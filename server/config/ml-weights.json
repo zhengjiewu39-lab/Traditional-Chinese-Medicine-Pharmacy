@@ -1,0 +1,46 @@
+{
+  "version": "1.0.0",
+  "description": "Interpretable logistic-style weights trained on benchmarks/prescription-review-dataset.json (demo calibration)",
+  "labelMap": { "approved": 0, "review": 1, "needs_revision": 2 },
+  "features": [
+    "herb_count_norm",
+    "has_dosage_high",
+    "has_dosage_low",
+    "has_18fan",
+    "has_19wei",
+    "has_incompatible_pair",
+    "licorice_ratio_high",
+    "elderly_patient",
+    "pediatric_patient",
+    "warm_cold_mix"
+  ],
+  "weights": {
+    "needs_revision": {
+      "bias": -1.2,
+      "herb_count_norm": 0.3,
+      "has_dosage_high": 2.8,
+      "has_dosage_low": 0.4,
+      "has_18fan": 3.5,
+      "has_19wei": 2.2,
+      "has_incompatible_pair": 3.0,
+      "licorice_ratio_high": 1.5,
+      "elderly_patient": 0.2,
+      "pediatric_patient": 0.5,
+      "warm_cold_mix": 0.3
+    },
+    "review": {
+      "bias": -0.5,
+      "herb_count_norm": 0.5,
+      "has_dosage_high": 0.8,
+      "has_dosage_low": 1.2,
+      "has_18fan": 0.2,
+      "has_19wei": 0.6,
+      "has_incompatible_pair": 0.4,
+      "licorice_ratio_high": 1.8,
+      "elderly_patient": 0.8,
+      "pediatric_patient": 1.0,
+      "warm_cold_mix": 1.2
+    }
+  },
+  "explainability": "Linear weights over hand-crafted clinical features; top positive features indicate drivers toward review/revision."
+}

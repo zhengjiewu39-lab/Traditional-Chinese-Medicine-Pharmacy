@@ -17,6 +17,7 @@ const herbRoutes = require('./server/routes/herbs');
 const dashboardRoutes = require('./server/routes/dashboard');
 const analyticsRoutes = require('./server/routes/analytics');
 const exportRoutes = require('./server/routes/export');
+const researchRoutes = require('./server/routes/research');
 
 const app = express();
 const port = process.env.PORT || 3002;
@@ -71,6 +72,7 @@ app.use('/api/billing', billingRoutes);
 app.use('/api/herbs', herbRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/export', exportRoutes);
+app.use('/api/research', researchRoutes);
 
 // 处方文件上传分析
 app.post('/api/prescriptions/analyze/file', upload.single('file'), (req, res) => {

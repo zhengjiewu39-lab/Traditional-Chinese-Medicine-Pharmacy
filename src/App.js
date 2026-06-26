@@ -25,6 +25,7 @@ import MembershipManagement from './pages/MembershipManagement';
 import PrescriptionReview from './pages/PrescriptionReview';
 import PrescriptionTemplates from './pages/PrescriptionTemplates';
 import PrescriptionAnalytics from './pages/PrescriptionAnalytics';
+import ResearchHub from './pages/ResearchHub';
 import HerbalKnowledgeBase from './pages/HerbalKnowledgeBase';
 import PharmacistTraining from './pages/PharmacistTraining';
 import PersonnelManagement from './pages/organization/PersonnelManagement';
@@ -76,6 +77,7 @@ function App() {
               <Route path="/prescriptions/review" element={<PrescriptionReview />} />
               <Route path="/prescriptions/templates" element={<PrescriptionTemplates />} />
               <Route path="/prescriptions/analytics" element={<PrescriptionAnalytics />} />
+              <Route path="/research" element={<ResearchHub />} />
               <Route path="/patients" element={<PatientRecords />} />
               <Route path="/traceability" element={<TraceabilitySystem />} />
               <Route path="/quality" element={<QualityManagement />} />

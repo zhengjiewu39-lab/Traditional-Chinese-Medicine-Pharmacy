@@ -12,7 +12,7 @@ Designed for modern TCM retail and clinic-pharmacy scenarios where **doctors, ph
 |------------|-------------|
 | **End-to-end prescription flow** | Doctor workbench → AI/pharmacist review → pickup code → POS prefill → inventory deduction → completed |
 | **Smart POS (Billing)** | Scan or enter pickup code; cart auto-fills from approved prescriptions |
-| **TCM Review Engine v2** | Dosage checks, *Shi Ba Fan* (十八反) / *Shi Jiu Wei* (十九畏), contraindications, scoring |
+| **TCM Review Engine v3** | Configurable JSON rules: dosage, *Shi Ba Fan* / *Shi Jiu Wei*, ML comparison, benchmarks |
 | **Persistent backend** | JSON-backed store with full REST CRUD (inventory, orders, patients, prescriptions, billing) |
 | **Operations dashboard** | Live KPIs: today’s sales, pending reviews, pickup queue, low-stock alerts |
 | **Patient pickup portal** | Patients track status with a 6-digit pickup code |
@@ -43,7 +43,68 @@ Patient Pickup Query                    Smart POS (Billing)
 
 - **Frontend:** React 18, Material UI 5, React Router 6, Recharts, Axios
 - **Backend:** Express 5, modular routes, file-based persistence
-- **Review logic:** Rule-based TCM engine (dosage, compatibility, demographics)
+- **Review logic:** Configurable rule engine + interpretable ML classifier + public benchmark
+
+---
+
+## Research, evaluation & reproducibility
+
+### Public benchmark dataset
+
+`benchmarks/prescription-review-dataset.json` — **24 synthetic prescriptions** with expert labels (`approved` / `review` / `needs_revision`), licensed **CC-BY-4.0**. No real patient data.
+
+### Run evaluation (compare engines)
+
+```bash
+npm run test:server    # unit tests
+npm run evaluate       # writes benchmarks/results/latest.json
+```
+
+**Reference results** (TCM-Prescription-Review-Mini-v1, n=24):
+
+| Engine | Accuracy | Macro-F1 | Binary-F1 (needs_revision) |
+|--------|----------|----------|----------------------------|
+| **rule-engine-v3** | **0.75** | **0.725** | **0.818** |
+| ml-interpretable-v1 | 0.46 | 0.39 | 0.70 |
+| baseline-keyword | 0.38 | 0.24 | 0.20 |
+| baseline-naive | 0.38 | 0.24 | 0.20 |
+
+### Configurable rules
+
+Edit `server/config/tcm-rules.json` (herb dosage, 十八反/十九畏, thresholds). Override path:
+
+```bash
+TCM_RULES_PATH=./my-rules.json npm run server
+```
+
+### ML + explainability
+
+`server/config/ml-weights.json` — linear model with **feature attributions** (`explainability.topContributions`). Compare via API:
+
+```bash
+curl -X POST 'http://localhost:3002/api/research/analyze?engine=ml-interpretable-v1' \
+  -H 'Content-Type: application/json' \
+  -d '{"prescription":"甘草10g，甘遂5g","patientAge":50}'
+```
+
+### Docker
+
+```bash
+docker compose up --build
+```
+
+### CI
+
+GitHub Actions (`.github/workflows/ci.yml`) runs tests, benchmark evaluation, and Docker build on every push/PR.
+
+### Documentation
+
+| Doc | Topic |
+|-----|-------|
+| [docs/EVALUATION.md](docs/EVALUATION.md) | Metrics & benchmark protocol |
+| [docs/REPRODUCIBILITY.md](docs/REPRODUCIBILITY.md) | Step-by-step reproduction |
+| [docs/ETHICS.md](docs/ETHICS.md) | Privacy, risks, responsible use |
+| [docs/LITERATURE.md](docs/LITERATURE.md) | References & paper outline |
 
 ---
 
@@ -116,9 +177,12 @@ chinese-medicine-pharmacy/
 │   ├── routes/          # REST endpoints
 │   ├── services/        # Review engine, workflow, stats
 │   └── data/            # Seed & store loader
-├── data/                # Runtime store (auto-created, gitignored)
-├── server.js            # API entry
-└── package.json
+├── benchmarks/          # Public evaluation dataset & results
+├── docs/                # Ethics, evaluation, literature
+├── scripts/             # evaluate-review.js
+├── Dockerfile
+├── docker-compose.yml
+├── .github/workflows/   # CI
 ```
 
 ---
@@ -134,6 +198,7 @@ Base URL: `http://localhost:3002/api`
 | Billing | `POST /billing/checkout` |
 | Inventory | `GET /inventory`, `GET /inventory/alerts`, CRUD |
 | Dashboard | `GET /dashboard/overview` |
+| Research | `GET /research/dataset`, `POST /research/evaluate`, `POST /research/analyze?engine=` |
 
 Data persists in `data/store.json` (created on first run from seed data).
 
@@ -147,12 +212,23 @@ Data persists in `data/store.json` (created on first run from seed data).
 | `npm run server` | API only (port 3002) |
 | `npm start` | Frontend only (port 3000) |
 | `npm run build` | Production build |
+| `npm run test:server` | Node unit tests (review engine) |
+| `npm run evaluate` | Benchmark all engines → JSON report |
+
+---
+
+## Ethics & privacy
+
+- Benchmark data is **synthetic** and safe to publish
+- Runtime patient data stays local (`data/store.json`, gitignored)
+- Prescription review is **decision support only** — mandatory human pharmacist review
+- See [docs/ETHICS.md](docs/ETHICS.md) for risks, mitigations, and production privacy guidance
 
 ---
 
 ## Disclaimer
 
-This system is intended for **demonstration, education, and internal pharmacy management prototyping**. AI prescription review is a **decision-support tool** and does not replace licensed pharmacist or physician judgment. Always follow local regulations for dispensing TCM products.
+This system is intended for **demonstration, education, and research prototyping**. It is **not** a certified medical device. AI/rule/ML outputs do not replace licensed pharmacist or physician judgment. Always follow local regulations for dispensing TCM products.
 
 ---
 

@@ -1,0 +1,230 @@
+{
+  "dataset": "TCM-Prescription-Review-Mini-v1",
+  "version": "1.0.0",
+  "license": "CC-BY-4.0",
+  "description": "Small public benchmark: de-identified synthetic TCM prescriptions with pharmacist-style expert labels (approved / review / needs_revision). For research and reproducible evaluation only — not real patient data.",
+  "labelSchema": {
+    "approved": "Safe to dispense after routine check",
+    "review": "Pharmacist should manually verify before dispensing",
+    "needs_revision": "Prescription should be modified before dispensing"
+  },
+  "annotationProtocol": "Two-pass review: (1) rule checklist for dosage/compatibility; (2) holistic TCM safety judgment. Labels reflect consensus for demo benchmark.",
+  "cases": [
+    {
+      "id": "PR-001",
+      "prescription": "黄芪15g，当归10g，白芍10g，川芎6g，甘草6g",
+      "diagnosis": "气血两虚",
+      "patientAge": 45,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Classic balanced formula within dosage norms"
+    },
+    {
+      "id": "PR-002",
+      "prescription": "黄芪15g，当归10g，甘草20g",
+      "diagnosis": "气血两虚",
+      "patientAge": 45,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Licorice overdose and >15% ratio"
+    },
+    {
+      "id": "PR-003",
+      "prescription": "甘草10g，甘遂5g",
+      "diagnosis": "水肿",
+      "patientAge": 50,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Shi Ba Fan: Gan Cao + Gan Sui"
+    },
+    {
+      "id": "PR-004",
+      "prescription": "附子10g，半夏9g",
+      "diagnosis": "寒痰",
+      "patientAge": 55,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Fu Zi incompatible with Ban Xia"
+    },
+    {
+      "id": "PR-005",
+      "prescription": "人参10g，莱菔子15g",
+      "diagnosis": "气虚",
+      "patientAge": 40,
+      "patientGender": "男",
+      "expertLabel": "review",
+      "rationale": "Shi Jiu Wei combination — context dependent"
+    },
+    {
+      "id": "PR-006",
+      "prescription": "板蓝根15g，连翘10g，薄荷6g",
+      "diagnosis": "风热感冒",
+      "patientAge": 28,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Standard heat-clearing combo"
+    },
+    {
+      "id": "PR-007",
+      "prescription": "三七15g，丹参15g",
+      "diagnosis": "胸痹",
+      "patientAge": 68,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "San Qi exceeds safe upper limit"
+    },
+    {
+      "id": "PR-008",
+      "prescription": "麻黄12g，桂枝10g",
+      "diagnosis": "风寒感冒",
+      "patientAge": 30,
+      "patientGender": "男",
+      "expertLabel": "review",
+      "rationale": "Ma Huang slightly high; OK for strong exterior pattern but needs review"
+    },
+    {
+      "id": "PR-009",
+      "prescription": "麻黄15g，桂枝12g",
+      "diagnosis": "高血压",
+      "patientAge": 62,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Ma Huang overdose + contraindicated context"
+    },
+    {
+      "id": "PR-010",
+      "prescription": "熟地黄15g，山药15g，茯苓10g",
+      "diagnosis": "肾阴不足",
+      "patientAge": 52,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Standard yin-tonifying base"
+    },
+    {
+      "id": "PR-011",
+      "prescription": "黄芪5g，党参5g",
+      "diagnosis": "气虚",
+      "patientAge": 70,
+      "patientGender": "女",
+      "expertLabel": "review",
+      "rationale": "Under-dosed for elderly qi deficiency — may need adjustment"
+    },
+    {
+      "id": "PR-012",
+      "prescription": "川芎6g，当归10g，白芍10g，熟地黄15g",
+      "diagnosis": "血虚",
+      "patientAge": 35,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Si Wu Tang base — appropriate"
+    },
+    {
+      "id": "PR-013",
+      "prescription": "藜芦5g，人参9g",
+      "diagnosis": "虚劳",
+      "patientAge": 48,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Shi Ba Fan: Li Lu + Ren Shen"
+    },
+    {
+      "id": "PR-014",
+      "prescription": "板蓝根20g，黄连6g，黄芩10g",
+      "diagnosis": "脾胃虚寒",
+      "patientAge": 44,
+      "patientGender": "男",
+      "expertLabel": "review",
+      "rationale": "Cold herbs for cold pattern — needs syndrome review"
+    },
+    {
+      "id": "PR-015",
+      "prescription": "人参3g，白术9g，茯苓9g，甘草6g",
+      "diagnosis": "脾胃气虚",
+      "patientAge": 8,
+      "patientGender": "男",
+      "expertLabel": "review",
+      "rationale": "Pediatric dosing requires weight-based adjustment"
+    },
+    {
+      "id": "PR-016",
+      "prescription": "丹参15g，三七6g，黄芪20g",
+      "diagnosis": "胸痹心痛",
+      "patientAge": 60,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Within limits for cardio TCM formula"
+    },
+    {
+      "id": "PR-017",
+      "prescription": "",
+      "diagnosis": "未知",
+      "patientAge": 40,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Empty prescription"
+    },
+    {
+      "id": "PR-018",
+      "prescription": "桂枝9g，白芍9g，生姜9g，大枣12g，甘草6g",
+      "diagnosis": "太阳病",
+      "patientAge": 33,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Gui Zhi Tang standard composition"
+    },
+    {
+      "id": "PR-019",
+      "prescription": "乌头6g，贝母10g",
+      "diagnosis": "痹证",
+      "patientAge": 50,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Shi Ba Fan pair"
+    },
+    {
+      "id": "PR-020",
+      "prescription": "黄芪30g，当归15g，川芎9g，白芍12g",
+      "diagnosis": "血虚",
+      "patientAge": 42,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Upper-normal but acceptable doses"
+    },
+    {
+      "id": "PR-021",
+      "prescription": "人参12g，黄芪30g，甘草10g，白术12g，茯苓15g，陈皮6g，当归12g，川芎6g，白芍12g，熟地黄12g",
+      "diagnosis": "气血两虚",
+      "patientAge": 55,
+      "patientGender": "女",
+      "expertLabel": "review",
+      "rationale": "Many herbs — complex formula needs manual review"
+    },
+    {
+      "id": "PR-022",
+      "prescription": "丁香6g，郁金10g",
+      "diagnosis": "气滞",
+      "patientAge": 46,
+      "patientGender": "男",
+      "expertLabel": "review",
+      "rationale": "Shi Jiu Wei — context dependent"
+    },
+    {
+      "id": "PR-023",
+      "prescription": "板蓝根15g，甘草6g",
+      "diagnosis": "风热",
+      "patientAge": 25,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Simple safe pair"
+    },
+    {
+      "id": "PR-024",
+      "prescription": "三七9g，川芎12g，红花10g",
+      "diagnosis": "血瘀",
+      "patientAge": 72,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "San Qi overdose in elderly bleeding-risk patient"
+    }
+  ]
+}

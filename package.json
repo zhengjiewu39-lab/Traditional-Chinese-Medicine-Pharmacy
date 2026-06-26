@@ -26,6 +26,8 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
+    "test:server": "node --test server/__tests__/*.test.js",
+    "evaluate": "node scripts/evaluate-review.js",
     "eject": "react-scripts eject",
     "server": "node server.js",
     "dev": "concurrently \"npm run server\" \"npm run start\""

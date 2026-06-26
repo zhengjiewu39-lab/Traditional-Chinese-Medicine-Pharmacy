@@ -1,0 +1,51 @@
+{
+  "version": "1.0.0",
+  "meta": {
+    "description": "Configurable TCM prescription review rules (dosage, compatibility, contraindications)",
+    "sources": [
+      "Chinese Pharmacopoeia compatibility principles (Shi Ba Fan / Shi Jiu Wei)",
+      "Commonly cited TCM clinical dosage references (demo subset)"
+    ]
+  },
+  "herbRules": {
+    "人参": { "min": 3, "max": 9, "unit": "g", "nature": "温", "incompatible": ["藜芦"], "caution": ["实证", "热证"] },
+    "黄芪": { "min": 10, "max": 30, "unit": "g", "nature": "温", "incompatible": [], "caution": ["表实邪盛"] },
+    "当归": { "min": 6, "max": 15, "unit": "g", "nature": "温", "incompatible": [], "caution": ["湿盛便溏"] },
+    "白芍": { "min": 6, "max": 15, "unit": "g", "nature": "寒", "incompatible": ["藜芦"], "caution": ["虚寒"] },
+    "川芎": { "min": 3, "max": 9, "unit": "g", "nature": "温", "incompatible": [], "caution": ["孕妇"] },
+    "甘草": { "min": 3, "max": 10, "unit": "g", "nature": "平", "incompatible": [], "caution": ["高血压"], "maxRatio": 0.15 },
+    "麻黄": { "min": 3, "max": 9, "unit": "g", "nature": "温", "incompatible": [], "caution": ["高血压", "失眠"] },
+    "桂枝": { "min": 3, "max": 10, "unit": "g", "nature": "温", "incompatible": [], "caution": ["阴虚"] },
+    "三七": { "min": 3, "max": 6, "unit": "g", "nature": "温", "incompatible": [], "caution": ["孕妇", "出血倾向"] },
+    "附子": { "min": 3, "max": 15, "unit": "g", "nature": "大热", "incompatible": ["半夏", "瓜蒌", "贝母", "白蔹", "白及"], "caution": ["孕妇"] },
+    "半夏": { "min": 3, "max": 9, "unit": "g", "nature": "温", "incompatible": ["附子", "乌头"], "caution": ["孕妇"] },
+    "板蓝根": { "min": 10, "max": 30, "unit": "g", "nature": "寒", "incompatible": [], "caution": ["脾胃虚寒"] },
+    "甘遂": { "min": 0.5, "max": 1.5, "unit": "g", "nature": "寒", "incompatible": ["甘草"], "caution": ["孕妇", "体虚"] },
+    "丹参": { "min": 10, "max": 15, "unit": "g", "nature": "微寒", "incompatible": ["藜芦"], "caution": ["出血倾向"] },
+    "熟地黄": { "min": 10, "max": 30, "unit": "g", "nature": "温", "incompatible": [], "caution": ["脾虚便溏"] }
+  },
+  "eighteenIncompatible": [
+    ["甘草", "甘遂"], ["甘草", "大戟"], ["甘草", "海藻"], ["甘草", "芫花"],
+    ["乌头", "贝母"], ["乌头", "瓜蒌"], ["乌头", "半夏"], ["乌头", "白蔹"], ["乌头", "白及"],
+    ["藜芦", "人参"], ["藜芦", "沙参"], ["藜芦", "丹参"], ["藜芦", "玄参"], ["藜芦", "细辛"], ["藜芦", "芍药"],
+    ["硫黄", "朴硝"], ["水银", "砒霜"], ["狼毒", "密陀僧"], ["巴豆", "牵牛"]
+  ],
+  "nineteenFear": [
+    ["人参", "莱菔子"], ["丁香", "郁金"], ["川乌", "犀角"], ["牙硝", "三棱"],
+    ["官桂", "石脂"], ["人参", "五灵脂"]
+  ],
+  "thresholds": {
+    "maxHerbCount": 20,
+    "rejectScoreBelow": 60,
+    "reviewScoreBelow": 85,
+    "licoriceMaxRatio": 0.15
+  },
+  "scoring": {
+    "dosageLowPenalty": 3,
+    "dosageHighPenalty": 8,
+    "cautionPenalty": 4,
+    "herbCountPenalty": 5,
+    "licoriceRatioPenalty": 5,
+    "errorPenalty": 5
+  }
+}

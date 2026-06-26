@@ -4,11 +4,11 @@ import {
   List, ListItem, ListItemText, Alert, Table, TableBody, TableCell, TableHead, TableRow,
 } from '@mui/material';
 import {
-  TrendingUp, Inventory, People, Receipt, Warning, LocalPharmacy, QrCode2,
+  TrendingUp, Inventory, People, Receipt, Warning, LocalPharmacy, QrCode2, Science,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { dashboardApi } from '../services/api';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
+import { dashboardApi, researchApi } from '../services/api';
 
 const statusColor = {
   待审核: 'warning', 已审核: 'info', 配药中: 'primary', 待取药: 'secondary', 已完成: 'success',
@@ -16,13 +16,17 @@ const statusColor = {
 
 function OperationsDashboard() {
   const [data, setData] = useState(null);
+  const [research, setResearch] = useState(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   const load = useCallback(() => {
     setLoading(true);
-    dashboardApi.getOverview()
-      .then(res => { setData(res.data); setLoading(false); })
+    Promise.all([
+      dashboardApi.getOverview(),
+      researchApi.getResults().catch(() => ({ data: null })),
+    ])
+      .then(([dash, res]) => { setData(dash.data); setResearch(res.data); setLoading(false); })
       .catch(() => setLoading(false));
   }, []);
 
@@ -120,6 +124,39 @@ function OperationsDashboard() {
                   ))}
                 </TableBody>
               </Table>
+            )}
+          </Paper>
+        </Grid>
+
+        <Grid item xs={12} md={6}>
+          <Paper sx={{ p: 2, cursor: 'pointer' }} onClick={() => navigate('/research')}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+              <Typography variant="h6" fontWeight={600}>
+                <Science sx={{ mr: 0.5, verticalAlign: 'middle', fontSize: 20 }} />
+                科研评价 · 引擎 Benchmark
+              </Typography>
+              <Button size="small" onClick={e => { e.stopPropagation(); navigate('/research'); }}>详情</Button>
+            </Box>
+            {research?.comparison?.length ? (
+              <>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                  数据集 n={research.n} · 最佳 {research.comparison[0].engine} Macro-F1 {(research.comparison[0].macroF1 * 100).toFixed(1)}%
+                </Typography>
+                <ResponsiveContainer width="100%" height={160}>
+                  <BarChart data={research.comparison.map(r => ({
+                    name: r.engine.replace('rule-engine-v3', '规则').replace('ml-interpretable-v1', 'ML').replace('baseline-', 'B-'),
+                    MacroF1: +(r.macroF1 * 100).toFixed(1),
+                  }))}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                    <YAxis domain={[0, 100]} tickFormatter={v => `${v}%`} />
+                    <Tooltip formatter={v => [`${v}%`, 'Macro-F1']} />
+                    <Bar dataKey="MacroF1" fill="#6A1B9A" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </>
+            ) : (
+              <Typography variant="body2" color="text.secondary">点击进入科研评价中心，运行 Benchmark 与多引擎对比</Typography>
             )}
           </Paper>
         </Grid>

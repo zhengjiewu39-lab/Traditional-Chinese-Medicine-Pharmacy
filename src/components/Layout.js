@@ -45,7 +45,7 @@ import {
   PersonAdd,
   Assessment,
   WorkOutline,
-  PointOfSale,
+  Science,
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -75,6 +75,7 @@ const menuItems = [
     icon: <ReceiptLong />, 
     children: [
       { text: 'AI处方审理', path: '/prescriptions/review' },
+      { text: '科研评价中心', path: '/research', badge: 'NEW' },
       { text: '处方模板库', path: '/prescriptions/templates' },
       { text: '处方统计分析', path: '/prescriptions/analytics' },
     ] 

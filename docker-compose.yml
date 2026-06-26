@@ -1,0 +1,14 @@
+services:
+  api:
+    build: .
+    ports:
+      - "3002:3002"
+    volumes:
+      - pharmacy-data:/app/data
+    environment:
+      - PORT=3002
+      - TCM_RULES_PATH=/app/server/config/tcm-rules.json
+    restart: unless-stopped
+
+volumes:
+  pharmacy-data:

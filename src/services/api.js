@@ -163,4 +163,15 @@ export const patientsApi = {
   getPatientPrescriptions: (id, params) => api.get(`/patients/${id}/prescriptions`, { params }),
 };
 
+// 科研评价 API
+export const researchApi = {
+  getDataset: () => api.get('/research/dataset'),
+  getResults: () => api.get('/research/results'),
+  runEvaluation: () => api.post('/research/evaluate'),
+  getRules: () => api.get('/research/rules'),
+  getEngines: () => api.get('/research/engines'),
+  analyze: (engine, data) => api.post(`/research/analyze?engine=${engine}`, data),
+  compareAll: (data) => api.post('/research/compare', data),
+};
+
 export default api; 

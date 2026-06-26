@@ -1,0 +1,447 @@
+{
+  "dataset": "TCM-Prescription-Review-Mini-v1",
+  "version": "1.0.0",
+  "evaluatedAt": "2026-06-26T12:04:08.047Z",
+  "n": 24,
+  "engines": {
+    "baseline-naive": {
+      "metrics": {
+        "accuracy": 0.375,
+        "macro": {
+          "precision": 0.4493,
+          "recall": 0.3704,
+          "f1": 0.2387
+        },
+        "perClass": {
+          "approved": {
+            "precision": 0.3478,
+            "recall": 1,
+            "f1": 0.5161,
+            "support": 8
+          },
+          "review": {
+            "precision": 0,
+            "recall": 0,
+            "f1": 0,
+            "support": 7
+          },
+          "needs_revision": {
+            "precision": 1,
+            "recall": 0.1111,
+            "f1": 0.2,
+            "support": 9
+          }
+        },
+        "binaryNeedsRevision": {
+          "precision": 1,
+          "recall": 0.1111,
+          "f1": 0.2,
+          "confusion": {
+            "tp": 1,
+            "fp": 0,
+            "fn": 8,
+            "tn": 15
+          }
+        }
+      },
+      "mismatches": [
+        {
+          "id": "PR-002",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "PR-003",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "PR-004",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "PR-005",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "PR-007",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "PR-008",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "PR-009",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "PR-011",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "PR-013",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "PR-014",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "PR-015",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "PR-019",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "PR-021",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "PR-022",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "PR-024",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        }
+      ]
+    },
+    "baseline-keyword": {
+      "metrics": {
+        "accuracy": 0.375,
+        "macro": {
+          "precision": 0.4545,
+          "recall": 0.3704,
+          "f1": 0.2444
+        },
+        "perClass": {
+          "approved": {
+            "precision": 0.3636,
+            "recall": 1,
+            "f1": 0.5333,
+            "support": 8
+          },
+          "review": {
+            "precision": 0,
+            "recall": 0,
+            "f1": 0,
+            "support": 7
+          },
+          "needs_revision": {
+            "precision": 1,
+            "recall": 0.1111,
+            "f1": 0.2,
+            "support": 9
+          }
+        },
+        "binaryNeedsRevision": {
+          "precision": 1,
+          "recall": 0.1111,
+          "f1": 0.2,
+          "confusion": {
+            "tp": 1,
+            "fp": 0,
+            "fn": 8,
+            "tn": 15
+          }
+        }
+      },
+      "mismatches": [
+        {
+          "id": "PR-002",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "PR-003",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "PR-004",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "PR-005",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "PR-007",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "PR-008",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "PR-009",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "PR-011",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "PR-013",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "PR-014",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "PR-015",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "PR-019",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "PR-021",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "PR-022",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "PR-024",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        }
+      ]
+    },
+    "rule-engine-v3": {
+      "metrics": {
+        "accuracy": 0.75,
+        "macro": {
+          "precision": 0.7641,
+          "recall": 0.7262,
+          "f1": 0.7251
+        },
+        "perClass": {
+          "approved": {
+            "precision": 1,
+            "recall": 0.75,
+            "f1": 0.8571,
+            "support": 8
+          },
+          "review": {
+            "precision": 0.6,
+            "recall": 0.4286,
+            "f1": 0.5,
+            "support": 7
+          },
+          "needs_revision": {
+            "precision": 0.6923,
+            "recall": 1,
+            "f1": 0.8182,
+            "support": 9
+          }
+        },
+        "binaryNeedsRevision": {
+          "precision": 0.6923,
+          "recall": 1,
+          "f1": 0.8182,
+          "confusion": {
+            "tp": 9,
+            "fp": 4,
+            "fn": 0,
+            "tn": 11
+          }
+        }
+      },
+      "mismatches": [
+        {
+          "id": "PR-005",
+          "expected": "review",
+          "predicted": "needs_revision"
+        },
+        {
+          "id": "PR-008",
+          "expected": "review",
+          "predicted": "needs_revision"
+        },
+        {
+          "id": "PR-018",
+          "expected": "approved",
+          "predicted": "review"
+        },
+        {
+          "id": "PR-021",
+          "expected": "review",
+          "predicted": "needs_revision"
+        },
+        {
+          "id": "PR-022",
+          "expected": "review",
+          "predicted": "needs_revision"
+        },
+        {
+          "id": "PR-023",
+          "expected": "approved",
+          "predicted": "review"
+        }
+      ]
+    },
+    "ml-interpretable-v1": {
+      "metrics": {
+        "accuracy": 0.4583,
+        "macro": {
+          "precision": 0.4127,
+          "recall": 0.4272,
+          "f1": 0.3943
+        },
+        "perClass": {
+          "approved": {
+            "precision": 0.5,
+            "recall": 0.25,
+            "f1": 0.3333,
+            "support": 8
+          },
+          "review": {
+            "precision": 0.1667,
+            "recall": 0.1429,
+            "f1": 0.1538,
+            "support": 7
+          },
+          "needs_revision": {
+            "precision": 0.5714,
+            "recall": 0.8889,
+            "f1": 0.6957,
+            "support": 9
+          }
+        },
+        "binaryNeedsRevision": {
+          "precision": 0.5714,
+          "recall": 0.8889,
+          "f1": 0.6957,
+          "confusion": {
+            "tp": 8,
+            "fp": 6,
+            "fn": 1,
+            "tn": 9
+          }
+        }
+      },
+      "mismatches": [
+        {
+          "id": "PR-001",
+          "expected": "approved",
+          "predicted": "review"
+        },
+        {
+          "id": "PR-005",
+          "expected": "review",
+          "predicted": "needs_revision"
+        },
+        {
+          "id": "PR-008",
+          "expected": "review",
+          "predicted": "needs_revision"
+        },
+        {
+          "id": "PR-012",
+          "expected": "approved",
+          "predicted": "review"
+        },
+        {
+          "id": "PR-014",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "PR-015",
+          "expected": "review",
+          "predicted": "needs_revision"
+        },
+        {
+          "id": "PR-016",
+          "expected": "approved",
+          "predicted": "review"
+        },
+        {
+          "id": "PR-017",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "PR-018",
+          "expected": "approved",
+          "predicted": "review"
+        },
+        {
+          "id": "PR-020",
+          "expected": "approved",
+          "predicted": "review"
+        },
+        {
+          "id": "PR-021",
+          "expected": "review",
+          "predicted": "needs_revision"
+        },
+        {
+          "id": "PR-022",
+          "expected": "review",
+          "predicted": "needs_revision"
+        },
+        {
+          "id": "PR-023",
+          "expected": "approved",
+          "predicted": "needs_revision"
+        }
+      ]
+    }
+  },
+  "comparison": [
+    {
+      "engine": "rule-engine-v3",
+      "accuracy": 0.75,
+      "macroF1": 0.7251
+    },
+    {
+      "engine": "ml-interpretable-v1",
+      "accuracy": 0.4583,
+      "macroF1": 0.3943
+    },
+    {
+      "engine": "baseline-keyword",
+      "accuracy": 0.375,
+      "macroF1": 0.2444
+    },
+    {
+      "engine": "baseline-naive",
+      "accuracy": 0.375,
+      "macroF1": 0.2387
+    }
+  ]
+}
