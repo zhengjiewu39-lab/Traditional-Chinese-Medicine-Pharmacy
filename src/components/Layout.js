@@ -45,6 +45,7 @@ import {
   PersonAdd,
   Assessment,
   WorkOutline,
+  PointOfSale,
   Science,
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';

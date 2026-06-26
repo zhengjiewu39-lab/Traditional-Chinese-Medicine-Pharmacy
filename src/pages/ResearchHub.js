@@ -42,9 +42,11 @@ function ResearchHub() {
   });
   const [compareResults, setCompareResults] = useState(null);
   const [comparing, setComparing] = useState(false);
+  const [apiError, setApiError] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
+    setApiError('');
     try {
       const [res, ds, rl] = await Promise.all([
         researchApi.getResults(),
@@ -56,6 +58,11 @@ function ResearchHub() {
       setRules(rl.data);
     } catch (e) {
       console.error(e);
+      if (e.response?.status === 404) {
+        setApiError('科研 API 未就绪，请在项目目录执行 npm run server 重启后端（端口 3002）');
+      } else {
+        setApiError('无法连接 API，请确认后端已启动：npm run server');
+      }
     } finally {
       setLoading(false);
     }
@@ -75,9 +82,17 @@ function ResearchHub() {
 
   const runCompare = async () => {
     setComparing(true);
+    setApiError('');
     try {
       const res = await researchApi.compareAll(compareInput);
       setCompareResults(res.data.results);
+      if (res.data.fallback) {
+        setApiError('后端未加载最新科研路由，已降级为逐引擎分析。请重启 API：npm run server');
+      }
+    } catch (e) {
+      setApiError(e.response?.status === 404
+        ? '接口 404：请重启后端 npm run server 后再试'
+        : '分析失败，请确认 API 已启动 (端口 3002)');
     } finally {
       setComparing(false);
     }
@@ -119,6 +134,8 @@ function ResearchHub() {
           </Button>
         </Box>
       </Box>
+
+      {apiError && <Alert severity="warning" sx={{ mb: 2 }} onClose={() => setApiError('')}>{apiError}</Alert>}
 
       <Grid container spacing={2} sx={{ mb: 3 }}>
         {[

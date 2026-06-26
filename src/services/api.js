@@ -163,6 +163,36 @@ export const patientsApi = {
   getPatientPrescriptions: (id, params) => api.get(`/patients/${id}/prescriptions`, { params }),
 };
 
+const RESEARCH_ENGINES = [
+  'rule-engine-v3',
+  'baseline-naive',
+  'baseline-keyword',
+  'ml-interpretable-v1',
+];
+
+async function compareEngines(data) {
+  try {
+    return await api.post('/research/compare', data);
+  } catch (err) {
+    if (err.response?.status !== 404) throw err;
+    const results = await Promise.all(
+      RESEARCH_ENGINES.map(async (engine) => {
+        try {
+          const res = await api.post(`/research/analyze?engine=${engine}`, data);
+          return { engine, result: res.data };
+        } catch (analyzeErr) {
+          if (engine === 'rule-engine-v3' && analyzeErr.response?.status === 404) {
+            const res = await api.post('/prescriptions/analyze', data);
+            return { engine, result: res.data };
+          }
+          throw analyzeErr;
+        }
+      })
+    );
+    return { data: { input: data, results, fallback: true } };
+  }
+}
+
 // 科研评价 API
 export const researchApi = {
   getDataset: () => api.get('/research/dataset'),
@@ -171,7 +201,7 @@ export const researchApi = {
   getRules: () => api.get('/research/rules'),
   getEngines: () => api.get('/research/engines'),
   analyze: (engine, data) => api.post(`/research/analyze?engine=${engine}`, data),
-  compareAll: (data) => api.post('/research/compare', data),
+  compareAll: compareEngines,
 };
 
 export default api; 

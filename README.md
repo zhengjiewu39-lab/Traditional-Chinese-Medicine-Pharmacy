@@ -14,7 +14,8 @@ Designed for modern TCM retail and clinic-pharmacy scenarios where **doctors, ph
 | **Smart POS (Billing)** | Scan or enter pickup code; cart auto-fills from approved prescriptions |
 | **TCM Review Engine v3** | Configurable JSON rules: dosage, *Shi Ba Fan* / *Shi Jiu Wei*, ML comparison, benchmarks |
 | **Persistent backend** | JSON-backed store with full REST CRUD (inventory, orders, patients, prescriptions, billing) |
-| **Operations dashboard** | Live KPIs: today’s sales, pending reviews, pickup queue, low-stock alerts |
+| **Operations dashboard** | Live KPIs: today’s sales, pending reviews, pickup queue, low-stock alerts, benchmark snapshot |
+| **Research evaluation hub** | In-app benchmark charts, 4-engine compare playground, public dataset viewer, ethics docs |
 | **Patient pickup portal** | Patients track status with a 6-digit pickup code |
 | **Doctor workbench** | Select patient, apply classic formula templates, reuse history, issue pickup codes |
 
@@ -155,6 +156,7 @@ npm run server
 | `/pickup` | Patient pickup status |
 | `/billing` | Smart POS / cashier |
 | `/prescriptions/review` | AI prescription review |
+| `/research` | Research hub — benchmark results, engine compare, dataset, ethics |
 | `/inventory` | Inventory & low-stock alerts |
 | `/patients` | Patient records |
 | `/customers` | Customer & membership |
@@ -198,7 +200,9 @@ Base URL: `http://localhost:3002/api`
 | Billing | `POST /billing/checkout` |
 | Inventory | `GET /inventory`, `GET /inventory/alerts`, CRUD |
 | Dashboard | `GET /dashboard/overview` |
-| Research | `GET /research/dataset`, `POST /research/evaluate`, `POST /research/analyze?engine=` |
+| Research | `GET /research/dataset`, `GET /research/results`, `POST /research/evaluate`, `POST /research/compare`, `POST /research/analyze?engine=` |
+
+> **Note:** After updating `server.js` or routes, restart the API (`npm run server`) so new endpoints (e.g. `/research/*`) are loaded.
 
 Data persists in `data/store.json` (created on first run from seed data).
 

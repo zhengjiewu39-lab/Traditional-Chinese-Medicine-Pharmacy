@@ -1,7 +1,7 @@
 {
   "dataset": "TCM-Prescription-Review-Mini-v1",
   "version": "1.0.0",
-  "evaluatedAt": "2026-06-26T12:04:08.047Z",
+  "evaluatedAt": "2026-06-26T12:17:42.326Z",
   "n": 24,
   "engines": {
     "baseline-naive": {
