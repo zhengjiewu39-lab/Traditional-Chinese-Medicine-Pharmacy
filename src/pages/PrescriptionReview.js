@@ -52,6 +52,10 @@ import {
   Delete as DeleteIcon
 } from '@mui/icons-material';
 
+import { prescriptionApi } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
+
 // 模拟中药数据库
 const herbsDatabase = [
   { name: '黄芪', commonDosage: '10-30g', nature: '甘温', meridians: '肺、脾经', functions: '补气升阳，益卫固表，利水消肿，托毒排脓，生肌', contraindications: '表实邪盛、热病初起、阴虚火旺者慎用' },
@@ -104,6 +108,8 @@ const prescriptionHistory = [
 
 // 主组件
 function PrescriptionReview() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [prescription, setPrescription] = useState('');
   const [patientName, setPatientName] = useState('');
   const [patientAge, setPatientAge] = useState('');
@@ -115,6 +121,37 @@ function PrescriptionReview() {
   const [viewMode, setViewMode] = useState('input'); // 'input', 'review', 'history'
   const [selectedHistoryItem, setSelectedHistoryItem] = useState(null);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [savedRx, setSavedRx] = useState(null);
+
+  const handleSavePrescription = async (approve = false) => {
+    try {
+      setLoading(true);
+      const herbs = parsePrescription(prescription).map(h => ({
+        name: h.name,
+        dosage: h.dosage || h.commonDosage || '10g',
+      }));
+      const created = await prescriptionApi.createPrescription({
+        patientName: patientName || '未登记',
+        doctor: user?.name || '医生',
+        diagnosis,
+        herbs,
+        prescriptionText: prescription,
+        patientAge: patientAge ? Number(patientAge) : undefined,
+        patientGender,
+        reviewScore: reviewResult?.score ?? reviewResult?.apiAnalysis?.score,
+      });
+      let final = created.data;
+      if (approve) {
+        const approved = await prescriptionApi.approvePrescription(final.id, { reviewer: user?.name, reviewScore: final.reviewScore });
+        final = approved.data;
+      }
+      setSavedRx(final);
+    } catch (e) {
+      setError(e.response?.data?.message || '保存失败');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // 解析处方文本为药材列表
   const parsePrescription = (text) => {
@@ -250,7 +287,7 @@ function PrescriptionReview() {
   };
 
   // 审核处方
-  const reviewPrescription = () => {
+  const reviewPrescription = async () => {
     try {
       setLoading(true);
       setError('');
@@ -259,50 +296,47 @@ function PrescriptionReview() {
         throw new Error('请输入处方内容');
       }
 
-      // 解析处方
+      const apiResult = await prescriptionApi.analyzePrescription({
+        prescription,
+        patientAge: patientAge ? Number(patientAge) : undefined,
+        patientGender,
+        diagnosis,
+      });
+
       const herbs = parsePrescription(prescription);
-      
-      if (herbs.length === 0) {
-        throw new Error('未能识别任何中药材，请检查格式');
-      }
-      
-      // 药材存在性检查
       const nonExistentHerbs = herbs.filter(h => !h.exists);
-      
-      // 剂量检查
       const invalidDosageHerbs = herbs.filter(h => !checkDosage(h));
-      
-      // 药物相互作用检查
       const interactions = checkInteractions(herbs);
-      
-      // 处方功效分析
       const effects = analyzePrescriptionEffects(herbs);
-      
-      // 生成审核结果
+
       const result = {
         herbs,
         nonExistentHerbs,
         invalidDosageHerbs,
         interactions,
         effects,
+        apiAnalysis: apiResult.data,
         patientInfo: {
           name: patientName || '未填写',
           age: patientAge || '未填写',
           gender: patientGender || '未填写',
         },
         diagnosis: diagnosis || '未填写',
-        overallStatus: nonExistentHerbs.length > 0 || invalidDosageHerbs.length > 0 
-          ? '需修改' 
+        overallStatus: apiResult.data?.status || (nonExistentHerbs.length > 0 || invalidDosageHerbs.length > 0
+          ? '需修改'
           : interactions.some(i => i.severity === 'high')
             ? '需注意'
-            : '建议通过'
+            : '建议通过'),
+        score: apiResult.data?.score,
+        warnings: apiResult.data?.warnings || [],
+        suggestions: apiResult.data?.suggestions || [],
       };
-      
+
       setReviewResult(result);
       setViewMode('review');
     } catch (err) {
       console.error('处方审核失败:', err);
-      setError(err.message || '处方审核失败，请重试');
+      setError(err.response?.data?.message || err.message || '处方审核失败，请重试');
     } finally {
       setLoading(false);
     }
@@ -481,8 +515,17 @@ function PrescriptionReview() {
             color={getStatusColor(overallStatus)}
           />
         </Box>
+        {reviewResult?.score != null && (
+          <Chip label={`审方评分 ${reviewResult.score}`} color="primary" sx={{ mr: 1 }} />
+        )}
+        {reviewResult?.apiAnalysis?.warnings?.length > 0 && (
+          <Alert severity="warning" sx={{ mb: 2, mt: 1 }}>
+            {(reviewResult.apiAnalysis.warnings || reviewResult.warnings || []).slice(0, 3).map((w, i) => (
+              <Typography key={i} variant="body2">{w.message || w}</Typography>
+            ))}
+          </Alert>
+        )}
         <Divider sx={{ mb: 2 }} />
-
         <Grid container spacing={3}>
           <Grid item xs={12} md={6}>
             <Card variant="outlined" sx={{ mb: 2 }}>
@@ -621,22 +664,19 @@ function PrescriptionReview() {
           </Grid>
         </Grid>
 
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 3 }}>
-          <Button
-            variant="outlined"
-            onClick={() => setViewMode('input')}
-            sx={{ mr: 1 }}
-          >
-            返回编辑
-          </Button>
-          <Button
-            variant="contained"
-            startIcon={<SaveIcon />}
-            color="primary"
-          >
-            保存处方
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 3, flexWrap: 'wrap', gap: 1 }}>
+          <Button variant="outlined" onClick={() => setViewMode('input')}>返回编辑</Button>
+          <Button variant="outlined" startIcon={<SaveIcon />} onClick={() => handleSavePrescription(false)}>保存待审</Button>
+          <Button variant="contained" startIcon={<CheckIcon />} color="success" onClick={() => handleSavePrescription(true)}>
+            审方通过并发码
           </Button>
         </Box>
+        {savedRx?.pickupCode && (
+          <Alert severity="success" sx={{ mt: 2 }}>
+            取药码：<strong>{savedRx.pickupCode}</strong>
+            <Button size="small" sx={{ ml: 2 }} onClick={() => navigate(`/billing?code=${savedRx.pickupCode}`)}>去收银</Button>
+          </Alert>
+        )}
       </Paper>
     );
   };

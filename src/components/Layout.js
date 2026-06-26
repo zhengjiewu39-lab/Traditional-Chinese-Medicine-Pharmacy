@@ -45,14 +45,17 @@ import {
   PersonAdd,
   Assessment,
   WorkOutline,
-  GroupWork,
+  PointOfSale,
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 
 const drawerWidth = 240;
 
 const menuItems = [
-  { text: '仪表盘', icon: <Dashboard />, path: '/dashboard' },
+  { text: '运营驾驶舱', icon: <Dashboard />, path: '/dashboard' },
+  { text: '智慧收银台', icon: <PointOfSale />, path: '/billing', badge: 'HOT' },
+  { text: '医生工作台', icon: <Healing />, path: '/doctor', badge: 'NEW' },
+  { text: '取药查询', icon: <QrCode />, path: '/pickup' },
   { 
     text: '组织结构', 
     icon: <Business />, 

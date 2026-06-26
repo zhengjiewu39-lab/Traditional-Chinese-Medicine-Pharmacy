@@ -53,46 +53,9 @@ import {
   Refresh as RefreshIcon,
 } from '@mui/icons-material';
 
-const initialOrders = [
-  {
-    id: 1,
-    customerName: '张三',
-    date: '2024-02-20',
-    total: 350,
-    status: '已完成',
-    items: [
-      { name: '人参', quantity: 1, price: 200 },
-      { name: '当归', quantity: 3, price: 50 },
-    ],
-    shippingAddress: '北京市朝阳区建国路88号',
-    paymentMethod: '微信支付',
-  },
-  {
-    id: 2,
-    customerName: '李四',
-    date: '2024-02-20',
-    total: 180,
-    status: '处理中',
-    items: [
-      { name: '黄芪', quantity: 6, price: 30 },
-    ],
-    shippingAddress: '上海市浦东新区陆家嘴1号',
-    paymentMethod: '支付宝',
-  },
-  {
-    id: 3,
-    customerName: '王五',
-    date: '2024-02-19',
-    total: 450,
-    status: '待付款',
-    items: [
-      { name: '人参', quantity: 2, price: 200 },
-      { name: '当归', quantity: 1, price: 50 },
-    ],
-    shippingAddress: '广州市天河区体育西路12号',
-    paymentMethod: '银联',
-  },
-];
+import { ordersApi } from '../services/api';
+
+const initialOrders = [];
 
 const statusMap = {
   '已完成': 'success',
@@ -134,6 +97,13 @@ function Orders() {
     message: '',
     severity: 'success',
   });
+
+  // 从 API 加载订单
+  useEffect(() => {
+    ordersApi.getOrders().then(res => {
+      if (res.data?.length) setOrders(res.data);
+    }).catch(console.error);
+  }, []);
 
   // 自动添加订单计时器
   useEffect(() => {
@@ -228,12 +198,17 @@ function Orders() {
   };
   
   // 添加新订单
-  const addNewOrder = (order) => {
-    setOrders([order, ...orders]);
+  const addNewOrder = async (order) => {
+    try {
+      const res = await ordersApi.createOrder({ ...order, deductStock: false });
+      setOrders(prev => [res.data, ...prev]);
+    } catch {
+      setOrders(prev => [order, ...prev]);
+    }
   };
-  
+
   // 处理新订单提交
-  const handleSubmitNewOrder = () => {
+  const handleSubmitNewOrder = async () => {
     if (!newOrderForm.customerName || !newOrderForm.shippingAddress || newOrderForm.items.length === 0) {
       setNotification({
         open: true,
@@ -246,7 +221,6 @@ function Orders() {
     const total = newOrderForm.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
     
     const newOrder = {
-      id: Math.floor(1000 + Math.random() * 9000),
       customerName: newOrderForm.customerName,
       date: new Date().toISOString().split('T')[0],
       total: parseFloat(total.toFixed(2)),
@@ -254,9 +228,15 @@ function Orders() {
       items: newOrderForm.items,
       shippingAddress: newOrderForm.shippingAddress,
       paymentMethod: newOrderForm.paymentMethod,
+      deductStock: false,
     };
-    
-    addNewOrder(newOrder);
+
+    try {
+      const res = await ordersApi.createOrder(newOrder);
+      setOrders(prev => [res.data, ...prev]);
+    } catch {
+      addNewOrder({ ...newOrder, id: Math.floor(1000 + Math.random() * 9000) });
+    }
     setOpenNewOrderDialog(false);
     setNewOrderForm({
       customerName: '',
@@ -269,7 +249,7 @@ function Orders() {
     
     setNotification({
       open: true,
-      message: `成功创建订单: ${newOrder.id}`,
+      message: `成功创建订单: ${newOrder.customerName}`,
       severity: 'success',
     });
   };

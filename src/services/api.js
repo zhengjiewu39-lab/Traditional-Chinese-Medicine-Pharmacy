@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:3001/api';
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:3002/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -44,7 +44,9 @@ export const salesApi = {
 // 库存数据相关API
 export const inventoryApi = {
   getAllInventory: (params) => api.get('/inventory', { params }),
+  getInventoryStats: () => api.get('/inventory/stats'),
   getInventoryItem: (id) => api.get(`/inventory/${id}`),
+  createInventory: (data) => api.post('/inventory', data),
   updateInventory: (id, inventoryData) => api.put(`/inventory/${id}`, inventoryData),
   addStock: (id, stockData) => api.post(`/inventory/${id}/add`, stockData),
   reduceStock: (id, stockData) => api.post(`/inventory/${id}/reduce`, stockData),
@@ -57,6 +59,29 @@ export const customerApi = {
   getCustomerData: () => api.get('/customers'),
   getCustomerStats: () => api.get('/customers/stats'),
   getCustomerGrowth: () => api.get('/customers/growth'),
+  createCustomer: (data) => api.post('/customers', data),
+  updateCustomer: (id, data) => api.put(`/customers/${id}`, data),
+};
+
+// 订单相关API
+export const ordersApi = {
+  getOrders: (params) => api.get('/orders', { params }),
+  getOrder: (id) => api.get(`/orders/${id}`),
+  createOrder: (data) => api.post('/orders', data),
+  updateOrder: (id, data) => api.put(`/orders/${id}`, data),
+  deleteOrder: (id) => api.delete(`/orders/${id}`),
+};
+
+// 收银台 API
+export const billingApi = {
+  checkout: (data) => api.post('/billing/checkout', data),
+  getBills: () => api.get('/billing'),
+};
+
+// 仪表盘 API
+export const dashboardApi = {
+  getOverview: () => api.get('/dashboard/overview'),
+  globalSearch: (q) => api.get('/dashboard/search', { params: { q } }),
 };
 
 // 药品类别相关API
@@ -100,6 +125,12 @@ export const prescriptionApi = {
   createPrescription: (prescriptionData) => api.post('/prescriptions', prescriptionData),
   updatePrescription: (id, prescriptionData) => api.put(`/prescriptions/${id}`, prescriptionData),
   deletePrescription: (id) => api.delete(`/prescriptions/${id}`),
+  approvePrescription: (id, data) => api.post(`/prescriptions/${id}/approve`, data),
+  dispensePrescription: (id, data) => api.post(`/prescriptions/${id}/dispense`, data),
+  markReady: (id, data) => api.post(`/prescriptions/${id}/ready`, data),
+  getBillingPrefill: (id) => api.get(`/prescriptions/${id}/billing-prefill`),
+  getPickupByCode: (code) => api.get(`/prescriptions/pickup/${code}`),
+  getPickupQueue: () => api.get('/prescriptions/pickup/queue'),
   
   // 处方模板
   getTemplates: (params) => api.get('/prescription-templates', { params }),

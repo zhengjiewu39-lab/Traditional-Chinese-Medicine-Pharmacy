@@ -1,1 +1,17 @@
 node_modules
+build
+.DS_Store
+.env
+.env.local
+.env.*.local
+
+# Runtime persistence (seeded on first API start)
+data/store.json
+
+# Uploaded files
+uploads/*
+!uploads/.gitkeep
+
+# Logs & caches
+npm-debug.log*
+.eslintcache

@@ -1,96 +1,169 @@
-# 中药连锁药房管理系统
+# TCM Chain Pharmacy Management System
 
-中药连锁药房管理系统是一个现代化的中药药房管理平台，集成了AI、大数据、物联网和区块链技术，为中药连锁药房提供全方位的管理解决方案。
+A full-stack **Traditional Chinese Medicine (TCM) chain pharmacy platform** built with React and Express. It connects the entire clinical-to-dispensing workflow—prescribing, AI-assisted review, pickup codes, smart POS checkout, inventory, patients, and operations analytics—in one cohesive system.
 
-## 系统功能模块
+Designed for modern TCM retail and clinic-pharmacy scenarios where **doctors, pharmacists, cashiers, and patients** need a shared, accurate, and efficient experience.
 
-系统包含以下主要模块：
+---
 
-- **仪表盘**：展示关键指标、销售趋势和数据分析
-- **组织结构**：管理连锁药房组织架构和人员
-- **订单管理**：处理订单创建、跟踪和完成
-- **库存管理**：中药材和中成药的库存跟踪与管理
-- **分销网络**：管理供应商和分销渠道
-- **客户管理**：维护客户资料并分析消费习惯
-- **处方管理**：包含AI处方审理、处方模板库和统计分析
-- **中药知识库**：存储和检索中药相关知识
-- **中药溯源**：基于区块链的中药溯源系统
-- **患者档案**：管理患者信息和就诊记录
-- **质量管理**：药材质量检测和标准操作规程
-- **药师培训**：在线培训和知识更新
-- **会员管理**：会员注册、积分和促销活动
-- **监管合规**：确保符合药品监管要求
+## Highlights
 
-## 技术特点
+| Capability | Description |
+|------------|-------------|
+| **End-to-end prescription flow** | Doctor workbench → AI/pharmacist review → pickup code → POS prefill → inventory deduction → completed |
+| **Smart POS (Billing)** | Scan or enter pickup code; cart auto-fills from approved prescriptions |
+| **TCM Review Engine v2** | Dosage checks, *Shi Ba Fan* (十八反) / *Shi Jiu Wei* (十九畏), contraindications, scoring |
+| **Persistent backend** | JSON-backed store with full REST CRUD (inventory, orders, patients, prescriptions, billing) |
+| **Operations dashboard** | Live KPIs: today’s sales, pending reviews, pickup queue, low-stock alerts |
+| **Patient pickup portal** | Patients track status with a 6-digit pickup code |
+| **Doctor workbench** | Select patient, apply classic formula templates, reuse history, issue pickup codes |
 
-- **人工智能**：智能处方分析、药材识别、用药推荐
-- **大数据**：销售趋势分析、客户行为分析、库存优化
-- **物联网**：仓储环境监控、药材保存条件跟踪
-- **区块链**：中药材溯源、防伪验证、供应链管理
+---
 
-## 安装与运行
+## Demo workflow
 
-### 环境要求
-
-- Node.js 16.x 或更高版本
-- npm 8.x 或更高版本
-
-### 安装步骤
-
-1. 克隆项目到本地：
-
-```bash
-git clone https://github.com/yourusername/chinese-medicine-pharmacy.git
-cd chinese-medicine-pharmacy
+```
+Doctor Workbench  →  Prescription Review  →  Pickup Code (TCM######)
+        ↓                                        ↓
+Patient Pickup Query                    Smart POS (Billing)
+        ↓                                        ↓
+              Operations Dashboard (live stats)
 ```
 
-2. 安装依赖：
+**Sample pickup codes** (after seed data loads):
+
+| Code | Patient | Status |
+|------|---------|--------|
+| `TCM128456` | Zhang San | Ready for pickup |
+| `TCM339812` | Li Si | Ready for pickup |
+
+---
+
+## Tech stack
+
+- **Frontend:** React 18, Material UI 5, React Router 6, Recharts, Axios
+- **Backend:** Express 5, modular routes, file-based persistence
+- **Review logic:** Rule-based TCM engine (dosage, compatibility, demographics)
+
+---
+
+## Quick start
+
+### Requirements
+
+- Node.js 16+
+- npm 8+
+
+### Install & run
 
 ```bash
+git clone https://github.com/zhengjiewu39-lab/Traditional-Chinese-Medicine-Pharmacy.git
+cd Traditional-Chinese-Medicine-Pharmacy
 npm install
-```
-
-3. 启动开发服务器：
-
-```bash
 npm run dev
 ```
 
-这将同时启动前端应用（端口3000）和模拟API服务器（端口3001）。
+| Service | URL |
+|---------|-----|
+| Web app | http://localhost:3000 |
+| API | http://localhost:3002 |
 
-### 登录信息
+If port 3000 is busy (e.g. another project):
 
-- 用户名：admin
-- 密码：admin123
+```bash
+PORT=3003 npm start
+# in another terminal:
+npm run server
+```
 
-## 项目结构
+### Demo accounts
+
+| Role | Username | Password |
+|------|----------|----------|
+| Admin | `admin` | `admin123` |
+| Pharmacist | `pharmacist` | `pharm123` |
+
+---
+
+## Main modules
+
+| Route | Module |
+|-------|--------|
+| `/dashboard` | Operations dashboard (real API data) |
+| `/doctor` | Doctor workbench |
+| `/pickup` | Patient pickup status |
+| `/billing` | Smart POS / cashier |
+| `/prescriptions/review` | AI prescription review |
+| `/inventory` | Inventory & low-stock alerts |
+| `/patients` | Patient records |
+| `/customers` | Customer & membership |
+| `/orders` | Order management |
+
+Additional UI modules: organization HR, distribution, traceability, quality, compliance, herbal knowledge base, pharmacist training, membership, prescription templates & analytics.
+
+---
+
+## Project structure
 
 ```
 chinese-medicine-pharmacy/
-├── public/                 # 静态资源
-├── src/                    # 源代码
-│   ├── components/         # 共享组件
-│   ├── contexts/           # React上下文
-│   ├── pages/              # 页面组件
-│   ├── services/           # API服务
-│   ├── App.js              # 应用入口
-│   ├── index.js            # 主入口
-│   └── theme.js            # Material UI主题配置
-├── server.js               # 模拟API服务器
-├── package.json            # 项目配置
-└── README.md               # 项目说明
+├── src/
+│   ├── pages/           # Feature pages
+│   ├── components/      # Layout & shared UI
+│   ├── contexts/        # Auth context
+│   └── services/        # API client
+├── server/
+│   ├── routes/          # REST endpoints
+│   ├── services/        # Review engine, workflow, stats
+│   └── data/            # Seed & store loader
+├── data/                # Runtime store (auto-created, gitignored)
+├── server.js            # API entry
+└── package.json
 ```
 
-## 开发指南
+---
 
-- 模拟API服务器位于`server.js`
-- 主题样式配置位于`src/theme.js`
-- 所有API调用都应通过`src/services/api.js`进行
+## API overview
 
-## 许可证
+Base URL: `http://localhost:3002/api`
+
+| Area | Examples |
+|------|----------|
+| Auth | `POST /auth/login`, `GET /auth/me` |
+| Prescriptions | `POST /prescriptions/analyze`, `POST /prescriptions/:id/approve`, `GET /prescriptions/pickup/:code` |
+| Billing | `POST /billing/checkout` |
+| Inventory | `GET /inventory`, `GET /inventory/alerts`, CRUD |
+| Dashboard | `GET /dashboard/overview` |
+
+Data persists in `data/store.json` (created on first run from seed data).
+
+---
+
+## Scripts
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start API + React dev server |
+| `npm run server` | API only (port 3002) |
+| `npm start` | Frontend only (port 3000) |
+| `npm run build` | Production build |
+
+---
+
+## Disclaimer
+
+This system is intended for **demonstration, education, and internal pharmacy management prototyping**. AI prescription review is a **decision-support tool** and does not replace licensed pharmacist or physician judgment. Always follow local regulations for dispensing TCM products.
+
+---
+
+## License
 
 MIT
 
-## 联系方式
+---
 
-如有问题或建议，请联系项目维护者。 
+## Author
+
+Maintained by [zhengjiewu39-lab](https://github.com/zhengjiewu39-lab).
+
+For issues or suggestions, please open a GitHub issue.

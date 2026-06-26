@@ -1,349 +1,179 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Container,
-  Paper,
-  Typography,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Button,
-  TextField,
-  Box,
-  Grid,
-  Card,
-  CardContent,
-  Chip,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  IconButton,
+  Box, Typography, Paper, Grid, Card, CardContent, Chip, Button, TextField,
+  Table, TableBody, TableCell, TableHead, TableRow, Dialog, DialogTitle, DialogContent,
+  DialogActions, LinearProgress, Alert,
 } from '@mui/material';
-import {
-  Person,
-  Search,
-  Add,
-  Edit,
-  Delete,
-  Visibility,
-  ContentPaste,
-  Close,
-} from '@mui/icons-material';
-
-// 模拟病人数据
-const initialPatients = [
-  {
-    id: 1,
-    name: '张三',
-    gender: '男',
-    age: 45,
-    phone: '13800138001',
-    address: '北京市海淀区中关村大街1号',
-    medicalHistory: ['高血压', '糖尿病'],
-    recentVisits: '2023-05-10',
-    prescriptionCount: 8,
-  },
-  {
-    id: 2,
-    name: '李四',
-    gender: '女',
-    age: 32,
-    phone: '13900139002',
-    address: '北京市朝阳区建国路2号',
-    medicalHistory: ['过敏性鼻炎'],
-    recentVisits: '2023-05-15',
-    prescriptionCount: 3,
-  },
-  {
-    id: 3,
-    name: '王五',
-    gender: '男',
-    age: 68,
-    phone: '13700137003',
-    address: '北京市西城区西长安街3号',
-    medicalHistory: ['冠心病', '高血脂', '骨质疏松'],
-    recentVisits: '2023-05-20',
-    prescriptionCount: 12,
-  },
-];
-
-// 模拟处方数据
-const patientPrescriptions = {
-  1: [
-    { id: 101, date: '2023-05-10', doctor: '赵医生', herbs: ['黄芪', '当归', '白芍', '茯苓'], status: '已完成' },
-    { id: 102, date: '2023-04-12', doctor: '赵医生', herbs: ['黄芪', '党参', '白术', '甘草'], status: '已完成' },
-    { id: 103, date: '2023-03-15', doctor: '李医生', herbs: ['丹参', '赤芍', '川芎', '红花'], status: '已完成' },
-  ],
-  2: [
-    { id: 201, date: '2023-05-15', doctor: '李医生', herbs: ['苏叶', '荆芥', '防风', '白芷'], status: '已完成' },
-    { id: 202, date: '2023-04-20', doctor: '王医生', herbs: ['黄芩', '黄连', '栀子', '甘草'], status: '已完成' },
-  ],
-  3: [
-    { id: 301, date: '2023-05-20', doctor: '张医生', herbs: ['丹参', '三七', '黄芪', '当归'], status: '进行中' },
-    { id: 302, date: '2023-05-05', doctor: '张医生', herbs: ['黄芪', '党参', '白术', '茯苓'], status: '已完成' },
-    { id: 303, date: '2023-04-18', doctor: '赵医生', herbs: ['杜仲', '续断', '狗脊', '补骨脂'], status: '已完成' },
-  ],
-};
+import { Search, Add, Refresh, Person, History } from '@mui/icons-material';
+import { patientsApi } from '../services/api';
 
 function PatientRecords() {
-  const [patients, setPatients] = useState(initialPatients);
-  const [filteredPatients, setFilteredPatients] = useState(initialPatients);
+  const [patients, setPatients] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedPatient, setSelectedPatient] = useState(null);
-  const [openDialog, setOpenDialog] = useState(false);
-  const [openHistoryDialog, setOpenHistoryDialog] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState(null);
+  const [prescriptions, setPrescriptions] = useState([]);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [openAdd, setOpenAdd] = useState(false);
+  const [form, setForm] = useState({ name: '', gender: '男', age: '', phone: '', address: '', medicalHistory: '', allergies: '' });
 
-  useEffect(() => {
-    const results = patients.filter(patient =>
-      patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      patient.phone.includes(searchTerm)
-    );
-    setFilteredPatients(results);
-  }, [searchTerm, patients]);
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await patientsApi.getAllPatients({ q: searchTerm || undefined });
+      setPatients(res.data);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  }, [searchTerm]);
 
-  const handleSearch = (e) => {
-    setSearchTerm(e.target.value);
+  useEffect(() => { load(); }, [load]);
+
+  const filtered = patients.filter(p =>
+    !searchTerm || p.name.includes(searchTerm) || p.phone.includes(searchTerm)
+  );
+
+  const openDetail = (patient) => {
+    setSelected(patient);
+    setDetailOpen(true);
   };
 
-  const handleSelectPatient = (patient) => {
-    setSelectedPatient(patient);
-    setOpenDialog(true);
+  const openHistory = async (patient) => {
+    setSelected(patient);
+    try {
+      const res = await patientsApi.getPatientPrescriptions(patient.id);
+      setPrescriptions(res.data);
+    } catch {
+      setPrescriptions([]);
+    }
+    setHistoryOpen(true);
   };
 
-  const handleOpenHistory = (patient) => {
-    setSelectedPatient(patient);
-    setOpenHistoryDialog(true);
+  const handleAdd = async () => {
+    await patientsApi.createPatient({
+      ...form,
+      age: Number(form.age),
+      medicalHistory: form.medicalHistory ? form.medicalHistory.split(/[,，]/).map(s => s.trim()) : [],
+      allergies: form.allergies ? form.allergies.split(/[,，]/).map(s => s.trim()) : [],
+    });
+    setOpenAdd(false);
+    setForm({ name: '', gender: '男', age: '', phone: '', address: '', medicalHistory: '', allergies: '' });
+    load();
   };
 
-  const handleCloseDialog = () => {
-    setOpenDialog(false);
-  };
-
-  const handleCloseHistoryDialog = () => {
-    setOpenHistoryDialog(false);
-  };
+  if (loading && patients.length === 0) return <LinearProgress />;
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Typography variant="h4" gutterBottom component="div" sx={{ mb: 4 }}>
-        患者档案管理
-      </Typography>
+    <Box>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3, flexWrap: 'wrap', gap: 2 }}>
+        <Box>
+          <Typography variant="h5" fontWeight={700}>患者档案管理</Typography>
+          <Typography variant="body2" color="text.secondary">电子病历 · 过敏史 · 处方历史 · 与客户账户关联</Typography>
+        </Box>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button startIcon={<Refresh />} onClick={load}>刷新</Button>
+          <Button variant="contained" startIcon={<Add />} onClick={() => setOpenAdd(true)}>新建档案</Button>
+        </Box>
+      </Box>
 
-      <Grid container spacing={3}>
-        <Grid item xs={12}>
-          <Card>
-            <CardContent>
-              <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-                <Typography variant="h6">患者列表</Typography>
-                <Box display="flex" alignItems="center">
-                  <TextField
-                    label="搜索患者"
-                    variant="outlined"
-                    size="small"
-                    value={searchTerm}
-                    onChange={handleSearch}
-                    InputProps={{
-                      startAdornment: <Search color="action" sx={{ mr: 1 }} />,
-                    }}
-                  />
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    startIcon={<Add />}
-                    sx={{ ml: 2 }}
-                  >
-                    新增患者
-                  </Button>
-                </Box>
-              </Box>
+      <Card sx={{ mb: 3 }}>
+        <CardContent>
+          <TextField
+            placeholder="搜索姓名或电话"
+            size="small"
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            InputProps={{ startAdornment: <Search sx={{ mr: 1, color: 'action.active' }} /> }}
+            sx={{ width: 300 }}
+          />
+        </CardContent>
+      </Card>
 
-              <TableContainer component={Paper}>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>姓名</TableCell>
-                      <TableCell>性别</TableCell>
-                      <TableCell>年龄</TableCell>
-                      <TableCell>联系电话</TableCell>
-                      <TableCell>病史</TableCell>
-                      <TableCell>最近就诊</TableCell>
-                      <TableCell>处方数量</TableCell>
-                      <TableCell>操作</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {filteredPatients.map((patient) => (
-                      <TableRow key={patient.id}>
-                        <TableCell>{patient.name}</TableCell>
-                        <TableCell>{patient.gender}</TableCell>
-                        <TableCell>{patient.age}</TableCell>
-                        <TableCell>{patient.phone}</TableCell>
-                        <TableCell>
-                          {patient.medicalHistory.map((item, index) => (
-                            <Chip
-                              key={index}
-                              label={item}
-                              size="small"
-                              sx={{ mr: 0.5, mb: 0.5 }}
-                            />
-                          ))}
-                        </TableCell>
-                        <TableCell>{patient.recentVisits}</TableCell>
-                        <TableCell>{patient.prescriptionCount}</TableCell>
-                        <TableCell>
-                          <IconButton
-                            size="small"
-                            color="primary"
-                            onClick={() => handleSelectPatient(patient)}
-                          >
-                            <Visibility fontSize="small" />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            color="secondary"
-                            onClick={() => handleOpenHistory(patient)}
-                          >
-                            <ContentPaste fontSize="small" />
-                          </IconButton>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
+      <Table component={Paper}>
+        <TableHead>
+          <TableRow>
+            <TableCell>姓名</TableCell>
+            <TableCell>性别/年龄</TableCell>
+            <TableCell>电话</TableCell>
+            <TableCell>病史</TableCell>
+            <TableCell>过敏</TableCell>
+            <TableCell>最近就诊</TableCell>
+            <TableCell>处方数</TableCell>
+            <TableCell>操作</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {filtered.map(p => (
+            <TableRow key={p.id}>
+              <TableCell><strong>{p.name}</strong></TableCell>
+              <TableCell>{p.gender} / {p.age}岁</TableCell>
+              <TableCell>{p.phone}</TableCell>
+              <TableCell>{(p.medicalHistory || []).map(h => <Chip key={h} label={h} size="small" sx={{ mr: 0.5 }} />)}</TableCell>
+              <TableCell>{(p.allergies || []).length ? (p.allergies || []).map(a => <Chip key={a} label={a} size="small" color="error" sx={{ mr: 0.5 }} />) : '—'}</TableCell>
+              <TableCell>{p.recentVisits}</TableCell>
+              <TableCell>{p.prescriptionCount || 0}</TableCell>
+              <TableCell>
+                <Button size="small" startIcon={<Person />} onClick={() => openDetail(p)}>详情</Button>
+                <Button size="small" startIcon={<History />} onClick={() => openHistory(p)}>处方</Button>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
 
-      {/* 患者详情对话框 */}
-      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>
-        <DialogTitle>
-          患者详细信息
-          <IconButton
-            aria-label="close"
-            onClick={handleCloseDialog}
-            sx={{
-              position: 'absolute',
-              right: 8,
-              top: 8,
-            }}
-          >
-            <Close />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent dividers>
-          {selectedPatient && (
-            <Grid container spacing={2}>
-              <Grid item xs={6}>
-                <Typography variant="subtitle1">姓名：{selectedPatient.name}</Typography>
-              </Grid>
-              <Grid item xs={6}>
-                <Typography variant="subtitle1">性别：{selectedPatient.gender}</Typography>
-              </Grid>
-              <Grid item xs={6}>
-                <Typography variant="subtitle1">年龄：{selectedPatient.age}</Typography>
-              </Grid>
-              <Grid item xs={6}>
-                <Typography variant="subtitle1">联系电话：{selectedPatient.phone}</Typography>
-              </Grid>
-              <Grid item xs={12}>
-                <Typography variant="subtitle1">住址：{selectedPatient.address}</Typography>
-              </Grid>
-              <Grid item xs={12}>
-                <Typography variant="subtitle1">
-                  病史：
-                  {selectedPatient.medicalHistory.map((item, index) => (
-                    <Chip
-                      key={index}
-                      label={item}
-                      size="small"
-                      sx={{ ml: 1 }}
-                    />
-                  ))}
-                </Typography>
-              </Grid>
+      <Dialog open={detailOpen} onClose={() => setDetailOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>患者详情 — {selected?.name}</DialogTitle>
+        <DialogContent>
+          {selected && (
+            <Grid container spacing={2} sx={{ mt: 0.5 }}>
+              <Grid item xs={6}><Typography variant="body2" color="text.secondary">电话</Typography><Typography>{selected.phone}</Typography></Grid>
+              <Grid item xs={6}><Typography variant="body2" color="text.secondary">地址</Typography><Typography>{selected.address}</Typography></Grid>
+              <Grid item xs={12}><Typography variant="body2" color="text.secondary">病史</Typography>{(selected.medicalHistory || []).map(h => <Chip key={h} label={h} size="small" sx={{ mr: 0.5 }} />)}</Grid>
+              <Grid item xs={12}><Typography variant="body2" color="text.secondary">过敏史</Typography>{(selected.allergies || []).length ? selected.allergies.map(a => <Chip key={a} label={a} color="error" size="small" sx={{ mr: 0.5 }} />) : '无'}</Grid>
+              {selected.customerId && <Grid item xs={12}><Alert severity="info">已关联客户账户 #{selected.customerId}</Alert></Grid>}
             </Grid>
           )}
         </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog} color="primary">
-            关闭
-          </Button>
-          <Button color="secondary" startIcon={<Edit />}>
-            编辑
-          </Button>
-        </DialogActions>
+        <DialogActions><Button onClick={() => setDetailOpen(false)}>关闭</Button></DialogActions>
       </Dialog>
 
-      {/* 处方历史对话框 */}
-      <Dialog open={openHistoryDialog} onClose={handleCloseHistoryDialog} maxWidth="md" fullWidth>
-        <DialogTitle>
-          处方历史记录 - {selectedPatient?.name}
-          <IconButton
-            aria-label="close"
-            onClick={handleCloseHistoryDialog}
-            sx={{
-              position: 'absolute',
-              right: 8,
-              top: 8,
-            }}
-          >
-            <Close />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent dividers>
-          {selectedPatient && (
-            <TableContainer>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>日期</TableCell>
-                    <TableCell>医师</TableCell>
-                    <TableCell>处方药材</TableCell>
-                    <TableCell>状态</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {patientPrescriptions[selectedPatient.id]?.map((prescription) => (
-                    <TableRow key={prescription.id}>
-                      <TableCell>{prescription.date}</TableCell>
-                      <TableCell>{prescription.doctor}</TableCell>
-                      <TableCell>
-                        {prescription.herbs.map((herb, index) => (
-                          <Chip
-                            key={index}
-                            label={herb}
-                            size="small"
-                            sx={{ mr: 0.5, mb: 0.5 }}
-                          />
-                        ))}
-                      </TableCell>
-                      <TableCell>
-                        <Chip
-                          label={prescription.status}
-                          color={prescription.status === '已完成' ? 'success' : 'warning'}
-                          size="small"
-                        />
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          )}
+      <Dialog open={historyOpen} onClose={() => setHistoryOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle>处方历史 — {selected?.name}</DialogTitle>
+        <DialogContent>
+          {prescriptions.length === 0 ? <Typography color="text.secondary">暂无处方记录</Typography> : prescriptions.map(pr => (
+            <Paper key={pr.id} variant="outlined" sx={{ p: 2, mb: 1 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                <Typography fontWeight={600}>{pr.diagnosis}</Typography>
+                <Chip label={pr.status} size="small" color={pr.status === '已审核' ? 'success' : 'warning'} />
+              </Box>
+              <Typography variant="body2" color="text.secondary">{pr.date} · {pr.doctor}</Typography>
+              <Typography variant="body2" sx={{ mt: 1 }}>{(pr.herbs || []).map(h => `${h.name}${h.dosage || ''}`).join('，')}</Typography>
+            </Paper>
+          ))}
+        </DialogContent>
+        <DialogActions><Button onClick={() => setHistoryOpen(false)}>关闭</Button></DialogActions>
+      </Dialog>
+
+      <Dialog open={openAdd} onClose={() => setOpenAdd(false)}>
+        <DialogTitle>新建患者档案</DialogTitle>
+        <DialogContent>
+          <TextField margin="dense" label="姓名" fullWidth value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
+          <TextField margin="dense" label="年龄" type="number" fullWidth value={form.age} onChange={e => setForm({ ...form, age: e.target.value })} />
+          <TextField margin="dense" label="电话" fullWidth value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
+          <TextField margin="dense" label="地址" fullWidth value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} />
+          <TextField margin="dense" label="病史（逗号分隔）" fullWidth value={form.medicalHistory} onChange={e => setForm({ ...form, medicalHistory: e.target.value })} />
+          <TextField margin="dense" label="过敏（逗号分隔）" fullWidth value={form.allergies} onChange={e => setForm({ ...form, allergies: e.target.value })} />
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseHistoryDialog} color="primary">
-            关闭
-          </Button>
+          <Button onClick={() => setOpenAdd(false)}>取消</Button>
+          <Button variant="contained" onClick={handleAdd}>保存</Button>
         </DialogActions>
       </Dialog>
-    </Container>
+    </Box>
   );
 }
 
-export default PatientRecords; 
+export default PatientRecords;
