@@ -10,6 +10,6 @@ lightgbm>=4.0
 shap>=0.43
 optuna>=3.4
 torch>=2.0
-pytorch-lightning>=2.0
+pytorch-lightning>=2.6.5
 jupyter>=1.0
 ipykernel>=6.0
