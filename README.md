@@ -145,6 +145,8 @@ npm run server
 | Admin | `admin` | `admin123` |
 | Pharmacist | `pharmacist` | `pharm123` |
 
+> **Demo vs production:** The accounts above are enabled only when `NODE_ENV !== 'production'` or `ALLOW_DEMO_AUTH=true`. In production, set `TCM_JWT_SECRET`, configure users via `TCM_USERS_JSON` / `TCM_*_PASSWORD`, and restrict `CORS_ORIGIN`. Copy `.env.example` to `.env` for local setup.
+
 ---
 
 ## Main modules
@@ -238,7 +240,12 @@ This system is intended for **demonstration, education, and research prototyping
 
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE).
+
+## Security & contributing
+
+- [SECURITY.md](SECURITY.md) — vulnerability reporting
+- [CONTRIBUTING.md](CONTRIBUTING.md) — development workflow
 
 ---
 

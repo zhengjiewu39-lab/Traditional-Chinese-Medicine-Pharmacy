@@ -64,94 +64,9 @@ import {
   PolarGrid,
   PolarAngleAxis,
   PolarRadiusAxis,
-  Treemap,
 } from 'recharts';
-import { ComposableMap, Geographies, Geography, Marker } from "react-simple-maps";
-
-// 使用备用的简化中国地图数据
-const chinaGeoData = {
-  "type": "FeatureCollection",
-  "features": [
-    {
-      "type": "Feature",
-      "properties": { "name": "北京" },
-      "geometry": { "type": "Polygon", "coordinates": [[[116.1, 39.5], [116.8, 39.5], [116.8, 40.2], [116.1, 40.2], [116.1, 39.5]]] }
-    },
-    {
-      "type": "Feature",
-      "properties": { "name": "上海" },
-      "geometry": { "type": "Polygon", "coordinates": [[[121.1, 30.8], [121.8, 30.8], [121.8, 31.5], [121.1, 31.5], [121.1, 30.8]]] }
-    },
-    {
-      "type": "Feature",
-      "properties": { "name": "广东" },
-      "geometry": { "type": "Polygon", "coordinates": [[[112.5, 22.5], [115.5, 22.5], [115.5, 24.5], [112.5, 24.5], [112.5, 22.5]]] }
-    },
-    {
-      "type": "Feature", 
-      "properties": { "name": "四川" },
-      "geometry": { "type": "Polygon", "coordinates": [[[102, 28], [106, 28], [106, 32], [102, 32], [102, 28]]] }
-    },
-    {
-      "type": "Feature",
-      "properties": { "name": "湖北" },
-      "geometry": { "type": "Polygon", "coordinates": [[[110, 30], [114, 30], [114, 33], [110, 33], [110, 30]]] }
-    },
-    {
-      "type": "Feature",
-      "properties": { "name": "浙江" },
-      "geometry": { "type": "Polygon", "coordinates": [[[118, 28], [121, 28], [121, 31], [118, 31], [118, 28]]] }
-    },
-    {
-      "type": "Feature",
-      "properties": { "name": "江苏" },
-      "geometry": { "type": "Polygon", "coordinates": [[[118, 31], [121, 31], [121, 35], [118, 35], [118, 31]]] }
-    },
-    {
-      "type": "Feature",
-      "properties": { "name": "山东" },
-      "geometry": { "type": "Polygon", "coordinates": [[[115, 35], [119, 35], [119, 38], [115, 38], [115, 35]]] }
-    }
-  ]
-};
-
-// 中国各省的中心点坐标 (简化版)
-const provinceCoordinates = {
-  "湖北省": [112.2363, 30.9756],
-  "湖南省": [111.6888, 27.6253],
-  "河南省": [113.4668, 34.6234],
-  "上海市": [121.4737, 31.2304],
-  "江苏省": [119.4543, 33.1236],
-  "浙江省": [119.5313, 29.8773],
-  "广东省": [113.5107, 23.4066],
-  "广西省": [108.2813, 23.6426],
-  "福建省": [118.3008, 25.9277],
-  "山东省": [117.0206, 36.6513],
-  "北京市": [116.4074, 39.9042],
-  "天津市": [117.4219, 39.4189],
-  "河北省": [115.4995, 38.1006],
-  "山西省": [112.3352, 37.9413],
-  "内蒙古": [114.4124, 43.4901],
-  "辽宁省": [123.1238, 41.1743],
-  "吉林省": [126.4371, 43.1520],
-  "黑龙江省": [128.1445, 48.5156],
-  "安徽省": [117.2900, 31.8600],
-  "江西省": [115.7221, 28.1700],
-  "重庆市": [107.7539, 29.8904],
-  "四川省": [103.9526, 30.7617],
-  "贵州省": [106.6113, 26.9385],
-  "云南省": [101.3431, 24.4800],
-  "西藏": [89.1865, 30.1465],
-  "陕西省": [108.9540, 34.2655],
-  "甘肃省": [103.5901, 36.3043],
-  "青海省": [97.3428, 35.4199],
-  "宁夏": [106.2309, 37.1988],
-  "新疆": [86.6077, 41.7407],
-  "海南省": [109.9512, 19.2041],
-  "台湾省": [120.9605, 23.6978],
-  "香港": [114.1095, 22.3964],
-  "澳门": [113.5439, 22.1987],
-};
+import ProvinceCoverageView from '../components/ProvinceCoverageView';
+import NetworkStructureChart from '../components/NetworkStructureChart';
 
 // 扩展分销商数据
 const initialDistributors = [
@@ -471,47 +386,9 @@ const radarData = [
 // 饼图颜色
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#83a6ed'];
 
-// 添加分销商网络树图数据
-const generateTreemapData = (distributors) => {
-  if (!distributors || !Array.isArray(distributors) || distributors.length === 0) {
-    return [{ name: '暂无数据', children: [{ name: '暂无数据', size: 100 }] }];
-  }
-  
-  // 按地区分组
-  const regionGroups = {};
-  
-  distributors.forEach(dist => {
-    if (!dist) return; // 跳过无效的分销商
-    
-    // 提取地区名称，并移除"地区"后缀
-    const region = (dist.region || '其他').replace('地区', '');
-    
-    if (!regionGroups[region]) {
-      regionGroups[region] = {
-        name: region,
-        children: [],
-      };
-    }
-    
-    regionGroups[region].children.push({
-      name: dist.name || '未命名',
-      size: dist.currentSales || 0,
-      status: dist.status || 'inactive',
-    });
-  });
-  
-  // 确保至少有一个区域
-  if (Object.keys(regionGroups).length === 0) {
-    return [{ name: '暂无数据', children: [{ name: '暂无数据', size: 100 }] }];
-  }
-  
-  return Object.values(regionGroups);
-};
-
-// 用于树图的自定义颜色
 const DISTRIBUTOR_COLORS = {
-  active: '#8884d8',
-  inactive: '#d0d0d0',
+  active: '#2563eb',
+  inactive: '#94a3b8',
 };
 
 const DistributionNetwork = () => {
@@ -603,26 +480,6 @@ const DistributionNetwork = () => {
     setMapTabValue(newValue);
   };
 
-  const getDistributorMarkers = () => {
-    const markers = [];
-    distributors.forEach(dist => {
-      // 从覆盖范围中提取省份
-      const provinces = dist.coverage.split('、');
-      provinces.forEach(province => {
-        const coordinates = provinceCoordinates[province];
-        if (coordinates) {
-          markers.push({
-            name: dist.name,
-            coordinates: coordinates,
-            status: dist.status,
-            province: province
-          });
-        }
-      });
-    });
-    return markers;
-  };
-
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3, alignItems: 'center' }}>
@@ -672,7 +529,7 @@ const DistributionNetwork = () => {
               onClick={handleMapDialogOpen}
               variant="outlined"
             >
-              查看分销地图
+              查看覆盖详情
             </Button>
             <Button 
               startIcon={<AssessmentIcon />} 
@@ -685,6 +542,16 @@ const DistributionNetwork = () => {
         </Grid>
       </Paper>
 
+      <Paper sx={{ p: 2, mb: 3 }}>
+        <Typography variant="h6" gutterBottom fontWeight={700}>
+          全国省份覆盖
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          按大区展示各省分销覆盖情况，悬停可查看对应分销商
+        </Typography>
+        <ProvinceCoverageView distributors={filteredDistributors} />
+      </Paper>
+
       <Grid container spacing={3}>
         {/* 销售区域分析 */}
         <Grid item xs={12}>
@@ -695,7 +562,7 @@ const DistributionNetwork = () => {
               </Typography>
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={salesRegionData}>
-                  <CartesianGrid strokeDasharray="3 3" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#94a3b8" />
                   <XAxis dataKey="name" />
                   <YAxis />
                   <RechartsTooltip />
@@ -767,97 +634,32 @@ const DistributionNetwork = () => {
       </Grid>
 
       {/* 分销地图对话框 */}
-      <Dialog 
-        open={openMapDialog} 
-        onClose={handleMapDialogClose} 
-        maxWidth="lg" 
+      <Dialog
+        open={openMapDialog}
+        onClose={handleMapDialogClose}
+        maxWidth="lg"
         fullWidth
       >
         <DialogTitle>
           <Box display="flex" alignItems="center">
             <MapIcon sx={{ mr: 1 }} />
-            <Typography variant="h6">全国分销网络地图</Typography>
+            <Typography variant="h6">全国分销网络</Typography>
           </Box>
         </DialogTitle>
         <DialogContent>
           <Tabs value={mapTabValue || 0} onChange={handleMapTabChange} sx={{ mb: 2 }}>
-            <Tab icon={<MapIcon />} label="地理分布" />
+            <Tab icon={<MapIcon />} label="省份覆盖" />
             <Tab icon={<AccountTreeIcon />} label="网络结构" />
             <Tab icon={<AssessmentIcon />} label="区域统计" />
           </Tabs>
 
-          {/* 地图视图 */}
           {mapTabValue === 0 && (
             <>
               <Typography variant="body2" color="text.secondary" gutterBottom>
-                地图展示了全国各地分销商的分布情况，不同颜色表示不同状态
+                按大区展示各省分销覆盖，绿色边框表示已有分销商
               </Typography>
-              <Box sx={{ height: 600, mt: 2 }}>
-                {/* 使用本地定义的地图数据 */}
-                <ComposableMap
-                  projection="geoMercator"
-                  projectionConfig={{
-                    scale: 800,
-                    center: [105, 38]
-                  }}
-                  width={1000}
-                  height={600}
-                  style={{ width: "100%", height: "auto" }}
-                >
-                  <Geographies geography={chinaGeoData}>
-                    {({ geographies }) =>
-                      geographies.map(geo => (
-                        <Geography
-                          key={geo.rsmKey}
-                          geography={geo}
-                          fill="#EAEAEC"
-                          stroke="#D6D6DA"
-                          style={{
-                            hover: {
-                              fill: "#F5F5F5",
-                              stroke: "#D6D6DA",
-                              strokeWidth: 0.75,
-                              outline: "none"
-                            }
-                          }}
-                        />
-                      ))
-                    }
-                  </Geographies>
-                  {getDistributorMarkers().map((marker, index) => (
-                    <Marker key={index} coordinates={marker.coordinates}>
-                      <circle 
-                        r={6} 
-                        fill={marker.status === "active" ? "#F53" : "#999"} 
-                        stroke="#fff" 
-                        strokeWidth={2} 
-                      />
-                      <text
-                        textAnchor="middle"
-                        y={-10}
-                        style={{ 
-                          fontFamily: "system-ui", 
-                          fontSize: "8px",
-                          fill: "#5D5A6D",
-                          pointerEvents: "none"
-                        }}
-                      >
-                        {marker.province}
-                      </text>
-                    </Marker>
-                  ))}
-                </ComposableMap>
-              </Box>
-              
-              <Box sx={{ mt: 3, display: "flex", alignItems: "center", flexWrap: "wrap" }}>
-                <Box sx={{ display: "flex", alignItems: "center", mr: 3 }}>
-                  <Box sx={{ width: 12, height: 12, borderRadius: "50%", backgroundColor: "#F53", mr: 1 }} />
-                  <Typography variant="body2">活跃分销商</Typography>
-                </Box>
-                <Box sx={{ display: "flex", alignItems: "center" }}>
-                  <Box sx={{ width: 12, height: 12, borderRadius: "50%", backgroundColor: "#999", mr: 1 }} />
-                  <Typography variant="body2">非活跃分销商</Typography>
-                </Box>
+              <Box sx={{ mt: 2 }}>
+                <ProvinceCoverageView distributors={distributors} />
               </Box>
             </>
           )}
@@ -868,88 +670,9 @@ const DistributionNetwork = () => {
               <Typography variant="body2" color="text.secondary" gutterBottom>
                 显示各区域分销商规模分布，方块大小代表销售额，颜色深浅代表活跃状态
               </Typography>
-              
-              {/* 树形图可视化 */}
-              <Box sx={{ height: 500, mt: 2 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <Treemap
-                    data={generateTreemapData(distributors)}
-                    dataKey="size"
-                    aspectRatio={4/3}
-                    stroke="#fff"
-                    fill="#8884d8"
-                    content={({ root, depth, x, y, width, height, index, payload, colors, rank, name }) => {
-                      // 防御性编程: 确保所有参数都存在
-                      if (!x || !y || !width || !height) return null;
-                      
-                      // 确定填充颜色
-                      let fillColor = '#f9f9f9'; // 默认为浅灰色
-                      if (depth === 1 && payload) {
-                        fillColor = payload.status === 'active' ? 
-                          DISTRIBUTOR_COLORS.active : 
-                          DISTRIBUTOR_COLORS.inactive;
-                      }
-                      
-                      return (
-                        <g>
-                          {/* 渲染方块 */}
-                          <rect
-                            x={x}
-                            y={y}
-                            width={width}
-                            height={height}
-                            style={{
-                              fill: fillColor,
-                              stroke: '#fff',
-                              strokeWidth: 2 / (depth + 1e-10),
-                              strokeOpacity: 1 / (depth + 1e-10),
-                            }}
-                          />
-                          
-                          {/* 父级区域标题 */}
-                          {depth === 0 && name && (
-                            <text
-                              x={x + width / 2}
-                              y={y + 20}
-                              textAnchor="middle"
-                              fill="#333"
-                              fontSize={16}
-                              fontWeight="bold"
-                            >
-                              {name}
-                            </text>
-                          )}
-                          
-                          {/* 子级分销商名称 */}
-                          {depth === 1 && name && width > 40 && height > 30 && (
-                            <text
-                              x={x + width / 2}
-                              y={y + height / 2 + 7}
-                              textAnchor="middle"
-                              fill="#fff"
-                              fontSize={14}
-                            >
-                              {name}
-                            </text>
-                          )}
-                          
-                          {/* 子级销售额显示 */}
-                          {depth === 1 && payload && payload.size && width > 70 && height > 50 && (
-                            <text
-                              x={x + width / 2}
-                              y={y + height / 2 - 7}
-                              textAnchor="middle"
-                              fill="#fff"
-                              fontSize={12}
-                            >
-                              {`¥${(payload.size / 10000).toFixed(0)}万`}
-                            </text>
-                          )}
-                        </g>
-                      );
-                    }}
-                  />
-                </ResponsiveContainer>
+
+              <Box sx={{ mt: 2 }}>
+                <NetworkStructureChart distributors={distributors} />
               </Box>
               
               {/* 备用表格视图 - 区域分销商列表 */}
@@ -1039,7 +762,7 @@ const DistributionNetwork = () => {
                             data={salesRegionData}
                             margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
                           >
-                            <CartesianGrid strokeDasharray="3 3" />
+                            <CartesianGrid strokeDasharray="3 3" stroke="#94a3b8" />
                             <XAxis dataKey="name" />
                             <YAxis />
                             <RechartsTooltip />
@@ -1324,7 +1047,7 @@ const DistributionNetwork = () => {
                   <Box sx={{ height: 350 }}>
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={performanceTrendData}>
-                        <CartesianGrid strokeDasharray="3 3" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="#94a3b8" />
                         <XAxis dataKey="month" />
                         <YAxis domain={[60, 100]} />
                         <RechartsTooltip />
@@ -1430,7 +1153,7 @@ const DistributionNetwork = () => {
                       data={distributors.filter(d => d.status === 'active')}
                       layout="vertical"
                     >
-                      <CartesianGrid strokeDasharray="3 3" />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#94a3b8" />
                       <XAxis type="number" domain={[0, 100]} />
                       <YAxis dataKey="name" type="category" width={150} />
                       <RechartsTooltip />
@@ -1509,7 +1232,7 @@ const DistributionNetwork = () => {
                   </Typography>
                   <ResponsiveContainer width="100%" height={400}>
                     <BarChart data={salesRegionData}>
-                      <CartesianGrid strokeDasharray="3 3" />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#94a3b8" />
                       <XAxis dataKey="name" />
                       <YAxis yAxisId="left" orientation="left" stroke="#8884d8" />
                       <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" />

@@ -70,6 +70,9 @@ export const AuthProvider = ({ children }) => {
     loading,
     login,
     logout,
+    role: user?.role,
+    isAdmin: user?.role === 'admin',
+    isPharmacist: user?.role === 'pharmacist',
   };
 
   return (

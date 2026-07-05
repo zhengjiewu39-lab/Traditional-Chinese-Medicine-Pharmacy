@@ -1,10 +1,14 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const path = require('path');
 const multer = require('multer');
 const { getStore } = require('./server/data/store');
 const { computeSalesStats } = require('./server/services/stats');
 const { analyzePrescription } = require('./server/services/prescriptionAnalyzer');
+const { requireAuth, authenticate, verifyToken, ALLOW_DEMO } = require('./server/security/auth');
 
 const inventoryRoutes = require('./server/routes/inventory');
 const customerRoutes = require('./server/routes/customers');
@@ -22,11 +26,34 @@ const researchRoutes = require('./server/routes/research');
 const app = express();
 const port = process.env.PORT || 3002;
 
-const upload = multer({ dest: path.join(__dirname, 'uploads/') });
+const corsOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim())
+  : null;
 
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(helmet({ contentSecurityPolicy: false }));
+app.use(cors({
+  origin: corsOrigins || (process.env.NODE_ENV === 'production' ? false : true),
+  credentials: true,
+}));
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ extended: true, limit: '2mb' }));
+app.use('/api/', rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: Number(process.env.RATE_LIMIT_MAX || 300),
+  standardHeaders: true,
+  legacyHeaders: false,
+}));
+app.use(requireAuth);
+
+const upload = multer({
+  dest: path.join(__dirname, 'uploads/'),
+  limits: { fileSize: 5 * 1024 * 1024, files: 1 },
+  fileFilter: (_req, file, cb) => {
+    const ok = /\.(txt|csv|json|xml)$/i.test(file.originalname);
+    cb(ok ? null : new Error('仅支持 .txt / .csv / .json / .xml 文件'), ok);
+  },
+});
+
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.use((req, res, next) => {
@@ -81,19 +108,13 @@ app.post('/api/prescriptions/analyze/file', upload.single('file'), (req, res) =>
 });
 
 // ── 认证 ──
-const USERS = {
-  admin: { password: 'admin123', user: { id: 1, username: 'admin', name: '管理员', role: 'admin' } },
-  pharmacist: { password: 'pharm123', user: { id: 2, username: 'pharmacist', name: '李药师', role: 'pharmacist' } },
-};
-
 app.post('/api/auth/login', (req, res) => {
-  const { username, password } = req.body;
-  const account = USERS[username];
-  if (account && account.password === password) {
-    res.json({ success: true, token: `tcm-token-${username}`, user: account.user });
-  } else {
-    res.status(401).json({ success: false, message: '用户名或密码错误' });
+  const { username, password } = req.body || {};
+  const result = authenticate(username, password);
+  if (!result) {
+    return res.status(401).json({ success: false, message: '用户名或密码错误' });
   }
+  return res.json({ success: true, ...result });
 });
 
 app.post('/api/auth/logout', (req, res) => {
@@ -101,22 +122,18 @@ app.post('/api/auth/logout', (req, res) => {
 });
 
 app.get('/api/auth/me', (req, res) => {
-  const authHeader = req.headers.authorization;
-  if (authHeader?.startsWith('Bearer ')) {
-    const token = authHeader.slice(7);
-    const username = token.replace('tcm-token-', '');
-    const account = USERS[username];
-    if (account) return res.json(account.user);
-    if (token === 'mock-jwt-token') return res.json(USERS.admin.user);
-  }
-  res.status(401).json({ success: false, message: '未授权访问' });
+  const user = verifyToken(req.headers.authorization);
+  if (!user) return res.status(401).json({ success: false, message: '未授权访问' });
+  return res.json(user);
 });
 
 app.put('/api/auth/profile', (req, res) => {
-  res.json({ ...USERS.admin.user, ...req.body });
+  if (!req.user) return res.status(401).json({ success: false, message: '未授权访问' });
+  res.json({ ...req.user, ...req.body });
 });
 
 app.post('/api/auth/change-password', (req, res) => {
+  if (!req.user) return res.status(401).json({ success: false, message: '未授权访问' });
   res.json({ success: true, message: '密码已更新（演示）' });
 });
 
@@ -130,7 +147,9 @@ app.get('/api/health', (req, res) => {
 });
 
 app.listen(port, () => {
-  getStore(); // 初始化数据文件
+  getStore();
   console.log(`中药药房 API http://localhost:${port} [持久化 · 全业务 CRUD]`);
-  console.log('  账号: admin/admin123 或 pharmacist/pharm123');
+  if (ALLOW_DEMO) {
+    console.log('  演示账号: admin/admin123 或 pharmacist/pharm123 (仅 DEV / ALLOW_DEMO_AUTH)');
+  }
 });

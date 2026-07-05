@@ -5,6 +5,15 @@ build
 .env.local
 .env.*.local
 
+# IDE / local
+.cursor/
+*.code-workspace
+*.bak
+*.bak2
+*.fixed
+*.original
+temp.txt
+
 # Runtime persistence (seeded on first API start)
 data/store.json
 
@@ -15,3 +24,9 @@ uploads/*
 # Logs & caches
 npm-debug.log*
 .eslintcache
+
+# Large generated experiment artifacts (keep features_v1.csv)
+experiments/data/**/synth_n*.json
+experiments/data/**/synth_user_*.json
+experiments/data/**/synth_user_*.zip
+experiments/results/*.joblib

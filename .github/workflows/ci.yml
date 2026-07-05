@@ -23,6 +23,10 @@ jobs:
       - name: Run server unit tests
         run: npm run test:server
 
+      - name: npm audit (high severity)
+        run: npm audit --audit-level=high
+        continue-on-error: true
+
       - name: Run prescription review benchmark
         run: npm run evaluate
 

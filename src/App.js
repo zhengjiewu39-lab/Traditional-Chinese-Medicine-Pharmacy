@@ -5,7 +5,9 @@ import CssBaseline from '@mui/material/CssBaseline';
 import theme from './theme';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Layout from './components/Layout';
+import RoleGuard from './components/RoleGuard';
 import { Box, CircularProgress } from '@mui/material';
+import { getHomeForRole } from './config/navigation';
 
 import Login from './pages/Login';
 import OperationsDashboard from './pages/OperationsDashboard';
@@ -44,11 +46,20 @@ function ProtectedRoute() {
   if (!user) return <Navigate to="/login" replace />;
   return (
     <Layout>
-      <Suspense fallback={<Loading />}>
-        <Outlet />
-      </Suspense>
+      <RoleGuard>
+        <Suspense fallback={<Loading />}>
+          <Outlet />
+        </Suspense>
+      </RoleGuard>
     </Layout>
   );
+}
+
+function RoleHome() {
+  const { user, loading } = useAuth();
+  if (loading) return <Loading />;
+  if (!user) return <Navigate to="/login" replace />;
+  return <Navigate to={getHomeForRole(user.role)} replace />;
 }
 
 function App() {
@@ -59,7 +70,7 @@ function App() {
         <Router>
           <Routes>
             <Route path="/login" element={<Login />} />
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/" element={<RoleHome />} />
             <Route element={<ProtectedRoute />}>
               <Route path="/dashboard" element={<OperationsDashboard />} />
               <Route path="/billing" element={<Billing />} />
