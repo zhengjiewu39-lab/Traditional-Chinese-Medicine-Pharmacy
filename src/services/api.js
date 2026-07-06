@@ -113,6 +113,7 @@ export const herbsApi = {
 export const prescriptionApi = {
   // 处方审理
   analyzePrescription: (prescriptionData) => api.post('/prescriptions/analyze', prescriptionData),
+  analyzePrescriptionCdss: (prescriptionData) => api.post('/prescriptions/cdss', prescriptionData),
   analyzePrescriptionFile: (formData) => api.post('/prescriptions/analyze/file', formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
@@ -198,10 +199,18 @@ export const researchApi = {
   getDataset: () => api.get('/research/dataset'),
   getResults: () => api.get('/research/results'),
   runEvaluation: () => api.post('/research/evaluate'),
+  runAblation: () => api.post('/research/ablation'),
+  getAblation: () => api.get('/research/ablation'),
+  getMeta: () => api.get('/research/meta'),
   getRules: () => api.get('/research/rules'),
   getEngines: () => api.get('/research/engines'),
   analyze: (engine, data) => api.post(`/research/analyze?engine=${engine}`, data),
   compareAll: compareEngines,
+};
+
+export const traceabilityApi = {
+  list: (params) => api.get('/traceability', { params }),
+  lookup: (code) => api.get(`/traceability/lookup/${encodeURIComponent(code)}`),
 };
 
 export default api; 

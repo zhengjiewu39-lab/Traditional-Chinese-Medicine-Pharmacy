@@ -1,0 +1,56 @@
+{
+  "version": "1.0.0",
+  "title": "TCM Herb Adverse Reaction Prevention Taxonomy",
+  "categories": [
+    {
+      "id": "ADR-C1",
+      "code": "incompatible_combination",
+      "nameZh": "配伍禁忌",
+      "nameEn": "Incompatible herb combination",
+      "description": "十八反、十九畏及药典配伍禁忌",
+      "evidenceLevel": "deterministic",
+      "ruleTypes": ["十八反", "十九畏", "配伍"]
+    },
+    {
+      "id": "ADR-C2",
+      "code": "dosage_toxicity",
+      "nameZh": "剂量毒性风险",
+      "nameEn": "Dosage toxicity risk",
+      "description": "单味药超量或全方剂量异常",
+      "evidenceLevel": "deterministic",
+      "ruleTypes": ["剂量", "比例"]
+    },
+    {
+      "id": "ADR-C3",
+      "code": "disease_contraindication",
+      "nameZh": "病证禁忌",
+      "nameEn": "Disease-herb contraindication",
+      "description": "药性与病证不符或禁忌提示",
+      "evidenceLevel": "rule-based",
+      "ruleTypes": ["禁忌"]
+    },
+    {
+      "id": "ADR-C4",
+      "code": "population_risk",
+      "nameZh": "特殊人群风险",
+      "nameEn": "Population-specific risk",
+      "description": "老年、儿童、妊娠等人群用药风险",
+      "evidenceLevel": "rule-based",
+      "ruleTypes": ["population"]
+    },
+    {
+      "id": "ADR-C5",
+      "code": "ml_latent_risk",
+      "nameZh": "ML 潜在风险",
+      "nameEn": "ML latent adverse reaction risk",
+      "description": "可解释 ML 特征组合提示的潜在不良反应风险",
+      "evidenceLevel": "probabilistic",
+      "mlFeatures": ["has_18fan", "has_19wei", "has_dosage_high", "has_incompatible_pair", "licorice_ratio_high", "warm_cold_mix"]
+    }
+  ],
+  "riskLevels": {
+    "low": { "labelZh": "低", "threshold": 0.25 },
+    "moderate": { "labelZh": "中", "threshold": 0.55 },
+    "high": { "labelZh": "高", "threshold": 1.0 }
+  }
+}

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Typography, Paper, Grid, Card, CardContent, Chip, Button, TextField,
   Table, TableBody, TableCell, TableHead, TableRow, Dialog, DialogTitle, DialogContent,
-  DialogActions, LinearProgress, Alert,
+  DialogActions, LinearProgress, Alert, TablePagination,
 } from '@mui/material';
 import { Search, Add, Refresh, Person, History } from '@mui/icons-material';
 import { patientsApi } from '../services/api';
@@ -16,6 +16,8 @@ function PatientRecords() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [openAdd, setOpenAdd] = useState(false);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(25);
   const [form, setForm] = useState({ name: '', gender: '男', age: '', phone: '', address: '', medicalHistory: '', allergies: '' });
 
   const load = useCallback(async () => {
@@ -32,9 +34,12 @@ function PatientRecords() {
 
   useEffect(() => { load(); }, [load]);
 
+  useEffect(() => { setPage(0); }, [searchTerm]);
+
   const filtered = patients.filter(p =>
     !searchTerm || p.name.includes(searchTerm) || p.phone.includes(searchTerm)
   );
+  const paged = filtered.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
   const openDetail = (patient) => {
     setSelected(patient);
@@ -71,7 +76,9 @@ function PatientRecords() {
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3, flexWrap: 'wrap', gap: 2 }}>
         <Box>
           <Typography variant="h5" fontWeight={700}>患者档案管理</Typography>
-          <Typography variant="body2" color="text.secondary">电子病历 · 过敏史 · 处方历史 · 与客户账户关联</Typography>
+          <Typography variant="body2" color="text.secondary">
+            电子病历 · 过敏史 · 处方历史 · 演示样本 {patients.length} 人
+          </Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Button startIcon={<Refresh />} onClick={load}>刷新</Button>
@@ -106,7 +113,7 @@ function PatientRecords() {
           </TableRow>
         </TableHead>
         <TableBody>
-          {filtered.map(p => (
+          {paged.map(p => (
             <TableRow key={p.id}>
               <TableCell><strong>{p.name}</strong></TableCell>
               <TableCell>{p.gender} / {p.age}岁</TableCell>
@@ -123,6 +130,16 @@ function PatientRecords() {
           ))}
         </TableBody>
       </Table>
+      <TablePagination
+        component="div"
+        count={filtered.length}
+        page={page}
+        onPageChange={(_, p) => setPage(p)}
+        rowsPerPage={rowsPerPage}
+        onRowsPerPageChange={(e) => { setRowsPerPage(+e.target.value); setPage(0); }}
+        rowsPerPageOptions={[10, 25, 50, 100]}
+        labelRowsPerPage="每页"
+      />
 
       <Dialog open={detailOpen} onClose={() => setDetailOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>患者详情 — {selected?.name}</DialogTitle>
@@ -145,12 +162,17 @@ function PatientRecords() {
         <DialogContent>
           {prescriptions.length === 0 ? <Typography color="text.secondary">暂无处方记录</Typography> : prescriptions.map(pr => (
             <Paper key={pr.id} variant="outlined" sx={{ p: 2, mb: 1 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
                 <Typography fontWeight={600}>{pr.diagnosis}</Typography>
-                <Chip label={pr.status} size="small" color={pr.status === '已审核' ? 'success' : 'warning'} />
+                <Chip label={pr.status} size="small" color={pr.status === '已完成' ? 'success' : 'warning'} />
               </Box>
               <Typography variant="body2" color="text.secondary">{pr.date} · {pr.doctor}</Typography>
-              <Typography variant="body2" sx={{ mt: 1 }}>{(pr.herbs || []).map(h => `${h.name}${h.dosage || ''}`).join('，')}</Typography>
+              <Typography variant="body2" sx={{ mt: 1 }}>
+                {(pr.prescriptionText || (pr.herbs || []).map(h => `${h.name}${h.dosage || ''}`).join('，'))}
+              </Typography>
+              {pr.cdssStatus && (
+                <Chip size="small" label={`CDSS ${pr.cdssStatus}`} sx={{ mt: 1 }} variant="outlined" />
+              )}
             </Paper>
           ))}
         </DialogContent>

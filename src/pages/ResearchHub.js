@@ -14,10 +14,17 @@ import {
 import { researchApi } from '../services/api';
 
 const ENGINE_LABELS = {
-  'rule-engine-v3': '规则引擎 v3',
+  'rule-engine-v3': '专家规则引擎 v3',
   'ml-interpretable-v1': '可解释 ML',
+  'cdss-dual-track-v1': '双轨融合 HAR-CDSS',
   'baseline-keyword': 'Baseline 关键词',
-  'baseline-naive': 'Baseline  naive',
+  'baseline-naive': 'Baseline naive',
+};
+
+const ABLATION_LABELS = {
+  'rule-only': '专家规则（单轨）',
+  'ml-only': '可解释 ML（单轨）',
+  'fusion-cdss': '双轨融合 CDSS',
 };
 
 const LABEL_COLOR = { approved: 'success', review: 'warning', needs_revision: 'error' };
@@ -42,20 +49,30 @@ function ResearchHub() {
   });
   const [compareResults, setCompareResults] = useState(null);
   const [comparing, setComparing] = useState(false);
+  const [ablation, setAblation] = useState(null);
+  const [ablationRunning, setAblationRunning] = useState(false);
   const [apiError, setApiError] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
     setApiError('');
     try {
-      const [res, ds, rl] = await Promise.all([
+      const healthRes = await fetch(`${process.env.REACT_APP_API_BASE_URL || 'http://localhost:3002/api'}/health`).catch(() => null);
+      const health = healthRes?.ok ? await healthRes.json() : null;
+      if (health && !health.features?.includes('research-ablation')) {
+        setApiError('后端版本较旧，缺少消融实验接口。请重启：npm run server');
+      }
+
+      const [res, ds, rl, abl] = await Promise.all([
         researchApi.getResults(),
         researchApi.getDataset(),
         researchApi.getRules(),
+        researchApi.getAblation().catch(() => ({ data: null })),
       ]);
       setResults(res.data?.engines ? res.data : null);
       setDataset(ds.data);
       setRules(rl.data);
+      setAblation(abl.data?.comparison ? abl.data : null);
     } catch (e) {
       console.error(e);
       if (e.response?.status === 404) {
@@ -77,6 +94,21 @@ function ResearchHub() {
       setResults(res.data);
     } finally {
       setEvaluating(false);
+    }
+  };
+
+  const runAblation = async () => {
+    setAblationRunning(true);
+    setApiError('');
+    try {
+      const res = await researchApi.runAblation();
+      setAblation(res.data);
+    } catch (e) {
+      setApiError(e.response?.status === 404
+        ? '消融接口 404：后端未加载最新代码。请在项目目录执行 npm run server 重启 API（端口 3002）后再试'
+        : (e.response?.data?.message || e.message || '消融实验运行失败'));
+    } finally {
+      setAblationRunning(false);
     }
   };
 
@@ -121,10 +153,10 @@ function ResearchHub() {
         <Box>
           <Typography variant="h5" fontWeight={700}>
             <Science sx={{ mr: 1, verticalAlign: 'middle' }} />
-            科研评价中心
+            HAR-CDSS 科研评价中心
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            公开基准数据集 · 多引擎对比 · 可复现实验 · 伦理合规
+            融合专家知识规则与可解释 ML · 草药不良反应预防 · 消融实验 · 可复现 Benchmark
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 1 }}>
@@ -139,9 +171,9 @@ function ResearchHub() {
 
       <Grid container spacing={2} sx={{ mb: 3 }}>
         {[
-          { label: '基准样本', value: dataset?.cases?.length || 24, icon: <Dataset /> },
-          { label: '对比引擎', value: 4, icon: <CompareArrows /> },
-          { label: '规则药材', value: Object.keys(rules?.herbRules || {}).length, icon: <Science /> },
+          { label: '基准样本', value: dataset?.cases?.length || results?.n || '—', icon: <Dataset /> },
+          { label: '对比引擎', value: 5, icon: <CompareArrows /> },
+          { label: 'ADR 规则类别', value: 5, icon: <Science /> },
           { label: '最佳 Macro-F1', value: results?.comparison?.[0]?.macroF1?.toFixed(3) || '—', icon: <CheckCircle /> },
         ].map(s => (
           <Grid item xs={6} md={3} key={s.label}>
@@ -157,9 +189,10 @@ function ResearchHub() {
       <Paper sx={{ mb: 3 }}>
         <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="scrollable" scrollButtons="auto">
           <Tab label="实验结果" />
+          <Tab label="消融实验" />
           <Tab label="引擎对比 playground" />
           <Tab label="公开数据集" />
-          <Tab label="伦理与文献" />
+          <Tab label="论文方法学" />
         </Tabs>
 
         <Box sx={{ p: 2 }}>
@@ -234,6 +267,48 @@ function ResearchHub() {
           </TabPanel>
 
           <TabPanel value={tab} index={1}>
+            {!ablation?.comparison ? (
+              <Alert severity="info" action={<Button onClick={runAblation} disabled={ablationRunning}>{ablationRunning ? '运行中...' : '运行消融'}</Button>}>
+                消融实验对比「规则单轨 / ML 单轨 / 双轨融合」，验证融合策略对 ADR 高风险检出的贡献
+              </Alert>
+            ) : (
+              <>
+                <Alert severity="success" sx={{ mb: 2 }}>
+                  消融研究 · n={ablation.n} · {new Date(ablation.evaluatedAt).toLocaleString()}
+                  <Button size="small" sx={{ ml: 2 }} onClick={runAblation} disabled={ablationRunning}>重新运行</Button>
+                </Alert>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>变体</TableCell>
+                      <TableCell>准确率</TableCell>
+                      <TableCell>Macro-F1</TableCell>
+                      <TableCell>ADR 高风险 F1</TableCell>
+                      <TableCell>灵敏度</TableCell>
+                      <TableCell>特异度</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {ablation.comparison.map((r) => (
+                      <TableRow key={r.variant}>
+                        <TableCell><strong>{ABLATION_LABELS[r.variant] || r.label}</strong></TableCell>
+                        <TableCell>{(r.accuracy * 100).toFixed(1)}%</TableCell>
+                        <TableCell>{(r.macroF1 * 100).toFixed(1)}%</TableCell>
+                        <TableCell>{(r.adrF1 * 100).toFixed(1)}%</TableCell>
+                        <TableCell>{(r.adrSensitivity * 100).toFixed(1)}%</TableCell>
+                        <TableCell>{(r.adrSpecificity * 100).toFixed(1)}%</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                  ADR 高风险 = needs_revision 类 · 报告 benchmarks/results/ablation-latest.json
+                </Typography>
+              </>
+            )}
+          </TabPanel>
+
+          <TabPanel value={tab} index={2}>
             <Grid container spacing={2}>
               <Grid item xs={12} md={5}>
                 <TextField fullWidth multiline rows={3} label="处方" sx={{ mb: 2 }}
@@ -260,12 +335,12 @@ function ResearchHub() {
                 </Grid>
                 <Button variant="contained" sx={{ mt: 2 }} startIcon={<CompareArrows />}
                   onClick={runCompare} disabled={comparing} fullWidth>
-                  {comparing ? '分析中...' : '四引擎并行分析'}
+                  {comparing ? '分析中...' : '五引擎并行分析'}
                 </Button>
               </Grid>
               <Grid item xs={12} md={7}>
                 {!compareResults ? (
-                  <Alert severity="info">输入处方后点击「四引擎并行分析」，对比规则引擎、ML 与 Baseline</Alert>
+                  <Alert severity="info">输入处方后点击「五引擎并行分析」，对比规则、ML、HAR-CDSS 融合与 Baseline</Alert>
                 ) : compareResults.map(({ engine, result }) => (
                   <Paper key={engine} variant="outlined" sx={{ p: 2, mb: 1.5 }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
@@ -277,6 +352,9 @@ function ResearchHub() {
                     <Typography variant="body2" sx={{ mt: 0.5 }}>{result.summary}</Typography>
                     {result.warnings?.slice(0, 2).map((w, i) => (
                       <Typography key={i} variant="caption" display="block" color="error.main">{w.message}</Typography>
+                    ))}
+                    {(result.adrPrevention?.preventionActions || []).slice(0, 1).map((a, i) => (
+                      <Typography key={`adr-${i}`} variant="caption" display="block" color="primary.main">ADR 预防：{a}</Typography>
                     ))}
                     {result.explainability?.topContributions?.length > 0 && (
                       <Box sx={{ mt: 1 }}>
@@ -292,7 +370,7 @@ function ResearchHub() {
             </Grid>
           </TabPanel>
 
-          <TabPanel value={tab} index={2}>
+          <TabPanel value={tab} index={3}>
             <Alert severity="info" sx={{ mb: 2 }}>
               {dataset?.description} · 许可 {dataset?.license}
             </Alert>
@@ -308,7 +386,7 @@ function ResearchHub() {
               <TableBody>
                 {(dataset?.cases || []).map(c => (
                   <TableRow key={c.id} hover sx={{ cursor: 'pointer' }}
-                    onClick={() => { setCompareInput({ ...compareInput, prescription: c.prescription, diagnosis: c.diagnosis, patientAge: c.patientAge, patientGender: c.patientGender }); setTab(1); }}>
+                    onClick={() => { setCompareInput({ ...compareInput, prescription: c.prescription, diagnosis: c.diagnosis, patientAge: c.patientAge, patientGender: c.patientGender }); setTab(2); }}>
                     <TableCell>{c.id}</TableCell>
                     <TableCell sx={{ maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.prescription || '(空)'}</TableCell>
                     <TableCell><Chip label={LABEL_ZH[c.expertLabel]} size="small" color={LABEL_COLOR[c.expertLabel]} /></TableCell>
@@ -319,7 +397,21 @@ function ResearchHub() {
             </Table>
           </TabPanel>
 
-          <TabPanel value={tab} index={3}>
+          <TabPanel value={tab} index={4}>
+            <Accordion defaultExpanded>
+              <AccordionSummary expandIcon={<ExpandMore />}><Science sx={{ mr: 1 }} /> 论文定位</AccordionSummary>
+              <AccordionDetails>
+                <Typography variant="body2" paragraph>
+                  <strong>融合专家知识规则与可解释机器学习的草药不良反应预防：一个临床决策支持系统原型的设计与评估</strong>
+                </Typography>
+                <Typography variant="body2" component="ul" sx={{ pl: 2 }}>
+                  <li>轨道 1：专家规则（十八反/十九畏/剂量/禁忌）→ 确定性 ADR 警报</li>
+                  <li>轨道 2：可解释线性 ML → 风险概率 + Feature Weights 归因</li>
+                  <li>融合策略：规则硬覆盖 + ML 概率混合 → HAR-CDSS 联合决策</li>
+                  <li>评价：Accuracy、Macro-F1、ADR 高风险检出（灵敏度/特异度）、消融实验</li>
+                </Typography>
+              </AccordionDetails>
+            </Accordion>
             <Accordion defaultExpanded>
               <AccordionSummary expandIcon={<ExpandMore />}><Gavel sx={{ mr: 1 }} /> 伦理与隐私</AccordionSummary>
               <AccordionDetails>
@@ -328,7 +420,7 @@ function ResearchHub() {
                 </Typography>
                 <Typography variant="body2" component="ul" sx={{ pl: 2 }}>
                   <li>运行时患者数据仅存本地 data/store.json，不提交至 GitHub</li>
-                  <li>审方/ML 输出可能存在漏报与误报，须人工复核</li>
+                  <li>ADR 预防/审方输出可能存在漏报与误报，须人工复核</li>
                   <li>生产环境需加密存储、RBAC、审计日志</li>
                 </Typography>
                 <Link href="https://github.com/zhengjiewu39-lab/Traditional-Chinese-Medicine-Pharmacy/blob/main/docs/ETHICS.md" target="_blank">完整伦理文档 →</Link>
@@ -341,7 +433,7 @@ function ResearchHub() {
                   <li>中国药典配伍禁忌（十八反、十九畏）</li>
                   <li>WHO 传统医学战略框架</li>
                   <li>可解释 AI：线性特征归因（非黑盒深度学习）</li>
-                  <li>评价指标：Accuracy、Macro-F1、修订类 Binary-F1</li>
+                  <li>评价指标：Accuracy、Macro-F1、ADR 高风险 Binary-F1、消融对比</li>
                 </Typography>
                 <Link href="https://github.com/zhengjiewu39-lab/Traditional-Chinese-Medicine-Pharmacy/blob/main/docs/LITERATURE.md" target="_blank">参考文献 →</Link>
               </AccordionDetails>
@@ -353,6 +445,8 @@ function ResearchHub() {
 {`npm install
 npm run test:server
 npm run evaluate
+npm run evaluate:ablation
+npm run cdss:pipeline
 docker compose up --build`}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">GitHub Actions 在每次 push 时自动运行测试与 benchmark</Typography>

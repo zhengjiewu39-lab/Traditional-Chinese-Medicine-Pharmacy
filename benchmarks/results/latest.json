@@ -1,46 +1,46 @@
 {
-  "dataset": "TCM-Prescription-Review-Mini-v1",
-  "version": "1.0.0",
-  "evaluatedAt": "2026-07-05T12:26:58.461Z",
-  "n": 24,
+  "dataset": "TCM-Prescription-Review-Expanded-v1",
+  "version": "1.1.0",
+  "evaluatedAt": "2026-07-06T13:31:50.590Z",
+  "n": 509,
   "engines": {
     "baseline-naive": {
       "metrics": {
-        "accuracy": 0.375,
+        "accuracy": 0.4558,
         "macro": {
-          "precision": 0.4493,
-          "recall": 0.3704,
-          "f1": 0.2387
+          "precision": 0.4849,
+          "recall": 0.3347,
+          "f1": 0.2111
         },
         "perClass": {
           "approved": {
-            "precision": 0.3478,
+            "precision": 0.4547,
             "recall": 1,
-            "f1": 0.5161,
-            "support": 8
+            "f1": 0.6252,
+            "support": 231
           },
           "review": {
             "precision": 0,
             "recall": 0,
             "f1": 0,
-            "support": 7
+            "support": 35
           },
           "needs_revision": {
             "precision": 1,
-            "recall": 0.1111,
-            "f1": 0.2,
-            "support": 9
+            "recall": 0.0041,
+            "f1": 0.0082,
+            "support": 243
           }
         },
         "binaryNeedsRevision": {
           "precision": 1,
-          "recall": 0.1111,
-          "f1": 0.2,
+          "recall": 0.0041,
+          "f1": 0.0082,
           "confusion": {
             "tp": 1,
             "fp": 0,
-            "fn": 8,
-            "tn": 15
+            "fn": 242,
+            "tn": 266
           }
         }
       },
@@ -117,6 +117,1316 @@
         },
         {
           "id": "PR-024",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0001",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0002",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0004",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0005",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0007",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0008",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0010",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0012",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0014",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0015",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0016",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0017",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0019",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0022",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0023",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0026",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0028",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0029",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0030",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0031",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0032",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0033",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0036",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0038",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0040",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0041",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0042",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0043",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0044",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0045",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0046",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0047",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0048",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0051",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0052",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0053",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0055",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0058",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0061",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0062",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0063",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0064",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0065",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0067",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0068",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0069",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0071",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0072",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0074",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0075",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0076",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0077",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0079",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0080",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0082",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0083",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0088",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0093",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0094",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0096",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0099",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0100",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0104",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0107",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0110",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0111",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0112",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0113",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0114",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0121",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0124",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0126",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0128",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0130",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0133",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0135",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0136",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0137",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0138",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0139",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0141",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0143",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0144",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0146",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0149",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0152",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0153",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0154",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0155",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0156",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0157",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0158",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0159",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0161",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0162",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0163",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0166",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0170",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0173",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0176",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0178",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0179",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0181",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0183",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0189",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0191",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0192",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0193",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0195",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0196",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0197",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0198",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0204",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0209",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0210",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0211",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0212",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0214",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0215",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0218",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0220",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0223",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0224",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0225",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0226",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0228",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0231",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0233",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0234",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0237",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0238",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0240",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0241",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0243",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0247",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0248",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0249",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0255",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0257",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0260",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0263",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0265",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0268",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0270",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0272",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0274",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0276",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0277",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0279",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0281",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0283",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0287",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0288",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0289",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0291",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0293",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0294",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0295",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0298",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0299",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0300",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0302",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0303",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0311",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0312",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0314",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0316",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0318",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0319",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0320",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0321",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0322",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0324",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0325",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0328",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0330",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0331",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0332",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0333",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0336",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0337",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0341",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0342",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0345",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0346",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0347",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0348",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0349",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0351",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0352",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0354",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0355",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0356",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0359",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0360",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0361",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0364",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0368",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0369",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0371",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0374",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0375",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0376",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0379",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0380",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0384",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0394",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0395",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0396",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0401",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0402",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0403",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0404",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0405",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0406",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0412",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0414",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0415",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0416",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0417",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0419",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0420",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0421",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0425",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0426",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0427",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0431",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0432",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0435",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0436",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0439",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0443",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0444",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0446",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0447",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0448",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0449",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0451",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0453",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0455",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0456",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0458",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0463",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0464",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0465",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0467",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0468",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0469",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0471",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0472",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0473",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0474",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0475",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0476",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0477",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0478",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0481",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0484",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0486",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0488",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0496",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0500",
           "expected": "needs_revision",
           "predicted": "approved"
         }
@@ -124,41 +1434,41 @@
     },
     "baseline-keyword": {
       "metrics": {
-        "accuracy": 0.375,
+        "accuracy": 0.4597,
         "macro": {
-          "precision": 0.4545,
-          "recall": 0.3704,
-          "f1": 0.2444
+          "precision": 0.5518,
+          "recall": 0.3699,
+          "f1": 0.2739
         },
         "perClass": {
           "approved": {
-            "precision": 0.3636,
-            "recall": 1,
-            "f1": 0.5333,
-            "support": 8
+            "precision": 0.6274,
+            "recall": 0.9913,
+            "f1": 0.7685,
+            "support": 231
           },
           "review": {
-            "precision": 0,
-            "recall": 0,
-            "f1": 0,
-            "support": 7
+            "precision": 0.028,
+            "recall": 0.1143,
+            "f1": 0.0449,
+            "support": 35
           },
           "needs_revision": {
             "precision": 1,
-            "recall": 0.1111,
-            "f1": 0.2,
-            "support": 9
+            "recall": 0.0041,
+            "f1": 0.0082,
+            "support": 243
           }
         },
         "binaryNeedsRevision": {
           "precision": 1,
-          "recall": 0.1111,
-          "f1": 0.2,
+          "recall": 0.0041,
+          "f1": 0.0082,
           "confusion": {
             "tp": 1,
             "fp": 0,
-            "fn": 8,
-            "tn": 15
+            "fn": 242,
+            "tn": 266
           }
         }
       },
@@ -237,46 +1547,1346 @@
           "id": "PR-024",
           "expected": "needs_revision",
           "predicted": "approved"
+        },
+        {
+          "id": "SYN-0001",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0002",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0004",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0005",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0007",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0008",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0010",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0012",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0014",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0015",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0016",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0017",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0019",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0022",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0023",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0026",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0028",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0029",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0030",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0031",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0032",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0033",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0036",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0038",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0040",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0041",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0042",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0043",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0044",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0045",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0046",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0047",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0048",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0051",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0052",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0053",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0055",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0058",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0061",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0062",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0063",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0064",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0065",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0067",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0068",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0069",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0071",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0072",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0074",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0075",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0076",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0077",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0079",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0080",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0082",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0083",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0088",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0093",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0094",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0096",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0099",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0100",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0104",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0107",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0110",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0111",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0112",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0113",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0114",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0121",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0124",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0126",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0128",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0130",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0133",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0135",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0136",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0137",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0138",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0139",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0141",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0143",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0144",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0146",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0149",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0152",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0153",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0154",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0155",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0156",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0157",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0158",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0159",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0161",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0162",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0163",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0166",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0170",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0173",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0176",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0178",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0179",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0181",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0183",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0189",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0191",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0192",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0193",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0195",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0196",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0197",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0198",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0204",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0209",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0210",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0211",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0212",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0214",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0215",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0218",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0220",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0223",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0224",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0225",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0226",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0228",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0231",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0233",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0234",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0237",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0238",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0240",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0241",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0243",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0244",
+          "expected": "approved",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0247",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0248",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0249",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0255",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0257",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0260",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0263",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0265",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0268",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0270",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0272",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0274",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0276",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0277",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0279",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0281",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0283",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0287",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0288",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0289",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0291",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0293",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0294",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0295",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0298",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0299",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0300",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0302",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0303",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0305",
+          "expected": "approved",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0311",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0312",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0314",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0316",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0318",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0319",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0320",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0321",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0322",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0324",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0325",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0328",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0330",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0331",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0332",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0333",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0336",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0337",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0341",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0342",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0345",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0346",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0347",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0348",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0349",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0351",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0352",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0354",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0355",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0356",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0359",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0360",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0361",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0364",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0368",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0374",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0375",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0376",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0379",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0380",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0384",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0394",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0395",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0396",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0401",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0402",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0403",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0404",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0405",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0406",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0412",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0414",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0415",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0416",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0417",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0419",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0420",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0421",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0425",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0426",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0427",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0431",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0432",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0436",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0439",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0443",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0444",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0446",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0448",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0449",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0451",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0453",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0455",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0456",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0458",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0463",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0464",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0465",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0467",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0468",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0469",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0471",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0472",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0473",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0474",
+          "expected": "review",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0475",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0476",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0477",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0478",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0481",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0484",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0486",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0488",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0496",
+          "expected": "needs_revision",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0500",
+          "expected": "needs_revision",
+          "predicted": "review"
         }
       ]
     },
     "rule-engine-v3": {
       "metrics": {
-        "accuracy": 0.75,
+        "accuracy": 0.9548,
         "macro": {
-          "precision": 0.7641,
-          "recall": 0.7262,
-          "f1": 0.7251
+          "precision": 0.9378,
+          "recall": 0.8947,
+          "f1": 0.9138
         },
         "perClass": {
           "approved": {
-            "precision": 1,
-            "recall": 0.75,
-            "f1": 0.8571,
-            "support": 8
+            "precision": 0.9617,
+            "recall": 0.9784,
+            "f1": 0.97,
+            "support": 231
           },
           "review": {
-            "precision": 0.6,
-            "recall": 0.4286,
-            "f1": 0.5,
-            "support": 7
+            "precision": 0.8966,
+            "recall": 0.7429,
+            "f1": 0.8125,
+            "support": 35
           },
           "needs_revision": {
-            "precision": 0.6923,
-            "recall": 1,
-            "f1": 0.8182,
-            "support": 9
+            "precision": 0.9551,
+            "recall": 0.963,
+            "f1": 0.959,
+            "support": 243
           }
         },
         "binaryNeedsRevision": {
-          "precision": 0.6923,
-          "recall": 1,
-          "f1": 0.8182,
+          "precision": 0.9551,
+          "recall": 0.963,
+          "f1": 0.959,
           "confusion": {
-            "tp": 9,
-            "fp": 4,
-            "fn": 0,
-            "tn": 11
+            "tp": 234,
+            "fp": 11,
+            "fn": 9,
+            "tn": 255
           }
         }
       },
@@ -310,55 +2920,135 @@
           "id": "PR-023",
           "expected": "approved",
           "predicted": "review"
+        },
+        {
+          "id": "SYN-0003",
+          "expected": "approved",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0041",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0111",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0136",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0138",
+          "expected": "review",
+          "predicted": "needs_revision"
+        },
+        {
+          "id": "SYN-0149",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0193",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0214",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0244",
+          "expected": "approved",
+          "predicted": "needs_revision"
+        },
+        {
+          "id": "SYN-0305",
+          "expected": "approved",
+          "predicted": "needs_revision"
+        },
+        {
+          "id": "SYN-0354",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0369",
+          "expected": "review",
+          "predicted": "needs_revision"
+        },
+        {
+          "id": "SYN-0371",
+          "expected": "review",
+          "predicted": "needs_revision"
+        },
+        {
+          "id": "SYN-0435",
+          "expected": "review",
+          "predicted": "needs_revision"
+        },
+        {
+          "id": "SYN-0447",
+          "expected": "review",
+          "predicted": "needs_revision"
+        },
+        {
+          "id": "SYN-0472",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0486",
+          "expected": "needs_revision",
+          "predicted": "approved"
         }
       ]
     },
     "ml-interpretable-v1": {
       "metrics": {
-        "accuracy": 0.4583,
+        "accuracy": 0.9548,
         "macro": {
-          "precision": 0.4127,
-          "recall": 0.4272,
-          "f1": 0.3943
+          "precision": 0.9471,
+          "recall": 0.8948,
+          "f1": 0.9174
         },
         "perClass": {
           "approved": {
-            "precision": 0.5,
-            "recall": 0.25,
-            "f1": 0.3333,
-            "support": 8
+            "precision": 0.9538,
+            "recall": 0.9827,
+            "f1": 0.968,
+            "support": 231
           },
           "review": {
-            "precision": 0.1667,
-            "recall": 0.1429,
-            "f1": 0.1538,
-            "support": 7
+            "precision": 0.9286,
+            "recall": 0.7429,
+            "f1": 0.8254,
+            "support": 35
           },
           "needs_revision": {
-            "precision": 0.5714,
-            "recall": 0.8889,
-            "f1": 0.6957,
-            "support": 9
+            "precision": 0.9588,
+            "recall": 0.9588,
+            "f1": 0.9588,
+            "support": 243
           }
         },
         "binaryNeedsRevision": {
-          "precision": 0.5714,
-          "recall": 0.8889,
-          "f1": 0.6957,
+          "precision": 0.9588,
+          "recall": 0.9588,
+          "f1": 0.9588,
           "confusion": {
-            "tp": 8,
-            "fp": 6,
-            "fn": 1,
-            "tn": 9
+            "tp": 233,
+            "fp": 10,
+            "fn": 10,
+            "tn": 256
           }
         }
       },
       "mismatches": [
-        {
-          "id": "PR-001",
-          "expected": "approved",
-          "predicted": "review"
-        },
         {
           "id": "PR-005",
           "expected": "review",
@@ -368,11 +3058,6 @@
           "id": "PR-008",
           "expected": "review",
           "predicted": "needs_revision"
-        },
-        {
-          "id": "PR-012",
-          "expected": "approved",
-          "predicted": "review"
         },
         {
           "id": "PR-014",
@@ -380,27 +3065,160 @@
           "predicted": "approved"
         },
         {
-          "id": "PR-015",
-          "expected": "review",
-          "predicted": "needs_revision"
-        },
-        {
-          "id": "PR-016",
-          "expected": "approved",
-          "predicted": "review"
-        },
-        {
           "id": "PR-017",
           "expected": "needs_revision",
           "predicted": "approved"
         },
         {
-          "id": "PR-018",
+          "id": "PR-022",
+          "expected": "review",
+          "predicted": "needs_revision"
+        },
+        {
+          "id": "PR-023",
           "expected": "approved",
           "predicted": "review"
         },
         {
-          "id": "PR-020",
+          "id": "SYN-0003",
+          "expected": "approved",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0041",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0111",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0136",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0138",
+          "expected": "review",
+          "predicted": "needs_revision"
+        },
+        {
+          "id": "SYN-0149",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0193",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0214",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0244",
+          "expected": "approved",
+          "predicted": "needs_revision"
+        },
+        {
+          "id": "SYN-0305",
+          "expected": "approved",
+          "predicted": "needs_revision"
+        },
+        {
+          "id": "SYN-0354",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0369",
+          "expected": "review",
+          "predicted": "needs_revision"
+        },
+        {
+          "id": "SYN-0371",
+          "expected": "review",
+          "predicted": "needs_revision"
+        },
+        {
+          "id": "SYN-0435",
+          "expected": "review",
+          "predicted": "needs_revision"
+        },
+        {
+          "id": "SYN-0447",
+          "expected": "review",
+          "predicted": "needs_revision"
+        },
+        {
+          "id": "SYN-0472",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0486",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        }
+      ]
+    },
+    "cdss-dual-track-v1": {
+      "metrics": {
+        "accuracy": 0.9548,
+        "macro": {
+          "precision": 0.9378,
+          "recall": 0.8947,
+          "f1": 0.9138
+        },
+        "perClass": {
+          "approved": {
+            "precision": 0.9617,
+            "recall": 0.9784,
+            "f1": 0.97,
+            "support": 231
+          },
+          "review": {
+            "precision": 0.8966,
+            "recall": 0.7429,
+            "f1": 0.8125,
+            "support": 35
+          },
+          "needs_revision": {
+            "precision": 0.9551,
+            "recall": 0.963,
+            "f1": 0.959,
+            "support": 243
+          }
+        },
+        "binaryNeedsRevision": {
+          "precision": 0.9551,
+          "recall": 0.963,
+          "f1": 0.959,
+          "confusion": {
+            "tp": 234,
+            "fp": 11,
+            "fn": 9,
+            "tn": 255
+          }
+        }
+      },
+      "mismatches": [
+        {
+          "id": "PR-005",
+          "expected": "review",
+          "predicted": "needs_revision"
+        },
+        {
+          "id": "PR-008",
+          "expected": "review",
+          "predicted": "needs_revision"
+        },
+        {
+          "id": "PR-018",
           "expected": "approved",
           "predicted": "review"
         },
@@ -417,31 +3235,121 @@
         {
           "id": "PR-023",
           "expected": "approved",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0003",
+          "expected": "approved",
+          "predicted": "review"
+        },
+        {
+          "id": "SYN-0041",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0111",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0136",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0138",
+          "expected": "review",
           "predicted": "needs_revision"
+        },
+        {
+          "id": "SYN-0149",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0193",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0214",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0244",
+          "expected": "approved",
+          "predicted": "needs_revision"
+        },
+        {
+          "id": "SYN-0305",
+          "expected": "approved",
+          "predicted": "needs_revision"
+        },
+        {
+          "id": "SYN-0354",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0369",
+          "expected": "review",
+          "predicted": "needs_revision"
+        },
+        {
+          "id": "SYN-0371",
+          "expected": "review",
+          "predicted": "needs_revision"
+        },
+        {
+          "id": "SYN-0435",
+          "expected": "review",
+          "predicted": "needs_revision"
+        },
+        {
+          "id": "SYN-0447",
+          "expected": "review",
+          "predicted": "needs_revision"
+        },
+        {
+          "id": "SYN-0472",
+          "expected": "needs_revision",
+          "predicted": "approved"
+        },
+        {
+          "id": "SYN-0486",
+          "expected": "needs_revision",
+          "predicted": "approved"
         }
       ]
     }
   },
   "comparison": [
     {
-      "engine": "rule-engine-v3",
-      "accuracy": 0.75,
-      "macroF1": 0.7251
+      "engine": "ml-interpretable-v1",
+      "accuracy": 0.9548,
+      "macroF1": 0.9174
     },
     {
-      "engine": "ml-interpretable-v1",
-      "accuracy": 0.4583,
-      "macroF1": 0.3943
+      "engine": "rule-engine-v3",
+      "accuracy": 0.9548,
+      "macroF1": 0.9138
+    },
+    {
+      "engine": "cdss-dual-track-v1",
+      "accuracy": 0.9548,
+      "macroF1": 0.9138
     },
     {
       "engine": "baseline-keyword",
-      "accuracy": 0.375,
-      "macroF1": 0.2444
+      "accuracy": 0.4597,
+      "macroF1": 0.2739
     },
     {
       "engine": "baseline-naive",
-      "accuracy": 0.375,
-      "macroF1": 0.2387
+      "accuracy": 0.4558,
+      "macroF1": 0.2111
     }
   ]
 }

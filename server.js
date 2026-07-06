@@ -22,6 +22,7 @@ const dashboardRoutes = require('./server/routes/dashboard');
 const analyticsRoutes = require('./server/routes/analytics');
 const exportRoutes = require('./server/routes/export');
 const researchRoutes = require('./server/routes/research');
+const traceabilityRoutes = require('./server/routes/traceability');
 
 const app = express();
 const port = process.env.PORT || 3002;
@@ -100,6 +101,7 @@ app.use('/api/herbs', herbRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/export', exportRoutes);
 app.use('/api/research', researchRoutes);
+app.use('/api/traceability', traceabilityRoutes);
 
 // 处方文件上传分析
 app.post('/api/prescriptions/analyze/file', upload.single('file'), (req, res) => {
@@ -143,13 +145,31 @@ app.post('/api/auth/register', (req, res) => {
 
 // 健康检查
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', service: 'TCM Pharmacy API', version: '2.0' });
+  res.json({
+    status: 'ok',
+    service: 'TCM Pharmacy API',
+    version: '2.1',
+    features: ['har-cdss', 'research-ablation', 'adr-taxonomy', 'demo-patients-rx', 'traceability-v1'],
+  });
 });
 
-app.listen(port, () => {
+const server = app.listen(port, () => {
   getStore();
   console.log(`中药药房 API http://localhost:${port} [持久化 · 全业务 CRUD]`);
   if (ALLOW_DEMO) {
     console.log('  演示账号: admin/admin123 或 pharmacist/pharm123 (仅 DEV / ALLOW_DEMO_AUTH)');
   }
+});
+
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`\n端口 ${port} 已被占用，无法启动后端。`);
+    console.error('请先结束旧进程，然后重新启动：');
+    console.error(`  npm run stop`);
+    console.error(`  npm run server`);
+    console.error(`或手动: lsof -i :${port}  →  kill -9 <PID>\n`);
+    process.exit(1);
+  }
+  console.error('服务器启动失败:', err);
+  process.exit(1);
 });

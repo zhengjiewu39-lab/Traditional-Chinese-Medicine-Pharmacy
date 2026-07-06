@@ -5,10 +5,15 @@ import {
 } from '@mui/material';
 import { Save, CheckCircle, ContentCopy, LocalHospital } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { patientsApi, prescriptionApi } from '../services/api';
+import { prescriptionApi, patientsApi } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 
 const STEPS = ['待审核', '已审核', '配药中', '待取药', '已完成'];
+
+function rxToText(rx) {
+  if (rx.prescriptionText) return rx.prescriptionText;
+  return (rx.herbs || []).map((h) => `${h.name}${h.dosage || ''}`).join('，');
+}
 
 function statusStep(status) {
   const map = { 待审核: 0, 已审核: 1, 配药中: 2, 待取药: 3, 已完成: 4, 已驳回: 0 };
@@ -49,7 +54,10 @@ function DoctorWorkbench() {
   useEffect(() => {
     if (!patient) { setHistory([]); return; }
     prescriptionApi.getAllPrescriptions({ patientId: patient.id })
-      .then(res => setHistory(res.data.filter(rx => rx.status === '已完成').slice(0, 5)))
+      .then((res) => {
+        const list = (res.data || []).sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 8);
+        setHistory(list);
+      })
       .catch(() => setHistory([]));
   }, [patient]);
 
@@ -67,7 +75,7 @@ function DoctorWorkbench() {
 
   const applyHistory = (rx) => {
     setDiagnosis(rx.diagnosis || '');
-    setPrescriptionText((rx.herbs || []).map(h => `${h.name}${h.dosage || '10g'}`).join('，'));
+    setPrescriptionText(rxToText(rx));
   };
 
   const handleSubmit = async (autoApprove = false) => {
@@ -116,7 +124,7 @@ function DoctorWorkbench() {
     <Box>
       <Typography variant="h5" fontWeight={700} gutterBottom>医生工作台</Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        选患者 → 调模板/历史方 → 开方提交 → 自动生成取药码
+        选患者 → 调模板/历史方 → 开方提交 → 自动生成取药码 · 演示患者 {patients.length} 人
       </Typography>
 
       {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
@@ -154,10 +162,17 @@ function DoctorWorkbench() {
               <Typography variant="subtitle1" fontWeight={600} gutterBottom>1. 选择患者</Typography>
               <Autocomplete
                 options={patients}
-                getOptionLabel={p => `${p.name} (${p.phone})`}
+                getOptionLabel={p => `${p.name} · ${p.gender} ${p.age}岁 · ${p.phone}`}
+                filterOptions={(opts, { inputValue }) => {
+                  const q = inputValue.trim();
+                  if (!q) return opts.slice(0, 50);
+                  return opts.filter(p =>
+                    p.name.includes(q) || p.phone.includes(q) || String(p.age).includes(q)
+                  ).slice(0, 50);
+                }}
                 value={patient}
                 onChange={(_, v) => setPatient(v)}
-                renderInput={params => <TextField {...params} label="患者" size="small" />}
+                renderInput={params => <TextField {...params} label="患者（可搜姓名/电话）" size="small" placeholder="输入关键字筛选" />}
               />
               {patient && (
                 <Box sx={{ mt: 2 }}>
@@ -179,19 +194,23 @@ function DoctorWorkbench() {
               <Typography variant="subtitle1" fontWeight={600} gutterBottom>2. 处方模板</Typography>
               <Autocomplete
                 options={templates}
-                getOptionLabel={t => t.name}
+                getOptionLabel={(t) => `${t.name} · ${t.category}`}
+                groupBy={(t) => t.category}
                 value={template}
                 onChange={(_, v) => setTemplate(v)}
-                renderInput={params => <TextField {...params} label="经典方剂" size="small" />}
+                renderInput={(params) => <TextField {...params} label={`经典方剂 (${templates.length})`} size="small" />}
               />
               {history.length > 0 && (
                 <>
                   <Divider sx={{ my: 2 }} />
-                  <Typography variant="subtitle2" gutterBottom>历史有效方</Typography>
+                  <Typography variant="subtitle2" gutterBottom>该患者历史处方 ({history.length})</Typography>
                   <List dense>
                     {history.map(rx => (
                       <ListItem key={rx.id} button onClick={() => applyHistory(rx)}>
-                        <ListItemText primary={rx.diagnosis} secondary={rx.date} />
+                        <ListItemText
+                          primary={`${rx.diagnosis} · ${rx.status}`}
+                          secondary={`${rx.date} · ${rxToText(rx).slice(0, 36)}…`}
+                        />
                       </ListItem>
                     ))}
                   </List>

@@ -1,0 +1,208 @@
+{
+  "study": "HAR-CDSS Ablation",
+  "purpose": "herb_adverse_reaction_prevention",
+  "dataset": "TCM-Prescription-Review-Expanded-v1",
+  "version": "1.1.0",
+  "n": 509,
+  "evaluatedAt": "2026-07-06T14:08:21.718Z",
+  "variants": {
+    "rule-only": {
+      "engine": "rule-only",
+      "label": "专家规则（单轨）",
+      "metrics": {
+        "accuracy": 0.9528,
+        "macro": {
+          "precision": 0.9353,
+          "recall": 0.8852,
+          "f1": 0.9069
+        },
+        "perClass": {
+          "approved": {
+            "precision": 0.9617,
+            "recall": 0.9784,
+            "f1": 0.97,
+            "support": 231
+          },
+          "review": {
+            "precision": 0.8929,
+            "recall": 0.7143,
+            "f1": 0.7937,
+            "support": 35
+          },
+          "needs_revision": {
+            "precision": 0.9512,
+            "recall": 0.963,
+            "f1": 0.9571,
+            "support": 243
+          }
+        },
+        "binaryNeedsRevision": {
+          "precision": 0.9512,
+          "recall": 0.963,
+          "f1": 0.9571,
+          "confusion": {
+            "tp": 234,
+            "fp": 12,
+            "fn": 9,
+            "tn": 254
+          }
+        }
+      },
+      "adrHighRiskDetection": {
+        "sensitivity": 0.963,
+        "specificity": 0.9549,
+        "ppv": 0.9512,
+        "npv": 0.9658,
+        "f1": 0.9571,
+        "confusion": {
+          "tp": 234,
+          "fp": 12,
+          "fn": 9,
+          "tn": 254
+        }
+      }
+    },
+    "ml-only": {
+      "engine": "ml-only",
+      "label": "可解释 ML（单轨）",
+      "metrics": {
+        "accuracy": 0.9548,
+        "macro": {
+          "precision": 0.9471,
+          "recall": 0.8948,
+          "f1": 0.9175
+        },
+        "perClass": {
+          "approved": {
+            "precision": 0.9578,
+            "recall": 0.9827,
+            "f1": 0.9701,
+            "support": 231
+          },
+          "review": {
+            "precision": 0.9286,
+            "recall": 0.7429,
+            "f1": 0.8254,
+            "support": 35
+          },
+          "needs_revision": {
+            "precision": 0.9549,
+            "recall": 0.9588,
+            "f1": 0.9569,
+            "support": 243
+          }
+        },
+        "binaryNeedsRevision": {
+          "precision": 0.9549,
+          "recall": 0.9588,
+          "f1": 0.9569,
+          "confusion": {
+            "tp": 233,
+            "fp": 11,
+            "fn": 10,
+            "tn": 255
+          }
+        }
+      },
+      "adrHighRiskDetection": {
+        "sensitivity": 0.9588,
+        "specificity": 0.9586,
+        "ppv": 0.9549,
+        "npv": 0.9623,
+        "f1": 0.9569,
+        "confusion": {
+          "tp": 233,
+          "fp": 11,
+          "fn": 10,
+          "tn": 255
+        }
+      }
+    },
+    "fusion-cdss": {
+      "engine": "fusion-cdss",
+      "label": "双轨融合 CDSS",
+      "metrics": {
+        "accuracy": 0.9528,
+        "macro": {
+          "precision": 0.9353,
+          "recall": 0.8852,
+          "f1": 0.9069
+        },
+        "perClass": {
+          "approved": {
+            "precision": 0.9617,
+            "recall": 0.9784,
+            "f1": 0.97,
+            "support": 231
+          },
+          "review": {
+            "precision": 0.8929,
+            "recall": 0.7143,
+            "f1": 0.7937,
+            "support": 35
+          },
+          "needs_revision": {
+            "precision": 0.9512,
+            "recall": 0.963,
+            "f1": 0.9571,
+            "support": 243
+          }
+        },
+        "binaryNeedsRevision": {
+          "precision": 0.9512,
+          "recall": 0.963,
+          "f1": 0.9571,
+          "confusion": {
+            "tp": 234,
+            "fp": 12,
+            "fn": 9,
+            "tn": 254
+          }
+        }
+      },
+      "adrHighRiskDetection": {
+        "sensitivity": 0.963,
+        "specificity": 0.9549,
+        "ppv": 0.9512,
+        "npv": 0.9658,
+        "f1": 0.9571,
+        "confusion": {
+          "tp": 234,
+          "fp": 12,
+          "fn": 9,
+          "tn": 254
+        }
+      }
+    }
+  },
+  "comparison": [
+    {
+      "variant": "ml-only",
+      "label": "可解释 ML（单轨）",
+      "accuracy": 0.9548,
+      "macroF1": 0.9175,
+      "adrF1": 0.9569,
+      "adrSensitivity": 0.9588,
+      "adrSpecificity": 0.9586
+    },
+    {
+      "variant": "rule-only",
+      "label": "专家规则（单轨）",
+      "accuracy": 0.9528,
+      "macroF1": 0.9069,
+      "adrF1": 0.9571,
+      "adrSensitivity": 0.963,
+      "adrSpecificity": 0.9549
+    },
+    {
+      "variant": "fusion-cdss",
+      "label": "双轨融合 CDSS",
+      "accuracy": 0.9528,
+      "macroF1": 0.9069,
+      "adrF1": 0.9571,
+      "adrSensitivity": 0.963,
+      "adrSpecificity": 0.9549
+    }
+  ],
+  "fullBenchmark": null
+}

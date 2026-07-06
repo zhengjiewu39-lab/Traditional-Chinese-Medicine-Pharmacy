@@ -40,12 +40,50 @@
         "background": {
           "activeOnStart": true,
           "beginsPattern": ".",
-          "endsPattern": "(Compiled successfully|Failed to compile|webpack compiled|Mock API|3001|listening)"
+          "endsPattern": "(Compiled successfully|Failed to compile|webpack compiled|中药药房 API|localhost:3002|localhost:3000)"
         }
       },
       "presentation": {
         "reveal": "always",
         "panel": "dedicated",
+        "group": "dev"
+      }
+    },
+    {
+      "label": "重启前后端 (npm run restart)",
+      "type": "shell",
+      "command": "bash",
+      "args": ["${workspaceFolder}/.vscode/scripts/npm.sh", "run", "restart"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "custom",
+        "pattern": { "regexp": "^$" },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".",
+          "endsPattern": "(Compiled successfully|Failed to compile|webpack compiled|中药药房 API|localhost:3002|localhost:3000)"
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "dev"
+      }
+    },
+    {
+      "label": "停止开发服务 (npm run stop)",
+      "type": "shell",
+      "command": "bash",
+      "args": ["${workspaceFolder}/.vscode/scripts/npm.sh", "run", "stop"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
         "group": "dev"
       }
     }

@@ -11,8 +11,12 @@ const ruleEngine = require('../server/services/prescriptionAnalyzer');
 const baselineNaive = require('../server/services/baselineAnalyzer');
 const baselineKeyword = require('../server/services/baselineKeywordAnalyzer');
 const mlEngine = require('../server/services/mlPrescriptionClassifier');
+const cdssEngine = require('../server/services/cdssEngine');
 
-const DATASET = path.join(__dirname, '../benchmarks/prescription-review-dataset.json');
+const DATASET = process.env.TCM_EVAL_DATASET
+  || (fs.existsSync(path.join(__dirname, '../benchmarks/prescription-review-dataset-expanded.json'))
+    ? path.join(__dirname, '../benchmarks/prescription-review-dataset-expanded.json')
+    : path.join(__dirname, '../benchmarks/prescription-review-dataset.json'));
 const LABELS = ['approved', 'review', 'needs_revision'];
 
 const ENGINES = {
@@ -20,6 +24,7 @@ const ENGINES = {
   'baseline-keyword': baselineKeyword,
   'rule-engine-v3': ruleEngine,
   'ml-interpretable-v1': mlEngine,
+  'cdss-dual-track-v1': cdssEngine,
 };
 
 function predictLabel(analyzer, sample) {

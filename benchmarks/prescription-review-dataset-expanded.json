@@ -1,0 +1,5078 @@
+{
+  "dataset": "TCM-Prescription-Review-Expanded-v1",
+  "version": "1.1.0",
+  "license": "CC-BY-4.0",
+  "description": "Expanded benchmark: 24 curated + 500 synthetic (deduped n=509).",
+  "sources": {
+    "curated": 24,
+    "synthetic": 500
+  },
+  "cases": [
+    {
+      "id": "PR-001",
+      "prescription": "黄芪15g，当归10g，白芍10g，川芎6g，甘草6g",
+      "diagnosis": "气血两虚",
+      "patientAge": 45,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Classic balanced formula within dosage norms"
+    },
+    {
+      "id": "PR-002",
+      "prescription": "黄芪15g，当归10g，甘草20g",
+      "diagnosis": "气血两虚",
+      "patientAge": 45,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Licorice overdose and >15% ratio"
+    },
+    {
+      "id": "PR-003",
+      "prescription": "甘草10g，甘遂5g",
+      "diagnosis": "水肿",
+      "patientAge": 50,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Shi Ba Fan: Gan Cao + Gan Sui"
+    },
+    {
+      "id": "PR-004",
+      "prescription": "附子10g，半夏9g",
+      "diagnosis": "寒痰",
+      "patientAge": 55,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Fu Zi incompatible with Ban Xia"
+    },
+    {
+      "id": "PR-005",
+      "prescription": "人参10g，莱菔子15g",
+      "diagnosis": "气虚",
+      "patientAge": 40,
+      "patientGender": "男",
+      "expertLabel": "review",
+      "rationale": "Shi Jiu Wei combination — context dependent"
+    },
+    {
+      "id": "PR-006",
+      "prescription": "板蓝根15g，连翘10g，薄荷6g",
+      "diagnosis": "风热感冒",
+      "patientAge": 28,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Standard heat-clearing combo"
+    },
+    {
+      "id": "PR-007",
+      "prescription": "三七15g，丹参15g",
+      "diagnosis": "胸痹",
+      "patientAge": 68,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "San Qi exceeds safe upper limit"
+    },
+    {
+      "id": "PR-008",
+      "prescription": "麻黄12g，桂枝10g",
+      "diagnosis": "风寒感冒",
+      "patientAge": 30,
+      "patientGender": "男",
+      "expertLabel": "review",
+      "rationale": "Ma Huang slightly high; OK for strong exterior pattern but needs review"
+    },
+    {
+      "id": "PR-009",
+      "prescription": "麻黄15g，桂枝12g",
+      "diagnosis": "高血压",
+      "patientAge": 62,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Ma Huang overdose + contraindicated context"
+    },
+    {
+      "id": "PR-010",
+      "prescription": "熟地黄15g，山药15g，茯苓10g",
+      "diagnosis": "肾阴不足",
+      "patientAge": 52,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Standard yin-tonifying base"
+    },
+    {
+      "id": "PR-011",
+      "prescription": "黄芪5g，党参5g",
+      "diagnosis": "气虚",
+      "patientAge": 70,
+      "patientGender": "女",
+      "expertLabel": "review",
+      "rationale": "Under-dosed for elderly qi deficiency — may need adjustment"
+    },
+    {
+      "id": "PR-012",
+      "prescription": "川芎6g，当归10g，白芍10g，熟地黄15g",
+      "diagnosis": "血虚",
+      "patientAge": 35,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Si Wu Tang base — appropriate"
+    },
+    {
+      "id": "PR-013",
+      "prescription": "藜芦5g，人参9g",
+      "diagnosis": "虚劳",
+      "patientAge": 48,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Shi Ba Fan: Li Lu + Ren Shen"
+    },
+    {
+      "id": "PR-014",
+      "prescription": "板蓝根20g，黄连6g，黄芩10g",
+      "diagnosis": "脾胃虚寒",
+      "patientAge": 44,
+      "patientGender": "男",
+      "expertLabel": "review",
+      "rationale": "Cold herbs for cold pattern — needs syndrome review"
+    },
+    {
+      "id": "PR-015",
+      "prescription": "人参3g，白术9g，茯苓9g，甘草6g",
+      "diagnosis": "脾胃气虚",
+      "patientAge": 8,
+      "patientGender": "男",
+      "expertLabel": "review",
+      "rationale": "Pediatric dosing requires weight-based adjustment"
+    },
+    {
+      "id": "PR-016",
+      "prescription": "丹参15g，三七6g，黄芪20g",
+      "diagnosis": "胸痹心痛",
+      "patientAge": 60,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Within limits for cardio TCM formula"
+    },
+    {
+      "id": "PR-017",
+      "prescription": "",
+      "diagnosis": "未知",
+      "patientAge": 40,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Empty prescription"
+    },
+    {
+      "id": "PR-018",
+      "prescription": "桂枝9g，白芍9g，生姜9g，大枣12g，甘草6g",
+      "diagnosis": "太阳病",
+      "patientAge": 33,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Gui Zhi Tang standard composition"
+    },
+    {
+      "id": "PR-019",
+      "prescription": "乌头6g，贝母10g",
+      "diagnosis": "痹证",
+      "patientAge": 50,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Shi Ba Fan pair"
+    },
+    {
+      "id": "PR-020",
+      "prescription": "黄芪30g，当归15g，川芎9g，白芍12g",
+      "diagnosis": "血虚",
+      "patientAge": 42,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Upper-normal but acceptable doses"
+    },
+    {
+      "id": "PR-021",
+      "prescription": "人参12g，黄芪30g，甘草10g，白术12g，茯苓15g，陈皮6g，当归12g，川芎6g，白芍12g，熟地黄12g",
+      "diagnosis": "气血两虚",
+      "patientAge": 55,
+      "patientGender": "女",
+      "expertLabel": "review",
+      "rationale": "Many herbs — complex formula needs manual review"
+    },
+    {
+      "id": "PR-022",
+      "prescription": "丁香6g，郁金10g",
+      "diagnosis": "气滞",
+      "patientAge": 46,
+      "patientGender": "男",
+      "expertLabel": "review",
+      "rationale": "Shi Jiu Wei — context dependent"
+    },
+    {
+      "id": "PR-023",
+      "prescription": "板蓝根15g，甘草6g",
+      "diagnosis": "风热",
+      "patientAge": 25,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Simple safe pair"
+    },
+    {
+      "id": "PR-024",
+      "prescription": "三七9g，川芎12g，红花10g",
+      "diagnosis": "血瘀",
+      "patientAge": 72,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "San Qi overdose in elderly bleeding-risk patient"
+    },
+    {
+      "id": "SYN-0001",
+      "prescription": "黄芪70.6g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 53,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0002",
+      "prescription": "人参6g，莱菔子10g",
+      "diagnosis": "合成",
+      "patientAge": 43,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=95)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0003",
+      "prescription": "熟地黄11g，甘草7.1g，黄芪10.6g，川芎4.6g，丹参10.3g",
+      "diagnosis": "合成",
+      "patientAge": 29,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (建议复核, score=95)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0004",
+      "prescription": "甘草10g，甘遂1.2045114918844775g",
+      "diagnosis": "合成",
+      "patientAge": 35,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0005",
+      "prescription": "甘草21.5g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 30,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=82)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0006",
+      "prescription": "白芍6.8g，黄芪28.9g，熟地黄18.6g，板蓝根28.8g",
+      "diagnosis": "合成",
+      "patientAge": 26,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0007",
+      "prescription": "当归23.7g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 55,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0008",
+      "prescription": "当归24.3g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 69,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0009",
+      "prescription": "白芍14g，熟地黄18.6g，川芎6.3g，丹参11.5g，板蓝根12g",
+      "diagnosis": "合成",
+      "patientAge": 54,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0010",
+      "prescription": "甘草10g，甘遂1.2109754037344829g",
+      "diagnosis": "合成",
+      "patientAge": 26,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0011",
+      "prescription": "当归9.5g，熟地黄12.6g，白芍13.8g，板蓝根17.4g，丹参10g",
+      "diagnosis": "合成",
+      "patientAge": 56,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0012",
+      "prescription": "黄芪50.5g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 22,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0013",
+      "prescription": "当归9.6g，板蓝根18.7g，甘草5.9g，白芍12.2g",
+      "diagnosis": "合成",
+      "patientAge": 39,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0014",
+      "prescription": "黄芪62.7g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 31,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0015",
+      "prescription": "熟地黄14.2g，白芍10.3g，黄芪17.6g，甘草8g",
+      "diagnosis": "合成",
+      "patientAge": 65,
+      "patientGender": "女",
+      "expertLabel": "review",
+      "rationale": "Synthetic (建议复核, score=95)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0016",
+      "prescription": "当归35.9g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 42,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0017",
+      "prescription": "甘草10g，甘遂1.0728310636011884g",
+      "diagnosis": "合成",
+      "patientAge": 69,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0018",
+      "prescription": "当归14.9g，甘草8.7g，熟地黄22.6g，丹参14.2g",
+      "diagnosis": "合成",
+      "patientAge": 62,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0019",
+      "prescription": "黄芪73.1g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 51,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0020",
+      "prescription": "熟地黄15.5g，板蓝根12.8g，川芎3.3g，当归8.6g",
+      "diagnosis": "合成",
+      "patientAge": 42,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0021",
+      "prescription": "甘草6.1g，川芎3.8g，白芍6g，当归7.3g，熟地黄28.9g",
+      "diagnosis": "合成",
+      "patientAge": 23,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0022",
+      "prescription": "甘草9.8g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 31,
+      "patientGender": "女",
+      "expertLabel": "review",
+      "rationale": "Synthetic (建议复核, score=95)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0023",
+      "prescription": "黄芪30.4g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 47,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0024",
+      "prescription": "白芍6.2g，熟地黄17.9g，甘草5.4g，板蓝根15.7g",
+      "diagnosis": "合成",
+      "patientAge": 61,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0025",
+      "prescription": "丹参12.5g，板蓝根25g，熟地黄21g，甘草7.8g，白芍11g",
+      "diagnosis": "合成",
+      "patientAge": 47,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0026",
+      "prescription": "当归35.5g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 39,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0027",
+      "prescription": "丹参14.8g，甘草6.4g，熟地黄15.5g，当归11.7g，白芍12.9g",
+      "diagnosis": "合成",
+      "patientAge": 56,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0028",
+      "prescription": "黄芪47.2g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 44,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0029",
+      "prescription": "当归30.3g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 22,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0030",
+      "prescription": "当归15.1g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 24,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0031",
+      "prescription": "人参6g，莱菔子10g",
+      "diagnosis": "合成",
+      "patientAge": 51,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=95)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0032",
+      "prescription": "甘草19.8g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 33,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=82)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0033",
+      "prescription": "甘草22.8g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 54,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=82)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0034",
+      "prescription": "当归9.1g，板蓝根23g，甘草3.2g，丹参13.7g",
+      "diagnosis": "合成",
+      "patientAge": 59,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0035",
+      "prescription": "丹参10.7g，川芎6.3g，板蓝根23.5g，当归7.9g",
+      "diagnosis": "合成",
+      "patientAge": 58,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0036",
+      "prescription": "甘草24.2g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 46,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=82)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0037",
+      "prescription": "白芍7.6g，熟地黄22.9g，丹参12.5g，川芎4.1g",
+      "diagnosis": "合成",
+      "patientAge": 62,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0038",
+      "prescription": "甘草10g，甘遂1.0543506446527318g",
+      "diagnosis": "合成",
+      "patientAge": 50,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0039",
+      "prescription": "黄芪29g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 45,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0040",
+      "prescription": "甘草10g，甘遂0.8174087699269876g",
+      "diagnosis": "合成",
+      "patientAge": 63,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0041",
+      "prescription": "黄芪21g，板蓝根19.6g，丹参12.6g，熟地黄19.5g，甘草6.2g",
+      "diagnosis": "合成",
+      "patientAge": 48,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0042",
+      "prescription": "甘草10g，甘遂1.1628861899487675g",
+      "diagnosis": "合成",
+      "patientAge": 66,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0043",
+      "prescription": "川芎8.7g，丹参14.2g，黄芪19.6g，熟地黄10.2g，甘草9.4g",
+      "diagnosis": "合成",
+      "patientAge": 23,
+      "patientGender": "女",
+      "expertLabel": "review",
+      "rationale": "Synthetic (建议复核, score=95)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0044",
+      "prescription": "当归32.5g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 69,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0045",
+      "prescription": "甘草9.6g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 69,
+      "patientGender": "女",
+      "expertLabel": "review",
+      "rationale": "Synthetic (建议复核, score=95)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0046",
+      "prescription": "甘草10.2g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 42,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=82)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0047",
+      "prescription": "甘草10g，甘遂1.1623082337435335g",
+      "diagnosis": "合成",
+      "patientAge": 22,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0048",
+      "prescription": "当归28.6g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 59,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0049",
+      "prescription": "板蓝根19.3g，川芎6.2g，丹参15g，熟地黄13.5g，白芍11.4g",
+      "diagnosis": "合成",
+      "patientAge": 23,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0050",
+      "prescription": "黄芪29.9g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 28,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0051",
+      "prescription": "黄芪63.9g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 64,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0052",
+      "prescription": "人参6g，莱菔子10g",
+      "diagnosis": "合成",
+      "patientAge": 20,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=95)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0053",
+      "prescription": "甘草19.1g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 61,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=82)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0054",
+      "prescription": "甘草8.1g，丹参11.4g，川芎8.5g，当归14.5g，熟地黄18.6g",
+      "diagnosis": "合成",
+      "patientAge": 49,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0055",
+      "prescription": "黄芪72.3g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 45,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0056",
+      "prescription": "板蓝根29.3g，黄芪14.5g，熟地黄28.9g，甘草5.1g，白芍10.6g，附子12g",
+      "diagnosis": "合成",
+      "patientAge": 39,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0057",
+      "prescription": "白芍11.9g，川芎6.2g，当归14g，甘草7.1g，板蓝根27.1g",
+      "diagnosis": "合成",
+      "patientAge": 42,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0058",
+      "prescription": "黄芪50.2g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 20,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0059",
+      "prescription": "白芍12.4g，黄芪14.3g，川芎4.7g，熟地黄22.4g，当归9.1g",
+      "diagnosis": "合成",
+      "patientAge": 37,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0060",
+      "prescription": "板蓝根22.2g，丹参13.8g，川芎8.6g，当归9.6g，熟地黄17.5g",
+      "diagnosis": "合成",
+      "patientAge": 28,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0061",
+      "prescription": "人参6g，莱菔子10g",
+      "diagnosis": "合成",
+      "patientAge": 24,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=95)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0062",
+      "prescription": "当归30.4g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 65,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0063",
+      "prescription": "甘草10g，甘遂1.1516356342006475g",
+      "diagnosis": "合成",
+      "patientAge": 46,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0064",
+      "prescription": "当归35.7g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 31,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0065",
+      "prescription": "黄芪74.9g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 31,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0066",
+      "prescription": "丹参12.2g，甘草5.4g，川芎7.5g，板蓝根15.8g，熟地黄21.7g",
+      "diagnosis": "合成",
+      "patientAge": 33,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0067",
+      "prescription": "人参6g，莱菔子10g",
+      "diagnosis": "合成",
+      "patientAge": 22,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=95)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0068",
+      "prescription": "人参6g，莱菔子10g",
+      "diagnosis": "合成",
+      "patientAge": 29,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=95)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0069",
+      "prescription": "甘草10g，甘遂0.8104715673951433g",
+      "diagnosis": "合成",
+      "patientAge": 39,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0070",
+      "prescription": "丹参14.1g，当归7.9g，黄芪10g，熟地黄26.8g，板蓝根28.2g，甘草9.5g",
+      "diagnosis": "合成",
+      "patientAge": 31,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0071",
+      "prescription": "甘草21.3g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 54,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=82)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0072",
+      "prescription": "黄芪47.3g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 33,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0073",
+      "prescription": "黄芪20.9g，板蓝根22g，白芍11.9g，丹参13g，当归6.6g，熟地黄27.7g",
+      "diagnosis": "合成",
+      "patientAge": 54,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0074",
+      "prescription": "甘草10g，甘遂0.8513209739001468g",
+      "diagnosis": "合成",
+      "patientAge": 66,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0075",
+      "prescription": "黄芪57.2g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 37,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0076",
+      "prescription": "黄芪71.3g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 62,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0077",
+      "prescription": "黄芪50.8g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 68,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0078",
+      "prescription": "丹参10.3g，白芍14.5g，川芎7.4g，熟地黄19.2g，板蓝根15.9g",
+      "diagnosis": "合成",
+      "patientAge": 33,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0079",
+      "prescription": "甘草9.7g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 21,
+      "patientGender": "女",
+      "expertLabel": "review",
+      "rationale": "Synthetic (建议复核, score=95)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0080",
+      "prescription": "甘草10g，甘遂0.9676569710252807g",
+      "diagnosis": "合成",
+      "patientAge": 52,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0081",
+      "prescription": "黄芪29.7g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 38,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0082",
+      "prescription": "甘草10g，甘遂0.9460193153470755g",
+      "diagnosis": "合成",
+      "patientAge": 53,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0083",
+      "prescription": "当归35.6g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 65,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0084",
+      "prescription": "甘草4.2g，黄芪14.8g，当归7.6g，熟地黄17.7g",
+      "diagnosis": "合成",
+      "patientAge": 68,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0085",
+      "prescription": "白芍8.3g，黄芪22.3g，熟地黄22.7g，丹参11.4g，板蓝根27.9g，川芎7.8g",
+      "diagnosis": "合成",
+      "patientAge": 51,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0086",
+      "prescription": "黄芪21.3g，板蓝根27.3g，熟地黄18.2g，丹参11.8g，当归10.8g，川芎3.3g，附子12g",
+      "diagnosis": "合成",
+      "patientAge": 34,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0087",
+      "prescription": "板蓝根16.1g，白芍7.9g，熟地黄14.5g，当归14.1g",
+      "diagnosis": "合成",
+      "patientAge": 69,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0088",
+      "prescription": "黄芪62.8g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 37,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0089",
+      "prescription": "丹参10.3g，甘草8.5g，当归10.3g，白芍8.1g，黄芪22.4g，川芎6.4g",
+      "diagnosis": "合成",
+      "patientAge": 46,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0090",
+      "prescription": "当归14.9g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 24,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0091",
+      "prescription": "甘草9g，熟地黄28.2g，板蓝根24.1g，川芎8.1g",
+      "diagnosis": "合成",
+      "patientAge": 38,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0092",
+      "prescription": "板蓝根20.3g，熟地黄22.7g，当归15g，丹参13.8g，黄芪25g，白芍13.3g",
+      "diagnosis": "合成",
+      "patientAge": 69,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0093",
+      "prescription": "甘草10g，甘遂1.0783505459083245g",
+      "diagnosis": "合成",
+      "patientAge": 22,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0094",
+      "prescription": "甘草22.8g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 34,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=82)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0095",
+      "prescription": "白芍14.1g，板蓝根24g，熟地黄26g，当归13.5g，甘草7.9g，附子12g",
+      "diagnosis": "合成",
+      "patientAge": 55,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0096",
+      "prescription": "甘草9.6g，丹参13.6g，白芍7.7g，板蓝根14g，附子12g",
+      "diagnosis": "合成",
+      "patientAge": 45,
+      "patientGender": "男",
+      "expertLabel": "review",
+      "rationale": "Synthetic (建议复核, score=95)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0097",
+      "prescription": "川芎3.2g，当归7.7g，熟地黄14.9g，丹参14.7g，黄芪28g",
+      "diagnosis": "合成",
+      "patientAge": 39,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0098",
+      "prescription": "川芎6.3g，板蓝根29.5g，甘草5.3g，黄芪14.7g，熟地黄14.4g，当归10.3g",
+      "diagnosis": "合成",
+      "patientAge": 40,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0099",
+      "prescription": "甘草10g，甘遂1.1714849518146366g",
+      "diagnosis": "合成",
+      "patientAge": 26,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0100",
+      "prescription": "人参6g，莱菔子10g",
+      "diagnosis": "合成",
+      "patientAge": 63,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=95)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0102",
+      "prescription": "甘草3.3g，白芍9.9g，川芎7.9g，当归12g，丹参12.3g",
+      "diagnosis": "合成",
+      "patientAge": 24,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0103",
+      "prescription": "川芎8.6g，丹参14.7g，甘草8.4g，当归13.2g，熟地黄22.8g",
+      "diagnosis": "合成",
+      "patientAge": 29,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0104",
+      "prescription": "甘草10g，甘遂1.0739658975042403g",
+      "diagnosis": "合成",
+      "patientAge": 34,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0105",
+      "prescription": "熟地黄15.6g，黄芪26.7g，甘草9g，板蓝根22.1g，当归6.5g，川芎8.6g，附子12g",
+      "diagnosis": "合成",
+      "patientAge": 36,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0106",
+      "prescription": "当归14.6g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 29,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0107",
+      "prescription": "黄芪72.8g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 51,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0108",
+      "prescription": "黄芪11.7g，白芍7.4g，川芎3.5g，熟地黄10.7g，板蓝根13.8g，甘草8.1g",
+      "diagnosis": "合成",
+      "patientAge": 55,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0109",
+      "prescription": "川芎9g，板蓝根19.2g，黄芪18.4g，甘草5.9g",
+      "diagnosis": "合成",
+      "patientAge": 25,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0110",
+      "prescription": "人参6g，莱菔子10g",
+      "diagnosis": "合成",
+      "patientAge": 50,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=95)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0111",
+      "prescription": "板蓝根29.5g，川芎7.6g，当归10.1g，白芍6.4g，甘草4.1g",
+      "diagnosis": "合成",
+      "patientAge": 24,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0112",
+      "prescription": "黄芪30.1g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 56,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0113",
+      "prescription": "当归34.3g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 48,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0114",
+      "prescription": "板蓝根12g，白芍7.4g，当归10.8g，熟地黄12.9g，甘草10g，附子12g",
+      "diagnosis": "合成",
+      "patientAge": 68,
+      "patientGender": "男",
+      "expertLabel": "review",
+      "rationale": "Synthetic (建议复核, score=95)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0115",
+      "prescription": "白芍10.2g，黄芪11.4g，板蓝根13.4g，当归14.3g",
+      "diagnosis": "合成",
+      "patientAge": 41,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0116",
+      "prescription": "黄芪29.6g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 22,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0117",
+      "prescription": "黄芪29.1g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 35,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0119",
+      "prescription": "板蓝根14.2g，丹参14.5g，当归10.7g，白芍12.3g，黄芪12.6g，熟地黄27.8g",
+      "diagnosis": "合成",
+      "patientAge": 45,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0120",
+      "prescription": "板蓝根16.3g，熟地黄12.4g，白芍13.5g，当归8.9g",
+      "diagnosis": "合成",
+      "patientAge": 35,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0121",
+      "prescription": "黄芪66.3g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 55,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0122",
+      "prescription": "甘草3.8g，丹参14.9g，板蓝根27.2g，当归10.6g，黄芪10.1g，熟地黄27.9g",
+      "diagnosis": "合成",
+      "patientAge": 62,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0123",
+      "prescription": "川芎8.3g，白芍9.1g，当归8.7g，板蓝根25.1g，黄芪28.7g",
+      "diagnosis": "合成",
+      "patientAge": 45,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0124",
+      "prescription": "甘草10.1g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 64,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=82)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0125",
+      "prescription": "当归14.3g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 56,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0126",
+      "prescription": "黄芪64.1g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 28,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0127",
+      "prescription": "黄芪15.1g，熟地黄21.1g，板蓝根21g，丹参14.9g，当归12g，白芍12.2g",
+      "diagnosis": "合成",
+      "patientAge": 39,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0128",
+      "prescription": "人参6g，莱菔子10g",
+      "diagnosis": "合成",
+      "patientAge": 28,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=95)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0129",
+      "prescription": "熟地黄28.9g，川芎8.9g，丹参13.4g，黄芪24.4g，当归11.7g",
+      "diagnosis": "合成",
+      "patientAge": 40,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0130",
+      "prescription": "当归32.5g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 28,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0131",
+      "prescription": "甘草6.9g，黄芪16.4g，当归11.6g，熟地黄11.4g，板蓝根15.6g，白芍10.8g",
+      "diagnosis": "合成",
+      "patientAge": 24,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0132",
+      "prescription": "川芎6.7g，白芍13.3g，黄芪12.7g，甘草8.5g，熟地黄10.9g，当归9.8g",
+      "diagnosis": "合成",
+      "patientAge": 38,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0133",
+      "prescription": "甘草10g，甘遂1.1620209968648851g",
+      "diagnosis": "合成",
+      "patientAge": 43,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0135",
+      "prescription": "甘草10g，甘遂1.2727611901471392g",
+      "diagnosis": "合成",
+      "patientAge": 41,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0136",
+      "prescription": "白芍9.7g，丹参11g，甘草5.6g，当归8.9g，熟地黄25g，板蓝根25.9g",
+      "diagnosis": "合成",
+      "patientAge": 44,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0137",
+      "prescription": "黄芪69.6g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 52,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0138",
+      "prescription": "人参6g，莱菔子10g",
+      "diagnosis": "合成",
+      "patientAge": 25,
+      "patientGender": "女",
+      "expertLabel": "review",
+      "rationale": "Synthetic (需修改, score=95)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0139",
+      "prescription": "甘草10g，甘遂1.0482890530955047g",
+      "diagnosis": "合成",
+      "patientAge": 25,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0140",
+      "prescription": "黄芪11g，板蓝根10.3g，熟地黄29.8g，当归12.7g，丹参14.4g，白芍14.5g",
+      "diagnosis": "合成",
+      "patientAge": 39,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0141",
+      "prescription": "甘草9.9g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 47,
+      "patientGender": "男",
+      "expertLabel": "review",
+      "rationale": "Synthetic (建议复核, score=95)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0142",
+      "prescription": "丹参10.9g，熟地黄14.7g，甘草3.8g，黄芪28g，当归9.6g，白芍12g",
+      "diagnosis": "合成",
+      "patientAge": 54,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0143",
+      "prescription": "人参6g，莱菔子10g",
+      "diagnosis": "合成",
+      "patientAge": 67,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=95)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0144",
+      "prescription": "甘草10g，甘遂1.1333569016540423g",
+      "diagnosis": "合成",
+      "patientAge": 45,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0145",
+      "prescription": "当归9g，川芎4.4g，黄芪21.6g，板蓝根11g",
+      "diagnosis": "合成",
+      "patientAge": 53,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0146",
+      "prescription": "当归27.8g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 37,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0147",
+      "prescription": "白芍8g，甘草5.3g，熟地黄15.4g，当归14.2g",
+      "diagnosis": "合成",
+      "patientAge": 38,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0148",
+      "prescription": "当归11.8g，川芎6.7g，丹参13.5g，熟地黄29.7g，板蓝根28.1g，黄芪28.1g",
+      "diagnosis": "合成",
+      "patientAge": 31,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0149",
+      "prescription": "川芎5.9g，当归11g，熟地黄18.7g，丹参10.8g，甘草4.1g，板蓝根19.1g",
+      "diagnosis": "合成",
+      "patientAge": 24,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0150",
+      "prescription": "当归14.6g，白芍11.1g，丹参11.1g，黄芪22.4g，熟地黄14.7g，板蓝根21g",
+      "diagnosis": "合成",
+      "patientAge": 20,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0151",
+      "prescription": "当归10.3g，黄芪29.2g，熟地黄29.5g，甘草8.3g，川芎6.3g",
+      "diagnosis": "合成",
+      "patientAge": 29,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0152",
+      "prescription": "甘草17.7g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 44,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=82)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0153",
+      "prescription": "甘草9.6g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 21,
+      "patientGender": "女",
+      "expertLabel": "review",
+      "rationale": "Synthetic (建议复核, score=95)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0154",
+      "prescription": "甘草10g，甘遂0.9140376913826913g",
+      "diagnosis": "合成",
+      "patientAge": 58,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0155",
+      "prescription": "甘草10g，甘遂0.8107901341980324g",
+      "diagnosis": "合成",
+      "patientAge": 51,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0156",
+      "prescription": "当归37.4g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 37,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0157",
+      "prescription": "人参6g，莱菔子10g",
+      "diagnosis": "合成",
+      "patientAge": 34,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=95)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0158",
+      "prescription": "人参6g，莱菔子10g",
+      "diagnosis": "合成",
+      "patientAge": 66,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=95)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0159",
+      "prescription": "甘草19.7g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 35,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=82)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0160",
+      "prescription": "当归7.7g，板蓝根22.2g，丹参10.2g，川芎8.3g，黄芪21.1g，白芍10.6g",
+      "diagnosis": "合成",
+      "patientAge": 36,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0161",
+      "prescription": "黄芪57g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 23,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0162",
+      "prescription": "黄芪30.7g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 56,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0163",
+      "prescription": "当归29.5g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 62,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0164",
+      "prescription": "熟地黄14.2g，板蓝根11.2g，川芎6.2g，白芍8.1g，附子12g",
+      "diagnosis": "合成",
+      "patientAge": 22,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0165",
+      "prescription": "熟地黄17.6g，黄芪27.4g，当归6.8g，丹参10.1g",
+      "diagnosis": "合成",
+      "patientAge": 48,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0166",
+      "prescription": "人参6g，莱菔子10g",
+      "diagnosis": "合成",
+      "patientAge": 31,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=95)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0167",
+      "prescription": "甘草6.8g，丹参10.2g，板蓝根28.5g，白芍6.1g",
+      "diagnosis": "合成",
+      "patientAge": 54,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0168",
+      "prescription": "甘草4.4g，黄芪16.2g，当归7.3g，白芍8.8g，川芎8.2g，熟地黄19.1g",
+      "diagnosis": "合成",
+      "patientAge": 57,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0169",
+      "prescription": "当归12.2g，丹参10g，白芍14.4g，甘草9.1g，板蓝根21.3g",
+      "diagnosis": "合成",
+      "patientAge": 60,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0170",
+      "prescription": "人参6g，莱菔子10g",
+      "diagnosis": "合成",
+      "patientAge": 39,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=95)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0171",
+      "prescription": "当归14.4g，丹参14.3g，白芍11.8g，甘草7.8g，熟地黄23.3g",
+      "diagnosis": "合成",
+      "patientAge": 30,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0172",
+      "prescription": "熟地黄16.2g，川芎3.7g，丹参10.5g，黄芪23.9g，白芍14.2g，板蓝根20.6g",
+      "diagnosis": "合成",
+      "patientAge": 37,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0173",
+      "prescription": "人参6g，莱菔子10g",
+      "diagnosis": "合成",
+      "patientAge": 68,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=95)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0174",
+      "prescription": "黄芪28.8g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 61,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0175",
+      "prescription": "熟地黄26g，甘草8.1g，川芎6.9g，黄芪23.9g",
+      "diagnosis": "合成",
+      "patientAge": 36,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0176",
+      "prescription": "甘草24.8g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 41,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=82)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0177",
+      "prescription": "川芎8.3g，丹参12.8g，黄芪11.7g，板蓝根10.6g",
+      "diagnosis": "合成",
+      "patientAge": 34,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0178",
+      "prescription": "当归31.1g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 61,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0179",
+      "prescription": "当归31.8g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 69,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0180",
+      "prescription": "当归12g，板蓝根27.3g，熟地黄19.7g，川芎8.7g，白芍7.1g",
+      "diagnosis": "合成",
+      "patientAge": 40,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0181",
+      "prescription": "甘草22.7g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 62,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=82)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0182",
+      "prescription": "当归12.5g，川芎4.7g，黄芪10.1g，板蓝根27.3g，甘草6.8g",
+      "diagnosis": "合成",
+      "patientAge": 30,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0183",
+      "prescription": "甘草10g，甘遂1.0133768127532676g",
+      "diagnosis": "合成",
+      "patientAge": 35,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0184",
+      "prescription": "当归7.6g，白芍9.4g，川芎4.7g，丹参11.5g",
+      "diagnosis": "合成",
+      "patientAge": 69,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0185",
+      "prescription": "甘草3.4g，川芎4.4g，丹参14.1g，板蓝根24.2g",
+      "diagnosis": "合成",
+      "patientAge": 55,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0187",
+      "prescription": "丹参12.5g，当归11.1g，甘草8.9g，板蓝根25.9g，白芍13.3g，川芎3.5g",
+      "diagnosis": "合成",
+      "patientAge": 22,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0188",
+      "prescription": "丹参11.9g，白芍10.3g，熟地黄11.5g，黄芪11g",
+      "diagnosis": "合成",
+      "patientAge": 55,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0189",
+      "prescription": "甘草10g，甘遂1.0826499856309966g",
+      "diagnosis": "合成",
+      "patientAge": 24,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0190",
+      "prescription": "白芍12.4g，川芎5.3g，丹参11.1g，黄芪29.3g，熟地黄12.6g，板蓝根14.6g",
+      "diagnosis": "合成",
+      "patientAge": 35,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0191",
+      "prescription": "甘草10g，甘遂1.0625360724050552g",
+      "diagnosis": "合成",
+      "patientAge": 28,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0192",
+      "prescription": "人参6g，莱菔子10g",
+      "diagnosis": "合成",
+      "patientAge": 26,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=95)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0193",
+      "prescription": "丹参11.6g，甘草5g，板蓝根21.3g，当归11.7g，川芎4g",
+      "diagnosis": "合成",
+      "patientAge": 69,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0194",
+      "prescription": "熟地黄11.6g，黄芪21g，板蓝根25.2g，白芍9.3g，川芎8.5g",
+      "diagnosis": "合成",
+      "patientAge": 34,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0195",
+      "prescription": "黄芪30.7g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 64,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0196",
+      "prescription": "甘草10g，甘遂0.9809623696608469g",
+      "diagnosis": "合成",
+      "patientAge": 22,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0197",
+      "prescription": "甘草10g，甘遂0.945285737933591g",
+      "diagnosis": "合成",
+      "patientAge": 53,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0198",
+      "prescription": "人参6g，莱菔子10g",
+      "diagnosis": "合成",
+      "patientAge": 53,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=95)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0199",
+      "prescription": "丹参12.9g，甘草9.6g，黄芪19.3g，当归10.4g，熟地黄27.5g，白芍9.7g",
+      "diagnosis": "合成",
+      "patientAge": 39,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0200",
+      "prescription": "丹参14.9g，当归6.6g，熟地黄15.5g，黄芪14g，川芎4.4g",
+      "diagnosis": "合成",
+      "patientAge": 53,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0201",
+      "prescription": "川芎3g，当归10.5g，板蓝根20.6g，熟地黄14.9g",
+      "diagnosis": "合成",
+      "patientAge": 29,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0202",
+      "prescription": "当归13.4g，熟地黄10g，丹参10.4g，板蓝根23g，附子12g",
+      "diagnosis": "合成",
+      "patientAge": 61,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0203",
+      "prescription": "黄芪12.2g，川芎5g，当归14.6g，熟地黄20.9g，板蓝根20.4g",
+      "diagnosis": "合成",
+      "patientAge": 27,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0204",
+      "prescription": "甘草22.9g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 60,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=82)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0205",
+      "prescription": "当归7g，板蓝根23g，丹参13.2g，白芍14.1g，黄芪21.1g，甘草5.4g，附子12g",
+      "diagnosis": "合成",
+      "patientAge": 52,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0206",
+      "prescription": "黄芪28.9g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 62,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0207",
+      "prescription": "黄芪24.7g，丹参13.1g，白芍12g，板蓝根25.6g",
+      "diagnosis": "合成",
+      "patientAge": 29,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0209",
+      "prescription": "黄芪30.4g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 69,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0210",
+      "prescription": "甘草10g，甘遂0.8573020570445806g",
+      "diagnosis": "合成",
+      "patientAge": 58,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0211",
+      "prescription": "甘草18.3g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 45,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=82)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0212",
+      "prescription": "当归28.1g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 58,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0213",
+      "prescription": "白芍14.8g，熟地黄16.7g，板蓝根16.6g，川芎7.1g，甘草6.5g，丹参11.9g",
+      "diagnosis": "合成",
+      "patientAge": 61,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0214",
+      "prescription": "黄芪29.8g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 20,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0215",
+      "prescription": "人参6g，莱菔子10g",
+      "diagnosis": "合成",
+      "patientAge": 41,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=95)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0216",
+      "prescription": "丹参14.9g，白芍14.9g，熟地黄18.8g，当归11.6g",
+      "diagnosis": "合成",
+      "patientAge": 62,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0217",
+      "prescription": "甘草3.8g，川芎4.2g，白芍9.1g，丹参12.4g",
+      "diagnosis": "合成",
+      "patientAge": 63,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0218",
+      "prescription": "甘草10g，甘遂1.093868476874195g",
+      "diagnosis": "合成",
+      "patientAge": 48,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0219",
+      "prescription": "丹参14.5g，白芍11.7g，当归14.2g，川芎5.8g",
+      "diagnosis": "合成",
+      "patientAge": 43,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0220",
+      "prescription": "甘草9.1g，熟地黄10.6g，白芍11.5g，板蓝根11.7g",
+      "diagnosis": "合成",
+      "patientAge": 35,
+      "patientGender": "女",
+      "expertLabel": "review",
+      "rationale": "Synthetic (建议复核, score=95)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0221",
+      "prescription": "黄芪29.3g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 37,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0222",
+      "prescription": "当归14.9g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 32,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0223",
+      "prescription": "黄芪30.4g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 51,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0224",
+      "prescription": "黄芪57.2g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 56,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0225",
+      "prescription": "甘草10g，甘遂1.0109527782304213g",
+      "diagnosis": "合成",
+      "patientAge": 25,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0226",
+      "prescription": "甘草22.7g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 37,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=82)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0228",
+      "prescription": "甘草10g，甘遂1.0439784044399858g",
+      "diagnosis": "合成",
+      "patientAge": 62,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0229",
+      "prescription": "当归14.3g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 51,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0230",
+      "prescription": "当归7.7g，熟地黄22.5g，川芎4.2g，白芍10.2g，丹参12g，黄芪13.8g",
+      "diagnosis": "合成",
+      "patientAge": 23,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0231",
+      "prescription": "板蓝根21.6g，甘草9.8g，丹参11.7g，川芎9g，当归12.3g",
+      "diagnosis": "合成",
+      "patientAge": 22,
+      "patientGender": "女",
+      "expertLabel": "review",
+      "rationale": "Synthetic (建议复核, score=95)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0232",
+      "prescription": "板蓝根25.3g，当归8.5g，熟地黄24.1g，川芎8.8g，黄芪23.6g",
+      "diagnosis": "合成",
+      "patientAge": 39,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0233",
+      "prescription": "黄芪56g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 31,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0234",
+      "prescription": "甘草10g，甘遂0.9335411447798834g",
+      "diagnosis": "合成",
+      "patientAge": 60,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0235",
+      "prescription": "黄芪29.8g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 35,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0236",
+      "prescription": "丹参11.3g，川芎7.9g，甘草7g，当归14.3g，附子12g",
+      "diagnosis": "合成",
+      "patientAge": 62,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0237",
+      "prescription": "黄芪55.3g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 40,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0238",
+      "prescription": "甘草10g，甘遂0.943032132415101g",
+      "diagnosis": "合成",
+      "patientAge": 59,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0239",
+      "prescription": "当归13.1g，板蓝根18g，熟地黄26.4g，白芍6.4g，川芎4g，黄芪19.7g",
+      "diagnosis": "合成",
+      "patientAge": 35,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0240",
+      "prescription": "甘草24.5g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 28,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=82)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0241",
+      "prescription": "人参6g，莱菔子10g",
+      "diagnosis": "合成",
+      "patientAge": 42,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=95)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0242",
+      "prescription": "板蓝根27.2g，黄芪21.4g，熟地黄17.5g，丹参12.3g，甘草7.5g",
+      "diagnosis": "合成",
+      "patientAge": 33,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0243",
+      "prescription": "甘草10g，甘遂0.9705423904350028g",
+      "diagnosis": "合成",
+      "patientAge": 58,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0244",
+      "prescription": "甘草10g，甘遂1.066668139724061g",
+      "diagnosis": "合成",
+      "patientAge": 30,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0245",
+      "prescription": "丹参12.2g，甘草7.3g，川芎5.6g，当归12.4g，白芍6.7g，黄芪21.9g",
+      "diagnosis": "合成",
+      "patientAge": 32,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0246",
+      "prescription": "黄芪28.7g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 64,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0247",
+      "prescription": "甘草10g，甘遂1.0591536471154541g",
+      "diagnosis": "合成",
+      "patientAge": 57,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0248",
+      "prescription": "黄芪63.9g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 50,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0249",
+      "prescription": "黄芪47.1g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 55,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0250",
+      "prescription": "熟地黄28.3g，黄芪15.6g，板蓝根11.3g，川芎4.1g",
+      "diagnosis": "合成",
+      "patientAge": 28,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0251",
+      "prescription": "板蓝根10.5g，川芎7.1g，黄芪26.9g，白芍11.5g",
+      "diagnosis": "合成",
+      "patientAge": 67,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0252",
+      "prescription": "川芎6.5g，熟地黄14.5g，黄芪20.8g，甘草8.5g，白芍9.5g，当归7.2g",
+      "diagnosis": "合成",
+      "patientAge": 69,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0253",
+      "prescription": "熟地黄23.3g，板蓝根26.7g，黄芪24.6g，川芎8.5g，丹参13.8g",
+      "diagnosis": "合成",
+      "patientAge": 23,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0254",
+      "prescription": "板蓝根16.1g，白芍14.7g，甘草6.3g，熟地黄12.1g，黄芪19.5g",
+      "diagnosis": "合成",
+      "patientAge": 40,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0255",
+      "prescription": "甘草18.6g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 64,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=82)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0256",
+      "prescription": "当归7.7g，熟地黄13.6g，甘草5.4g，板蓝根29g",
+      "diagnosis": "合成",
+      "patientAge": 67,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0257",
+      "prescription": "甘草10g，甘遂1.0456876271171496g",
+      "diagnosis": "合成",
+      "patientAge": 59,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0258",
+      "prescription": "黄芪29.7g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 39,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0259",
+      "prescription": "白芍10.6g，川芎7.3g，黄芪11.6g，熟地黄17.4g",
+      "diagnosis": "合成",
+      "patientAge": 21,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0260",
+      "prescription": "甘草10g，甘遂1.1849755852716044g",
+      "diagnosis": "合成",
+      "patientAge": 64,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0261",
+      "prescription": "川芎5.7g，熟地黄10.2g，黄芪25.5g，白芍13.9g，丹参14.4g，当归8.2g",
+      "diagnosis": "合成",
+      "patientAge": 62,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0262",
+      "prescription": "白芍8.8g，黄芪25.9g，丹参11.7g，甘草5.4g，板蓝根21.9g",
+      "diagnosis": "合成",
+      "patientAge": 45,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0263",
+      "prescription": "甘草20.7g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 62,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=82)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0264",
+      "prescription": "熟地黄23.5g，黄芪16g，当归9.4g，板蓝根13.8g，白芍9.1g，丹参13g",
+      "diagnosis": "合成",
+      "patientAge": 34,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0265",
+      "prescription": "丹参14.5g，川芎6.7g，甘草8.7g，熟地黄22.1g",
+      "diagnosis": "合成",
+      "patientAge": 47,
+      "patientGender": "女",
+      "expertLabel": "review",
+      "rationale": "Synthetic (建议复核, score=95)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0266",
+      "prescription": "当归8g，熟地黄28.2g，川芎7g，甘草3.7g，白芍14.2g",
+      "diagnosis": "合成",
+      "patientAge": 38,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0267",
+      "prescription": "当归13.6g，白芍8.7g，熟地黄11.4g，川芎3.7g，黄芪16.8g，附子12g",
+      "diagnosis": "合成",
+      "patientAge": 54,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0268",
+      "prescription": "甘草9.6g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 22,
+      "patientGender": "男",
+      "expertLabel": "review",
+      "rationale": "Synthetic (建议复核, score=95)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0269",
+      "prescription": "当归14.3g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 35,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0270",
+      "prescription": "人参6g，莱菔子10g",
+      "diagnosis": "合成",
+      "patientAge": 44,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=95)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0271",
+      "prescription": "甘草9.5g，黄芪27.8g，当归13.8g，熟地黄19.2g",
+      "diagnosis": "合成",
+      "patientAge": 55,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0272",
+      "prescription": "甘草10g，甘遂1.0856553905876354g",
+      "diagnosis": "合成",
+      "patientAge": 64,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0274",
+      "prescription": "当归22.7g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 27,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0275",
+      "prescription": "熟地黄13.2g，当归6.5g，甘草4.3g，板蓝根12.1g，白芍8.3g",
+      "diagnosis": "合成",
+      "patientAge": 33,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0276",
+      "prescription": "人参6g，莱菔子10g",
+      "diagnosis": "合成",
+      "patientAge": 54,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=95)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0277",
+      "prescription": "甘草10g，甘遂1.074544911342673g",
+      "diagnosis": "合成",
+      "patientAge": 65,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0278",
+      "prescription": "川芎7.2g，黄芪20g，当归14.1g，板蓝根22.6g，熟地黄17.3g，甘草9.3g",
+      "diagnosis": "合成",
+      "patientAge": 67,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0279",
+      "prescription": "白芍6.8g，当归8.7g，板蓝根11g，川芎3.8g，甘草8.7g，丹参11g",
+      "diagnosis": "合成",
+      "patientAge": 55,
+      "patientGender": "男",
+      "expertLabel": "review",
+      "rationale": "Synthetic (建议复核, score=95)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0280",
+      "prescription": "白芍8.5g，熟地黄11.9g，甘草8g，丹参14.3g，板蓝根26.6g，黄芪14.2g",
+      "diagnosis": "合成",
+      "patientAge": 48,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0281",
+      "prescription": "甘草10g，甘遂0.976598699647002g",
+      "diagnosis": "合成",
+      "patientAge": 21,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0282",
+      "prescription": "白芍14.5g，甘草8.5g，黄芪13.3g，当归8.7g，熟地黄19.4g，板蓝根13.1g",
+      "diagnosis": "合成",
+      "patientAge": 60,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0283",
+      "prescription": "黄芪72.2g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 63,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0284",
+      "prescription": "甘草7.3g，熟地黄20.8g，板蓝根11.8g，白芍15g",
+      "diagnosis": "合成",
+      "patientAge": 22,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0286",
+      "prescription": "板蓝根15.5g，白芍9.6g，黄芪13.2g，当归9.4g，熟地黄22.3g，丹参11.9g",
+      "diagnosis": "合成",
+      "patientAge": 45,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0287",
+      "prescription": "甘草10g，甘遂1.0525899527827278g",
+      "diagnosis": "合成",
+      "patientAge": 50,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0288",
+      "prescription": "黄芪74.6g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 44,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0289",
+      "prescription": "甘草10g，甘遂1.2790363180218265g",
+      "diagnosis": "合成",
+      "patientAge": 60,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0290",
+      "prescription": "川芎7g，丹参14.4g，熟地黄11.9g，黄芪24.6g",
+      "diagnosis": "合成",
+      "patientAge": 69,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0291",
+      "prescription": "甘草22.4g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 66,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=82)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0292",
+      "prescription": "甘草4.8g，熟地黄17.2g，当归9.5g，白芍14.9g",
+      "diagnosis": "合成",
+      "patientAge": 48,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0293",
+      "prescription": "当归35.8g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 64,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0294",
+      "prescription": "甘草10g，甘遂0.9028154521482066g",
+      "diagnosis": "合成",
+      "patientAge": 49,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0295",
+      "prescription": "甘草23.7g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 29,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=82)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0296",
+      "prescription": "川芎8.9g，黄芪15.1g，甘草9.1g，当归10.1g，板蓝根15.8g，熟地黄28.5g",
+      "diagnosis": "合成",
+      "patientAge": 28,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0297",
+      "prescription": "板蓝根21.9g，白芍14.8g，川芎8.3g，当归10.3g，熟地黄20.4g，甘草8.3g",
+      "diagnosis": "合成",
+      "patientAge": 56,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0298",
+      "prescription": "甘草10g，甘遂1.2529643404530362g",
+      "diagnosis": "合成",
+      "patientAge": 46,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0299",
+      "prescription": "甘草10g，甘遂0.8279378140112386g",
+      "diagnosis": "合成",
+      "patientAge": 58,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0300",
+      "prescription": "黄芪48.7g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 67,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0301",
+      "prescription": "熟地黄20g，川芎6.6g，当归14.6g，甘草4.1g",
+      "diagnosis": "合成",
+      "patientAge": 35,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0302",
+      "prescription": "甘草8.5g，川芎7.7g，丹参13.2g，黄芪11.4g，当归14.1g",
+      "diagnosis": "合成",
+      "patientAge": 48,
+      "patientGender": "女",
+      "expertLabel": "review",
+      "rationale": "Synthetic (建议复核, score=95)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0303",
+      "prescription": "甘草19.3g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 22,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=82)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0304",
+      "prescription": "黄芪17.5g，川芎6g，当归6.9g，板蓝根17.6g，白芍9.5g",
+      "diagnosis": "合成",
+      "patientAge": 22,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0305",
+      "prescription": "甘草10g，甘遂0.9683805524371565g",
+      "diagnosis": "合成",
+      "patientAge": 44,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0306",
+      "prescription": "黄芪16.2g，川芎4.7g，白芍6.9g，板蓝根15.7g",
+      "diagnosis": "合成",
+      "patientAge": 52,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0307",
+      "prescription": "白芍8.2g，熟地黄13g，甘草7.6g，当归9.9g，附子12g",
+      "diagnosis": "合成",
+      "patientAge": 58,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0308",
+      "prescription": "甘草8g，熟地黄26.5g，川芎8.5g，当归13.3g",
+      "diagnosis": "合成",
+      "patientAge": 37,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0309",
+      "prescription": "板蓝根12.8g，当归13.6g，黄芪24.3g，熟地黄14.6g",
+      "diagnosis": "合成",
+      "patientAge": 24,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0310",
+      "prescription": "白芍11.4g，丹参13.4g，熟地黄22.5g，川芎7.1g，甘草5.8g，当归6.2g，附子12g",
+      "diagnosis": "合成",
+      "patientAge": 24,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0311",
+      "prescription": "甘草20.4g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 65,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=82)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0312",
+      "prescription": "当归35.5g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 49,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0313",
+      "prescription": "甘草3.8g，熟地黄19.1g，白芍8.3g，当归13.7g，黄芪27.6g",
+      "diagnosis": "合成",
+      "patientAge": 49,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0314",
+      "prescription": "甘草10g，甘遂0.8771913366625086g",
+      "diagnosis": "合成",
+      "patientAge": 67,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0315",
+      "prescription": "黄芪10.5g，白芍7.2g，丹参13.7g，熟地黄13.4g",
+      "diagnosis": "合成",
+      "patientAge": 40,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0316",
+      "prescription": "甘草10g，甘遂1.024596542539075g",
+      "diagnosis": "合成",
+      "patientAge": 58,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0317",
+      "prescription": "当归15g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 63,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0318",
+      "prescription": "甘草10g，甘遂1.134136600024067g",
+      "diagnosis": "合成",
+      "patientAge": 42,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0319",
+      "prescription": "当归37.1g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 24,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0320",
+      "prescription": "人参6g，莱菔子10g",
+      "diagnosis": "合成",
+      "patientAge": 55,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=95)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0321",
+      "prescription": "甘草10g，甘遂1.0508778492920101g",
+      "diagnosis": "合成",
+      "patientAge": 55,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0322",
+      "prescription": "甘草9.6g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 31,
+      "patientGender": "女",
+      "expertLabel": "review",
+      "rationale": "Synthetic (建议复核, score=95)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0323",
+      "prescription": "黄芪28.9g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 47,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0324",
+      "prescription": "甘草10g，甘遂1.1694729906274006g",
+      "diagnosis": "合成",
+      "patientAge": 25,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0325",
+      "prescription": "甘草23.1g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 58,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=82)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0326",
+      "prescription": "黄芪29.3g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 24,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0327",
+      "prescription": "板蓝根28g，川芎6.9g，当归10.8g，黄芪29g，丹参13.1g，白芍10.8g",
+      "diagnosis": "合成",
+      "patientAge": 25,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0328",
+      "prescription": "甘草23.4g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 45,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=82)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0329",
+      "prescription": "黄芪10.7g，熟地黄25.2g，甘草8.3g，板蓝根29.1g，川芎6g，白芍6.5g",
+      "diagnosis": "合成",
+      "patientAge": 50,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0330",
+      "prescription": "甘草10g，甘遂1.2753272298257798g",
+      "diagnosis": "合成",
+      "patientAge": 22,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0331",
+      "prescription": "甘草10g，甘遂1.0977857963414863g",
+      "diagnosis": "合成",
+      "patientAge": 54,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0332",
+      "prescription": "人参6g，莱菔子10g",
+      "diagnosis": "合成",
+      "patientAge": 69,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=95)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0333",
+      "prescription": "人参6g，莱菔子10g",
+      "diagnosis": "合成",
+      "patientAge": 40,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=95)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0334",
+      "prescription": "黄芪22.1g，丹参11.1g，当归10.5g，白芍13.1g，熟地黄28g，附子12g",
+      "diagnosis": "合成",
+      "patientAge": 51,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0335",
+      "prescription": "白芍12.2g，板蓝根27.3g，甘草5g，丹参10.2g，黄芪26.5g，当归8.7g",
+      "diagnosis": "合成",
+      "patientAge": 36,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0336",
+      "prescription": "当归30.1g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 33,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0337",
+      "prescription": "甘草10g，甘遂1.0177644417388365g",
+      "diagnosis": "合成",
+      "patientAge": 57,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0338",
+      "prescription": "板蓝根13.2g，黄芪20.3g，当归8g，熟地黄26.5g",
+      "diagnosis": "合成",
+      "patientAge": 68,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0339",
+      "prescription": "当归10.8g，川芎8g，熟地黄24.1g，丹参12.3g，白芍11.5g，黄芪19g，附子12g",
+      "diagnosis": "合成",
+      "patientAge": 33,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0340",
+      "prescription": "丹参10.7g，熟地黄17.1g，白芍11.2g，甘草4.9g",
+      "diagnosis": "合成",
+      "patientAge": 36,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0341",
+      "prescription": "甘草10g，甘遂1.2051233552163467g",
+      "diagnosis": "合成",
+      "patientAge": 66,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0342",
+      "prescription": "甘草10g，甘遂0.8736928335390985g",
+      "diagnosis": "合成",
+      "patientAge": 42,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0343",
+      "prescription": "当归8.7g，川芎8.8g，丹参12.3g，板蓝根28.9g，甘草7.9g，黄芪13.5g，附子12g",
+      "diagnosis": "合成",
+      "patientAge": 52,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0344",
+      "prescription": "丹参12.2g，甘草3.9g，板蓝根21.1g，白芍10.6g，熟地黄19.8g，川芎5.3g",
+      "diagnosis": "合成",
+      "patientAge": 57,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0345",
+      "prescription": "人参6g，莱菔子10g",
+      "diagnosis": "合成",
+      "patientAge": 65,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=95)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0346",
+      "prescription": "甘草10g，甘遂0.8241888194577769g",
+      "diagnosis": "合成",
+      "patientAge": 62,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0347",
+      "prescription": "甘草23g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 53,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=82)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0348",
+      "prescription": "黄芪53.5g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 55,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0349",
+      "prescription": "甘草10g，甘遂1.234065551031381g",
+      "diagnosis": "合成",
+      "patientAge": 32,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0350",
+      "prescription": "川芎7.2g，当归11.5g，甘草9g，白芍6.8g，熟地黄10.6g，黄芪27.2g",
+      "diagnosis": "合成",
+      "patientAge": 65,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0351",
+      "prescription": "甘草9.8g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 61,
+      "patientGender": "女",
+      "expertLabel": "review",
+      "rationale": "Synthetic (建议复核, score=95)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0352",
+      "prescription": "甘草10g，甘遂1.0971332260640339g",
+      "diagnosis": "合成",
+      "patientAge": 22,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0353",
+      "prescription": "白芍10.2g，板蓝根18.4g，黄芪27.8g，丹参11.6g",
+      "diagnosis": "合成",
+      "patientAge": 36,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0354",
+      "prescription": "黄芪28.5g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 23,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0355",
+      "prescription": "黄芪70.4g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 37,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0356",
+      "prescription": "人参6g，莱菔子10g",
+      "diagnosis": "合成",
+      "patientAge": 64,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=95)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0357",
+      "prescription": "板蓝根22.6g，川芎7g，黄芪11.6g，白芍14.7g，丹参11.1g，甘草5.4g",
+      "diagnosis": "合成",
+      "patientAge": 68,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0358",
+      "prescription": "丹参13.6g，熟地黄12.5g，板蓝根24.8g，白芍6.6g，甘草9.6g，黄芪28.2g",
+      "diagnosis": "合成",
+      "patientAge": 63,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0359",
+      "prescription": "黄芪49.6g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 61,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0360",
+      "prescription": "甘草10g，甘遂0.9008065908681602g",
+      "diagnosis": "合成",
+      "patientAge": 31,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0361",
+      "prescription": "甘草10g，甘遂1.0339240362634883g",
+      "diagnosis": "合成",
+      "patientAge": 50,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0362",
+      "prescription": "丹参14.5g，白芍8.7g，熟地黄26.1g，川芎4.3g",
+      "diagnosis": "合成",
+      "patientAge": 33,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0363",
+      "prescription": "黄芪10.2g，白芍13g，川芎8.3g，甘草4g，丹参10.8g，当归7.4g",
+      "diagnosis": "合成",
+      "patientAge": 62,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0364",
+      "prescription": "当归35.2g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 45,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0365",
+      "prescription": "川芎6g，黄芪13.8g，丹参12.3g，熟地黄24.7g",
+      "diagnosis": "合成",
+      "patientAge": 60,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0366",
+      "prescription": "熟地黄21.9g，白芍13.1g，黄芪20.5g，甘草5.9g，当归12.5g",
+      "diagnosis": "合成",
+      "patientAge": 53,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0367",
+      "prescription": "川芎6.6g，熟地黄18.2g，丹参12.1g，甘草3.1g，板蓝根29.6g，黄芪29.5g",
+      "diagnosis": "合成",
+      "patientAge": 59,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0368",
+      "prescription": "人参6g，莱菔子10g",
+      "diagnosis": "合成",
+      "patientAge": 52,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=95)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0369",
+      "prescription": "甘草10g，甘遂0.8245816127862782g",
+      "diagnosis": "合成",
+      "patientAge": 21,
+      "patientGender": "男",
+      "expertLabel": "review",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0370",
+      "prescription": "黄芪20g，板蓝根16.9g，熟地黄15.3g，白芍14.9g",
+      "diagnosis": "合成",
+      "patientAge": 25,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0371",
+      "prescription": "甘草10g，甘遂1.2241620044922457g",
+      "diagnosis": "合成",
+      "patientAge": 22,
+      "patientGender": "男",
+      "expertLabel": "review",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0372",
+      "prescription": "甘草5.5g，当归7.7g，川芎7.9g，白芍10.7g，黄芪26.3g，熟地黄10.8g",
+      "diagnosis": "合成",
+      "patientAge": 24,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0373",
+      "prescription": "熟地黄16.9g，丹参14.5g，黄芪23.8g，川芎8.1g，当归13.8g，板蓝根17.6g",
+      "diagnosis": "合成",
+      "patientAge": 54,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0374",
+      "prescription": "甘草10.2g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 58,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=82)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0375",
+      "prescription": "当归7.9g，甘草7.7g，白芍9.9g，黄芪13.9g",
+      "diagnosis": "合成",
+      "patientAge": 54,
+      "patientGender": "男",
+      "expertLabel": "review",
+      "rationale": "Synthetic (建议复核, score=95)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0376",
+      "prescription": "人参6g，莱菔子10g",
+      "diagnosis": "合成",
+      "patientAge": 46,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=95)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0377",
+      "prescription": "川芎8.7g，丹参11.8g，板蓝根11.4g，黄芪29g，白芍6.8g，当归9.5g",
+      "diagnosis": "合成",
+      "patientAge": 65,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0378",
+      "prescription": "川芎8g，当归12.3g，熟地黄13.4g，白芍12.9g，附子12g",
+      "diagnosis": "合成",
+      "patientAge": 28,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0379",
+      "prescription": "甘草10g，甘遂1.1136816665064544g",
+      "diagnosis": "合成",
+      "patientAge": 58,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0380",
+      "prescription": "甘草15.5g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 22,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=82)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0381",
+      "prescription": "黄芪29.4g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 64,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0383",
+      "prescription": "甘草10g，黄芪15.6g，丹参13.6g，板蓝根29.5g，当归7.5g",
+      "diagnosis": "合成",
+      "patientAge": 41,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0384",
+      "prescription": "甘草9.8g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 57,
+      "patientGender": "女",
+      "expertLabel": "review",
+      "rationale": "Synthetic (建议复核, score=95)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0386",
+      "prescription": "丹参10.1g，川芎4.7g，熟地黄10.9g，板蓝根21.4g，当归11.2g，甘草4.2g，附子12g",
+      "diagnosis": "合成",
+      "patientAge": 36,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0387",
+      "prescription": "甘草9.2g，板蓝根29.8g，熟地黄21.2g，丹参13.7g",
+      "diagnosis": "合成",
+      "patientAge": 58,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0388",
+      "prescription": "板蓝根28.1g，熟地黄14.1g，当归11.9g，黄芪20.2g，丹参10.2g",
+      "diagnosis": "合成",
+      "patientAge": 47,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0389",
+      "prescription": "黄芪29.6g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 69,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0391",
+      "prescription": "甘草6.8g，白芍6.2g，熟地黄29.7g，丹参14.7g，板蓝根12.7g",
+      "diagnosis": "合成",
+      "patientAge": 31,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0392",
+      "prescription": "丹参14.7g，当归6.7g，甘草8.9g，黄芪25.4g，白芍11.6g，熟地黄14.1g",
+      "diagnosis": "合成",
+      "patientAge": 49,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0394",
+      "prescription": "甘草10.2g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 25,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=82)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0395",
+      "prescription": "黄芪72.1g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 55,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0396",
+      "prescription": "甘草10g，甘遂1.0723842267878354g",
+      "diagnosis": "合成",
+      "patientAge": 31,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0397",
+      "prescription": "当归15g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 68,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0398",
+      "prescription": "板蓝根11.6g，当归7.5g，甘草3.8g，丹参11g，熟地黄14.6g，黄芪27.2g",
+      "diagnosis": "合成",
+      "patientAge": 20,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0399",
+      "prescription": "川芎6.3g，丹参13g，白芍8.6g，当归14.5g，熟地黄12.5g，甘草8.1g",
+      "diagnosis": "合成",
+      "patientAge": 25,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0400",
+      "prescription": "白芍6.4g，黄芪20.7g，熟地黄23g，丹参10.4g，板蓝根16.6g，当归12.7g",
+      "diagnosis": "合成",
+      "patientAge": 60,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0401",
+      "prescription": "甘草10g，甘遂0.8868880315683783g",
+      "diagnosis": "合成",
+      "patientAge": 69,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0402",
+      "prescription": "甘草10g，甘遂1.1583305485080928g",
+      "diagnosis": "合成",
+      "patientAge": 42,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0403",
+      "prescription": "当归24.3g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 30,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0404",
+      "prescription": "甘草9.9g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 22,
+      "patientGender": "女",
+      "expertLabel": "review",
+      "rationale": "Synthetic (建议复核, score=95)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0405",
+      "prescription": "当归25.1g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 22,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0406",
+      "prescription": "甘草10g，甘遂0.99645998661872g",
+      "diagnosis": "合成",
+      "patientAge": 20,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0407",
+      "prescription": "黄芪28.9g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 26,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0408",
+      "prescription": "甘草4.3g，当归10.4g，川芎5.4g，丹参13.1g",
+      "diagnosis": "合成",
+      "patientAge": 54,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0409",
+      "prescription": "当归12.6g，甘草5.8g，熟地黄13.3g，黄芪21.8g",
+      "diagnosis": "合成",
+      "patientAge": 66,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0410",
+      "prescription": "川芎4.4g，板蓝根29.3g，甘草4.3g，黄芪29.5g，白芍8.9g，丹参14.6g，附子12g",
+      "diagnosis": "合成",
+      "patientAge": 53,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0411",
+      "prescription": "当归14.4g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 46,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0412",
+      "prescription": "甘草10g，甘遂0.8697289294330404g",
+      "diagnosis": "合成",
+      "patientAge": 54,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0413",
+      "prescription": "黄芪21.4g，白芍8.5g，川芎7.1g，甘草5.5g，板蓝根28g",
+      "diagnosis": "合成",
+      "patientAge": 44,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0414",
+      "prescription": "甘草10g，甘遂1.087296621943824g",
+      "diagnosis": "合成",
+      "patientAge": 20,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0415",
+      "prescription": "人参6g，莱菔子10g",
+      "diagnosis": "合成",
+      "patientAge": 37,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=95)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0416",
+      "prescription": "甘草10g，甘遂0.9447168973973021g",
+      "diagnosis": "合成",
+      "patientAge": 58,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0417",
+      "prescription": "黄芪54.7g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 61,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0418",
+      "prescription": "当归14.9g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 20,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0419",
+      "prescription": "当归29.8g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 42,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0420",
+      "prescription": "甘草10g，甘遂1.2392372911097482g",
+      "diagnosis": "合成",
+      "patientAge": 50,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0421",
+      "prescription": "甘草22.4g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 20,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=82)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0422",
+      "prescription": "丹参13.3g，熟地黄20.1g，甘草7g，川芎5.1g，白芍9.8g，黄芪11g",
+      "diagnosis": "合成",
+      "patientAge": 56,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0423",
+      "prescription": "板蓝根29.3g，熟地黄26.4g，川芎3.7g，当归11.1g，白芍9.9g",
+      "diagnosis": "合成",
+      "patientAge": 52,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0424",
+      "prescription": "白芍9.6g，当归11g，甘草3.7g，板蓝根26.9g，丹参10.1g",
+      "diagnosis": "合成",
+      "patientAge": 46,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0425",
+      "prescription": "黄芪48.1g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 41,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0426",
+      "prescription": "人参6g，莱菔子10g",
+      "diagnosis": "合成",
+      "patientAge": 23,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=95)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0427",
+      "prescription": "黄芪46.8g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 20,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0428",
+      "prescription": "黄芪29.9g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 33,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0429",
+      "prescription": "当归14.6g，板蓝根18.3g，甘草8.5g，丹参14.6g，白芍11.5g，熟地黄16.9g，附子12g",
+      "diagnosis": "合成",
+      "patientAge": 39,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0430",
+      "prescription": "熟地黄26.4g，当归11.9g，白芍12.3g，川芎7.1g",
+      "diagnosis": "合成",
+      "patientAge": 31,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0431",
+      "prescription": "黄芪61.3g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 44,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0432",
+      "prescription": "川芎5.8g，黄芪19.5g，甘草8.5g，当归6.4g",
+      "diagnosis": "合成",
+      "patientAge": 52,
+      "patientGender": "女",
+      "expertLabel": "review",
+      "rationale": "Synthetic (建议复核, score=95)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0433",
+      "prescription": "黄芪27g，熟地黄19.3g，当归11.9g，白芍9.9g",
+      "diagnosis": "合成",
+      "patientAge": 56,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0434",
+      "prescription": "黄芪30g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 25,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0435",
+      "prescription": "甘草10g，甘遂0.9334479828365148g",
+      "diagnosis": "合成",
+      "patientAge": 63,
+      "patientGender": "男",
+      "expertLabel": "review",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0436",
+      "prescription": "甘草17.4g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 55,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=82)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0437",
+      "prescription": "板蓝根14.8g，川芎6.3g，白芍7.1g，甘草9.6g，黄芪18.3g，当归10.6g",
+      "diagnosis": "合成",
+      "patientAge": 37,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0439",
+      "prescription": "人参6g，莱菔子10g",
+      "diagnosis": "合成",
+      "patientAge": 60,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=95)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0440",
+      "prescription": "川芎7.3g，黄芪29.3g，丹参13g，熟地黄22.8g，附子12g",
+      "diagnosis": "合成",
+      "patientAge": 22,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0441",
+      "prescription": "当归15g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 61,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0442",
+      "prescription": "熟地黄14.8g，黄芪14.4g，板蓝根19.6g，川芎8.9g，当归6.9g，丹参12.4g",
+      "diagnosis": "合成",
+      "patientAge": 54,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0443",
+      "prescription": "当归32.5g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 66,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0444",
+      "prescription": "甘草21.2g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 62,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=82)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0445",
+      "prescription": "丹参14.3g，熟地黄25.8g，黄芪25.7g，板蓝根16.2g",
+      "diagnosis": "合成",
+      "patientAge": 51,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0446",
+      "prescription": "人参6g，莱菔子10g",
+      "diagnosis": "合成",
+      "patientAge": 33,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=95)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0447",
+      "prescription": "甘草10g，甘遂1.1382621969794855g",
+      "diagnosis": "合成",
+      "patientAge": 36,
+      "patientGender": "女",
+      "expertLabel": "review",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0448",
+      "prescription": "甘草10g，甘遂1.1197048488073051g",
+      "diagnosis": "合成",
+      "patientAge": 21,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0449",
+      "prescription": "甘草10g，甘遂1.0978170063579455g",
+      "diagnosis": "合成",
+      "patientAge": 26,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0450",
+      "prescription": "白芍10.9g，甘草4g，熟地黄16.4g，板蓝根10.3g",
+      "diagnosis": "合成",
+      "patientAge": 58,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0451",
+      "prescription": "人参6g，莱菔子10g",
+      "diagnosis": "合成",
+      "patientAge": 27,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=95)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0452",
+      "prescription": "甘草7.1g，熟地黄11.5g，当归7.1g，板蓝根23.9g，白芍7.5g，川芎4.2g",
+      "diagnosis": "合成",
+      "patientAge": 24,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0453",
+      "prescription": "当归26.4g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 31,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0455",
+      "prescription": "熟地黄11.5g，当归9.1g，甘草8.2g，黄芪18.2g",
+      "diagnosis": "合成",
+      "patientAge": 34,
+      "patientGender": "女",
+      "expertLabel": "review",
+      "rationale": "Synthetic (建议复核, score=95)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0456",
+      "prescription": "甘草10g，甘遂1.1405840145424009g",
+      "diagnosis": "合成",
+      "patientAge": 36,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0457",
+      "prescription": "当归12.9g，川芎6.2g，白芍12.9g，丹参12.6g，板蓝根21.7g，黄芪13.3g",
+      "diagnosis": "合成",
+      "patientAge": 41,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0458",
+      "prescription": "黄芪69.5g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 21,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0459",
+      "prescription": "川芎7.7g，甘草3.9g，板蓝根28.8g，熟地黄11.8g，附子12g",
+      "diagnosis": "合成",
+      "patientAge": 57,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0460",
+      "prescription": "丹参11.7g，川芎5.3g，当归11g，黄芪19.7g，板蓝根29.3g",
+      "diagnosis": "合成",
+      "patientAge": 31,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0461",
+      "prescription": "丹参14.5g，甘草8.3g，熟地黄19.8g，黄芪23.6g",
+      "diagnosis": "合成",
+      "patientAge": 21,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0462",
+      "prescription": "黄芪23.6g，甘草7.8g，板蓝根21.8g，白芍11.7g，丹参10.7g",
+      "diagnosis": "合成",
+      "patientAge": 68,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0463",
+      "prescription": "黄芪30.4g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 33,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0464",
+      "prescription": "甘草10.2g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 37,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=82)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0465",
+      "prescription": "甘草10g，甘遂0.8460730494232849g",
+      "diagnosis": "合成",
+      "patientAge": 25,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0466",
+      "prescription": "板蓝根20.8g，白芍8.4g，当归7.3g，黄芪25g，川芎3.5g，甘草6.9g，附子12g",
+      "diagnosis": "合成",
+      "patientAge": 22,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0467",
+      "prescription": "甘草10g，甘遂1.2778648965293542g",
+      "diagnosis": "合成",
+      "patientAge": 55,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0468",
+      "prescription": "甘草10g，甘遂0.8414690374163911g",
+      "diagnosis": "合成",
+      "patientAge": 50,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0469",
+      "prescription": "甘草10g，甘遂1.2454643158242107g",
+      "diagnosis": "合成",
+      "patientAge": 68,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0470",
+      "prescription": "黄芪28.8g，熟地黄19.1g，当归8.6g，甘草5.9g，板蓝根15.1g",
+      "diagnosis": "合成",
+      "patientAge": 37,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0471",
+      "prescription": "黄芪30.1g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 42,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0472",
+      "prescription": "黄芪14.7g，白芍9.1g，熟地黄17.4g，甘草4.6g",
+      "diagnosis": "合成",
+      "patientAge": 69,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0473",
+      "prescription": "黄芪48.6g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 61,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0474",
+      "prescription": "板蓝根19.1g，白芍12.5g，川芎4g，甘草6.9g",
+      "diagnosis": "合成",
+      "patientAge": 67,
+      "patientGender": "男",
+      "expertLabel": "review",
+      "rationale": "Synthetic (建议复核, score=95)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0475",
+      "prescription": "甘草23.8g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 43,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=82)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0476",
+      "prescription": "甘草10g，甘遂0.9307620411971584g",
+      "diagnosis": "合成",
+      "patientAge": 23,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0477",
+      "prescription": "甘草20.4g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 37,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=82)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0478",
+      "prescription": "甘草10g，甘遂0.8790486143669114g",
+      "diagnosis": "合成",
+      "patientAge": 22,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0479",
+      "prescription": "板蓝根25g，丹参11.5g，川芎5.5g，熟地黄22.3g，甘草7.3g，附子12g",
+      "diagnosis": "合成",
+      "patientAge": 48,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0480",
+      "prescription": "甘草3.9g，黄芪22.5g，川芎8.2g，当归6.1g，板蓝根12g，熟地黄20.5g",
+      "diagnosis": "合成",
+      "patientAge": 65,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0481",
+      "prescription": "人参6g，莱菔子10g",
+      "diagnosis": "合成",
+      "patientAge": 61,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=95)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0483",
+      "prescription": "板蓝根18.5g，甘草6.3g，丹参14.9g，黄芪20.7g，熟地黄17g，白芍8.5g",
+      "diagnosis": "合成",
+      "patientAge": 39,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0484",
+      "prescription": "黄芪72.1g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 29,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0485",
+      "prescription": "黄芪28.6g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 55,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0486",
+      "prescription": "丹参12.4g，板蓝根18.6g，黄芪21.5g，川芎7.8g，熟地黄14.2g",
+      "diagnosis": "合成",
+      "patientAge": 50,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0487",
+      "prescription": "熟地黄11.4g，当归8.9g，黄芪16.3g，甘草7.7g，板蓝根16.6g",
+      "diagnosis": "合成",
+      "patientAge": 57,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0488",
+      "prescription": "黄芪59g，白芍10g，川芎6g",
+      "diagnosis": "合成",
+      "patientAge": 36,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=87)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0489",
+      "prescription": "熟地黄20.4g，黄芪18.6g，丹参11.1g，川芎5g",
+      "diagnosis": "合成",
+      "patientAge": 28,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0490",
+      "prescription": "黄芪23.6g，甘草7.1g，板蓝根21.1g，丹参11.7g，附子12g",
+      "diagnosis": "合成",
+      "patientAge": 65,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0491",
+      "prescription": "熟地黄20.5g，板蓝根20.4g，丹参13.1g，甘草8.3g，当归8.5g，白芍8.4g",
+      "diagnosis": "合成",
+      "patientAge": 50,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0492",
+      "prescription": "白芍12.7g，甘草6.8g，当归12.2g，黄芪20.9g，熟地黄19g",
+      "diagnosis": "合成",
+      "patientAge": 56,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0493",
+      "prescription": "板蓝根14.6g，川芎7.9g，黄芪11.8g，白芍7.9g，当归13g，熟地黄29.5g",
+      "diagnosis": "合成",
+      "patientAge": 33,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0494",
+      "prescription": "当归6.6g，熟地黄15.8g，板蓝根20.6g，川芎3.7g，丹参15g，黄芪11.7g，附子12g",
+      "diagnosis": "合成",
+      "patientAge": 37,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0495",
+      "prescription": "甘草9.8g，黄芪15.9g，白芍10g，丹参11g，板蓝根19.2g",
+      "diagnosis": "合成",
+      "patientAge": 46,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0496",
+      "prescription": "甘草10g，甘遂1.1381581018911675g",
+      "diagnosis": "合成",
+      "patientAge": 28,
+      "patientGender": "女",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0497",
+      "prescription": "丹参14.9g，黄芪25.3g，川芎5.7g，甘草7.5g",
+      "diagnosis": "合成",
+      "patientAge": 61,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0498",
+      "prescription": "丹参11.3g，熟地黄23.7g，甘草5.1g，川芎8.5g，黄芪11g，白芍9.6g",
+      "diagnosis": "合成",
+      "patientAge": 36,
+      "patientGender": "男",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0499",
+      "prescription": "当归12.5g，熟地黄21.3g，甘草4.3g，白芍14.8g",
+      "diagnosis": "合成",
+      "patientAge": 24,
+      "patientGender": "女",
+      "expertLabel": "approved",
+      "rationale": "Synthetic (已通过, score=100)",
+      "synthetic": true
+    },
+    {
+      "id": "SYN-0500",
+      "prescription": "甘草10g，甘遂1.019299257034436g",
+      "diagnosis": "合成",
+      "patientAge": 48,
+      "patientGender": "男",
+      "expertLabel": "needs_revision",
+      "rationale": "Synthetic (需修改, score=85)",
+      "synthetic": true
+    }
+  ]
+}

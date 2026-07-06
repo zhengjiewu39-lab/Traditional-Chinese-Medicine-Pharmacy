@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Button,
@@ -34,7 +34,8 @@ import {
   DialogActions,
   DialogContent,
   DialogContentText,
-  DialogTitle
+  DialogTitle,
+  TablePagination,
 } from '@mui/material';
 import {
   Upload as UploadIcon,
@@ -52,64 +53,28 @@ import {
   Delete as DeleteIcon
 } from '@mui/icons-material';
 
-import { prescriptionApi } from '../services/api';
+import { prescriptionApi, herbsApi } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import CdssDualTrackPanel from '../components/CdssDualTrackPanel';
 
-// 模拟中药数据库
-const herbsDatabase = [
-  { name: '黄芪', commonDosage: '10-30g', nature: '甘温', meridians: '肺、脾经', functions: '补气升阳，益卫固表，利水消肿，托毒排脓，生肌', contraindications: '表实邪盛、热病初起、阴虚火旺者慎用' },
-  { name: '当归', commonDosage: '6-15g', nature: '甘温', meridians: '肝、心、脾经', functions: '补血活血，调经止痛，润肠通便', contraindications: '湿盛中满及大便溏泄者慎用' },
-  { name: '白芍', commonDosage: '6-15g', nature: '苦酸微寒', meridians: '肝、脾经', functions: '养血敛阴，柔肝止痛，平抑肝阳', contraindications: '脾胃虚寒、腹泻者慎用' },
-  { name: '川芎', commonDosage: '3-9g', nature: '辛温', meridians: '肝、胆、心包经', functions: '活血行气，祛风止痛', contraindications: '孕妇慎用' },
-  { name: '熟地黄', commonDosage: '10-30g', nature: '甘温', meridians: '肝、肾经', functions: '滋阴补血，益精填髓', contraindications: '脾虚有湿、食少便溏者慎用' },
-  { name: '陈皮', commonDosage: '3-10g', nature: '辛苦温', meridians: '肺、脾经', functions: '理气健脾，燥湿化痰', contraindications: '阴虚燥咳、津液亏损者慎用' },
-  { name: '茯苓', commonDosage: '9-15g', nature: '甘淡平', meridians: '心、肺、脾、肾经', functions: '利水渗湿，健脾宁心', contraindications: '小便不利属于气化不利者慎用' },
-  { name: '甘草', commonDosage: '3-10g', nature: '甘平', meridians: '心、肺、脾、胃经', functions: '益气补中，清热解毒，祛痰止咳，缓急止痛，调和诸药', contraindications: '水肿、高血压者慎用' },
-  { name: '人参', commonDosage: '3-9g', nature: '甘微苦，微温', meridians: '脾、肺经', functions: '大补元气，复脉固脱，补脾益肺，生津安神', contraindications: '实证、热病初起慎用' },
-  { name: '白术', commonDosage: '6-12g', nature: '甘，温', meridians: '脾、胃经', functions: '健脾益气，燥湿利水，止汗，安胎', contraindications: '阴虚内热、口渴便秘者慎用' },
-  { name: '黄芩', commonDosage: '6-15g', nature: '苦，寒', meridians: '肺、胆、肝、大肠经', functions: '清热燥湿，泻火解毒，止血，安胎', contraindications: '脾胃虚寒、气虚体弱者慎用' },
-  { name: '板蓝根', commonDosage: '15-60g', nature: '苦，寒', meridians: '心、肺、胃经', functions: '清热解毒，凉血，利咽', contraindications: '脾胃虚寒者慎用' },
-  { name: '桂枝', commonDosage: '3-10g', nature: '辛、甘，温', meridians: '心、肺、膀胱经', functions: '发汗解表，温通经脉，助阳化气', contraindications: '阴虚发热、多汗者慎用' },
-  { name: '麻黄', commonDosage: '3-9g', nature: '辛、微苦，温', meridians: '肺、膀胱经', functions: '发汗解表，宣肺平喘，利水消肿', contraindications: '外感风热、内有实热、阴虚盗汗者慎用' },
-  { name: '枸杞子', commonDosage: '6-15g', nature: '甘，平', meridians: '肝、肾、肺经', functions: '滋补肝肾，益精明目，养血', contraindications: '脾虚有湿、大便溏泄者慎用' }
-];
+function rxToText(rx) {
+  if (rx.prescriptionText) return rx.prescriptionText;
+  return (rx.herbs || []).map((h) => `${h.name}${h.dosage || ''}`).join('，');
+}
 
-// 模拟处方历史记录
-const prescriptionHistory = [
-  {
-    id: 1,
-    patientInfo: { name: '张三', age: 45, gender: '男' },
-    date: '2023-10-15',
-    diagnosis: '气血两虚',
-    prescription: '黄芪15g，当归10g，白芍10g，川芎6g，熟地黄15g，陈皮6g，茯苓10g，甘草6g',
-    reviewer: '李医师',
-    status: '已通过'
-  },
-  {
-    id: 2,
-    patientInfo: { name: '李四', age: 32, gender: '女' },
-    date: '2023-10-16',
-    diagnosis: '肝郁气滞',
-    prescription: '柴胡10g，白芍12g，当归10g，陈皮6g，甘草5g，香附10g，枳壳6g',
-    reviewer: '王药师',
-    status: '需修改'
-  },
-  {
-    id: 3,
-    patientInfo: { name: '王五', age: 68, gender: '男' },
-    date: '2023-10-17',
-    diagnosis: '肾阳不足',
-    prescription: '熟地黄15g，山药15g，牛膝10g，杜仲12g，枸杞子15g，淫羊藿10g，桂枝6g，甘草5g',
-    reviewer: '李医师',
-    status: '已通过'
-  }
-];
+function statusChipColor(status) {
+  if (['已完成', '待取药', '已通过', '已审核'].includes(status)) return 'success';
+  if (['待审核', '建议复核', '需注意'].includes(status)) return 'warning';
+  if (['需修改', '已驳回'].includes(status)) return 'error';
+  return 'default';
+}
 
 // 主组件
 function PrescriptionReview() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [herbsDatabase, setHerbsDatabase] = useState([]);
   const [prescription, setPrescription] = useState('');
   const [patientName, setPatientName] = useState('');
   const [patientAge, setPatientAge] = useState('');
@@ -122,6 +87,36 @@ function PrescriptionReview() {
   const [selectedHistoryItem, setSelectedHistoryItem] = useState(null);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [savedRx, setSavedRx] = useState(null);
+  const [historyList, setHistoryList] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historySearch, setHistorySearch] = useState('');
+  const [historyPage, setHistoryPage] = useState(0);
+  const [historyRowsPerPage, setHistoryRowsPerPage] = useState(20);
+  const [selectedPatientId, setSelectedPatientId] = useState(null);
+
+  const loadHistory = useCallback(async () => {
+    setHistoryLoading(true);
+    try {
+      const res = await prescriptionApi.getAllPrescriptions();
+      const sorted = (res.data || []).sort((a, b) => (a.date < b.date ? 1 : -1));
+      setHistoryList(sorted);
+    } catch (e) {
+      console.error(e);
+      setError('加载历史处方失败，请确认后端已启动');
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (viewMode === 'history') loadHistory();
+  }, [viewMode, loadHistory]);
+
+  useEffect(() => {
+    herbsApi.getAllHerbs()
+      .then((res) => setHerbsDatabase(res.data || []))
+      .catch(() => setHerbsDatabase([]));
+  }, []);
 
   const handleSavePrescription = async (approve = false) => {
     try {
@@ -131,6 +126,7 @@ function PrescriptionReview() {
         dosage: h.dosage || h.commonDosage || '10g',
       }));
       const created = await prescriptionApi.createPrescription({
+        patientId: selectedPatientId || undefined,
         patientName: patientName || '未登记',
         doctor: user?.name || '医生',
         diagnosis,
@@ -230,22 +226,51 @@ function PrescriptionReview() {
     return interactions;
   };
 
+  const buildReviewResult = (text, apiResult, meta = {}) => {
+    const herbs = parsePrescription(text);
+    const nonExistentHerbs = herbs.filter((h) => !h.exists);
+    const invalidDosageHerbs = herbs.filter((h) => !checkDosage(h));
+    const interactions = checkInteractions(herbs);
+    const effects = analyzePrescriptionEffects(herbs);
+    const data = apiResult?.data ?? apiResult;
+
+    return {
+      herbs,
+      nonExistentHerbs,
+      invalidDosageHerbs,
+      interactions,
+      effects,
+      apiAnalysis: data,
+      cdss: data,
+      patientInfo: meta.patientInfo || { name: '未填写', age: '未填写', gender: '未填写' },
+      diagnosis: meta.diagnosis || '未填写',
+      overallStatus: data?.joint?.status || data?.status || (nonExistentHerbs.length > 0 || invalidDosageHerbs.length > 0
+        ? '需修改'
+        : interactions.some((i) => i.severity === 'high')
+          ? '需注意'
+          : '建议通过'),
+      score: data?.joint?.score ?? data?.score,
+      warnings: data?.warnings || [],
+      suggestions: data?.suggestions || [],
+    };
+  };
+
   // 分析处方功效
   const analyzePrescriptionEffects = (herbs) => {
     const validHerbs = herbs.filter(h => h.exists);
     
     // 检查处方中药物的属性统计
     const properties = {
-      sweet: validHerbs.filter(h => h.nature.includes('甘')).length,
-      bitter: validHerbs.filter(h => h.nature.includes('苦')).length,
-      spicy: validHerbs.filter(h => h.nature.includes('辛')).length,
-      sour: validHerbs.filter(h => h.nature.includes('酸')).length,
-      salty: validHerbs.filter(h => h.nature.includes('咸')).length,
-      cold: validHerbs.filter(h => h.nature.includes('寒')).length,
-      cool: validHerbs.filter(h => h.nature.includes('凉')).length,
-      neutral: validHerbs.filter(h => h.nature.includes('平')).length,
-      warm: validHerbs.filter(h => h.nature.includes('温')).length,
-      hot: validHerbs.filter(h => h.nature.includes('热')).length,
+      sweet: validHerbs.filter(h => h.nature?.includes('甘')).length,
+      bitter: validHerbs.filter(h => h.nature?.includes('苦')).length,
+      spicy: validHerbs.filter(h => h.nature?.includes('辛')).length,
+      sour: validHerbs.filter(h => h.nature?.includes('酸')).length,
+      salty: validHerbs.filter(h => h.nature?.includes('咸')).length,
+      cold: validHerbs.filter(h => h.nature?.includes('寒')).length,
+      cool: validHerbs.filter(h => h.nature?.includes('凉')).length,
+      neutral: validHerbs.filter(h => h.nature?.includes('平')).length,
+      warm: validHerbs.filter(h => h.nature?.includes('温')).length,
+      hot: validHerbs.filter(h => h.nature?.includes('热')).length,
     };
     
     // 简化的功效分析逻辑
@@ -271,15 +296,15 @@ function PrescriptionReview() {
       effects.push('辛味较多，具有发散作用');
     }
     
-    if (validHerbs.some(h => h.functions.includes('补气'))) {
+    if (validHerbs.some(h => h.functions?.includes('补气'))) {
       effects.push('具有补气功效');
     }
     
-    if (validHerbs.some(h => h.functions.includes('补血') || h.functions.includes('养血'))) {
+    if (validHerbs.some(h => h.functions?.includes('补血') || h.functions?.includes('养血'))) {
       effects.push('具有补血功效');
     }
     
-    if (validHerbs.some(h => h.functions.includes('活血'))) {
+    if (validHerbs.some(h => h.functions?.includes('活血'))) {
       effects.push('具有活血化瘀功效');
     }
     
@@ -296,43 +321,21 @@ function PrescriptionReview() {
         throw new Error('请输入处方内容');
       }
 
-      const apiResult = await prescriptionApi.analyzePrescription({
+      const apiResult = await prescriptionApi.analyzePrescriptionCdss({
         prescription,
         patientAge: patientAge ? Number(patientAge) : undefined,
         patientGender,
         diagnosis,
       });
 
-      const herbs = parsePrescription(prescription);
-      const nonExistentHerbs = herbs.filter(h => !h.exists);
-      const invalidDosageHerbs = herbs.filter(h => !checkDosage(h));
-      const interactions = checkInteractions(herbs);
-      const effects = analyzePrescriptionEffects(herbs);
-
-      const result = {
-        herbs,
-        nonExistentHerbs,
-        invalidDosageHerbs,
-        interactions,
-        effects,
-        apiAnalysis: apiResult.data,
+      setReviewResult(buildReviewResult(prescription, apiResult, {
         patientInfo: {
           name: patientName || '未填写',
           age: patientAge || '未填写',
           gender: patientGender || '未填写',
         },
         diagnosis: diagnosis || '未填写',
-        overallStatus: apiResult.data?.status || (nonExistentHerbs.length > 0 || invalidDosageHerbs.length > 0
-          ? '需修改'
-          : interactions.some(i => i.severity === 'high')
-            ? '需注意'
-            : '建议通过'),
-        score: apiResult.data?.score,
-        warnings: apiResult.data?.warnings || [],
-        suggestions: apiResult.data?.suggestions || [],
-      };
-
-      setReviewResult(result);
+      }));
       setViewMode('review');
     } catch (err) {
       console.error('处方审核失败:', err);
@@ -361,15 +364,50 @@ function PrescriptionReview() {
   };
 
   // 确认使用历史记录
+  const applyHistoryItem = (item) => {
+    const text = rxToText(item);
+    setPrescription(text);
+    setPatientName(item.patientName || '');
+    setPatientAge(item.patientAge != null ? String(item.patientAge) : '');
+    setPatientGender(item.patientGender || '');
+    setDiagnosis(item.diagnosis || '');
+    setSelectedPatientId(item.patientId || null);
+    setReviewResult(null);
+    setViewMode('input');
+  };
+
   const confirmUseHistory = () => {
     if (selectedHistoryItem) {
-      setPrescription(selectedHistoryItem.prescription);
-      setPatientName(selectedHistoryItem.patientInfo.name);
-      setPatientAge(selectedHistoryItem.patientInfo.age.toString());
-      setPatientGender(selectedHistoryItem.patientInfo.gender);
-      setDiagnosis(selectedHistoryItem.diagnosis);
+      applyHistoryItem(selectedHistoryItem);
       setConfirmDialogOpen(false);
+    }
+  };
+
+  const loadHistoryAndReview = async (item) => {
+    applyHistoryItem(item);
+    setLoading(true);
+    setError('');
+    try {
+      const apiResult = await prescriptionApi.analyzePrescriptionCdss({
+        prescription: rxToText(item),
+        patientAge: item.patientAge,
+        patientGender: item.patientGender,
+        diagnosis: item.diagnosis,
+      });
+      setReviewResult(buildReviewResult(rxToText(item), apiResult, {
+        patientInfo: {
+          name: item.patientName || '未填写',
+          age: item.patientAge ?? '未填写',
+          gender: item.patientGender || '未填写',
+        },
+        diagnosis: item.diagnosis || '未填写',
+      }));
+      setViewMode('review');
+    } catch (err) {
+      setError(err.response?.data?.message || 'ADR 评估失败');
       setViewMode('input');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -466,7 +504,7 @@ function PrescriptionReview() {
               disabled={loading || !prescription}
               startIcon={loading ? <CircularProgress size={20} /> : <HealthIcon />}
             >
-              {loading ? '审核中...' : '审核处方'}
+              {loading ? 'ADR 评估中...' : '运行 ADR 预防评估'}
             </Button>
           </Box>
         </Box>
@@ -484,7 +522,16 @@ function PrescriptionReview() {
   const renderReviewResult = () => {
     if (!reviewResult) return null;
 
-    const { herbs, nonExistentHerbs, invalidDosageHerbs, interactions, effects, patientInfo, diagnosis, overallStatus } = reviewResult;
+    const {
+      herbs = [],
+      nonExistentHerbs = [],
+      invalidDosageHerbs = [],
+      interactions = [],
+      effects = [],
+      patientInfo = {},
+      diagnosis = '未填写',
+      overallStatus = '—',
+    } = reviewResult;
 
     const getSeverityColor = (severity) => {
       switch (severity) {
@@ -508,7 +555,7 @@ function PrescriptionReview() {
       <Paper sx={{ p: 3 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <Typography variant="h6">
-            处方审核结果
+            不良反应预防评估结果
           </Typography>
           <Chip
             label={overallStatus}
@@ -516,8 +563,9 @@ function PrescriptionReview() {
           />
         </Box>
         {reviewResult?.score != null && (
-          <Chip label={`审方评分 ${reviewResult.score}`} color="primary" sx={{ mr: 1 }} />
+          <Chip label={`ADR 综合评分 ${reviewResult.score}`} color="primary" sx={{ mr: 1 }} />
         )}
+        <CdssDualTrackPanel cdss={reviewResult?.cdss} />
         {reviewResult?.apiAnalysis?.warnings?.length > 0 && (
           <Alert severity="warning" sx={{ mb: 2, mt: 1 }}>
             {(reviewResult.apiAnalysis.warnings || reviewResult.warnings || []).slice(0, 3).map((w, i) => (
@@ -683,70 +731,100 @@ function PrescriptionReview() {
 
   // 渲染历史处方记录
   const renderPrescriptionHistory = () => {
+    const filtered = historyList.filter((item) => {
+      if (!historySearch.trim()) return true;
+      const q = historySearch.trim();
+      return (
+        item.patientName?.includes(q)
+        || item.diagnosis?.includes(q)
+        || rxToText(item).includes(q)
+        || String(item.patientId).includes(q)
+      );
+    });
+    const paged = filtered.slice(
+      historyPage * historyRowsPerPage,
+      historyPage * historyRowsPerPage + historyRowsPerPage
+    );
+
     return (
       <Paper sx={{ p: 3 }}>
-        <Typography variant="h6" gutterBottom>
-          历史处方记录
-        </Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 1 }}>
+          <Typography variant="h6">历史处方记录</Typography>
+          <Chip label={`共 ${filtered.length} 条`} size="small" />
+        </Box>
+        <TextField
+          size="small"
+          placeholder="搜索患者 / 诊断 / 处方"
+          value={historySearch}
+          onChange={(e) => { setHistorySearch(e.target.value); setHistoryPage(0); }}
+          sx={{ mb: 2, width: 320 }}
+          InputProps={{ startAdornment: <SearchIcon sx={{ mr: 1, color: 'action.active' }} /> }}
+        />
         <Divider sx={{ mb: 2 }} />
 
-        <TableContainer>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>日期</TableCell>
-                <TableCell>患者</TableCell>
-                <TableCell>诊断</TableCell>
-                <TableCell>处方</TableCell>
-                <TableCell>状态</TableCell>
-                <TableCell>操作</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {prescriptionHistory.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell>{item.date}</TableCell>
-                  <TableCell>{`${item.patientInfo.name} (${item.patientInfo.age}岁 ${item.patientInfo.gender})`}</TableCell>
-                  <TableCell>{item.diagnosis}</TableCell>
-                  <TableCell>
-                    <Tooltip title={item.prescription}>
-                      <Typography
-                        sx={{
-                          maxWidth: 200,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap'
-                        }}
-                      >
-                        {item.prescription}
-                      </Typography>
-                    </Tooltip>
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={item.status}
-                      color={item.status === '已通过' ? 'success' : 'warning'}
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <IconButton size="small" onClick={() => viewHistoryDetail(item)}>
-                      <SearchIcon fontSize="small" />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+        {historyLoading ? (
+          <CircularProgress size={28} />
+        ) : (
+          <>
+            <TableContainer>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>日期</TableCell>
+                    <TableCell>患者</TableCell>
+                    <TableCell>诊断</TableCell>
+                    <TableCell>处方</TableCell>
+                    <TableCell>CDSS</TableCell>
+                    <TableCell>状态</TableCell>
+                    <TableCell>操作</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {paged.map((item) => (
+                    <TableRow key={item.id} hover>
+                      <TableCell>{item.date}</TableCell>
+                      <TableCell>{`${item.patientName} (${item.patientAge ?? '—'}岁 ${item.patientGender || ''})`}</TableCell>
+                      <TableCell>{item.diagnosis}</TableCell>
+                      <TableCell>
+                        <Tooltip title={rxToText(item)}>
+                          <Typography sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {rxToText(item)}
+                          </Typography>
+                        </Tooltip>
+                      </TableCell>
+                      <TableCell>
+                        {item.cdssStatus && (
+                          <Chip size="small" label={item.cdssStatus} color={statusChipColor(item.cdssStatus)} variant="outlined" />
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Chip label={item.status} color={statusChipColor(item.status)} size="small" />
+                      </TableCell>
+                      <TableCell>
+                        <Button size="small" onClick={() => viewHistoryDetail(item)}>载入</Button>
+                        <Button size="small" color="primary" onClick={() => loadHistoryAndReview(item)}>ADR 审理</Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            <TablePagination
+              component="div"
+              count={filtered.length}
+              page={historyPage}
+              onPageChange={(_, p) => setHistoryPage(p)}
+              rowsPerPage={historyRowsPerPage}
+              onRowsPerPageChange={(e) => { setHistoryRowsPerPage(+e.target.value); setHistoryPage(0); }}
+              rowsPerPageOptions={[10, 20, 50, 100]}
+              labelRowsPerPage="每页"
+            />
+          </>
+        )}
 
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 3 }}>
-          <Button
-            variant="outlined"
-            onClick={() => setViewMode('input')}
-          >
-            返回
-          </Button>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2, gap: 1 }}>
+          <Button variant="outlined" onClick={loadHistory} startIcon={<HistoryIcon />}>刷新</Button>
+          <Button variant="outlined" onClick={() => setViewMode('input')}>返回</Button>
         </Box>
       </Paper>
     );
@@ -756,11 +834,12 @@ function PrescriptionReview() {
     <Container maxWidth="lg">
       <Box sx={{ mt: 2, mb: 4 }}>
         <Typography variant="h4" gutterBottom>
-          处方审理系统
+          草药不良反应预防 CDSS
         </Typography>
         <Typography variant="subtitle1" color="text.secondary" gutterBottom>
-          辅助药师完成中药处方审核，提高处方合理性和安全性
+          融合专家知识规则与可解释机器学习 · 辅助药师识别配伍禁忌、剂量风险与潜在 ADR 信号
         </Typography>
+        <Chip label="HAR-CDSS v1.0" size="small" color="primary" variant="outlined" sx={{ mt: 0.5 }} />
       </Box>
 
       {viewMode === 'input' && renderInputForm()}

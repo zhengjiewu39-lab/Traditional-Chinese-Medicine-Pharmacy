@@ -1,6 +1,7 @@
 const express = require('express');
 const { getStore, updateStore, nextId } = require('../data/store');
 const { analyzePrescription } = require('../services/prescriptionAnalyzer');
+const cdssEngine = require('../services/cdssEngine');
 const {
   generatePickupCode,
   buildBillingPrefill,
@@ -41,6 +42,10 @@ router.get('/pickup/:code', (req, res) => {
 
 router.post('/analyze', (req, res) => {
   res.json(analyzePrescription(req.body));
+});
+
+router.post('/cdss', (req, res) => {
+  res.json(cdssEngine.analyzePrescription(req.body));
 });
 
 router.get('/:id/billing-prefill', (req, res) => {

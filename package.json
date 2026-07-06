@@ -27,18 +27,30 @@
   },
   "scripts": {
     "start": "react-scripts start",
+    "prestart": "node scripts/stop-dev.js --port 3000",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "test:server": "node --test server/__tests__/*.test.js",
     "evaluate": "node scripts/evaluate-review.js",
+    "seed:patients": "node scripts/seed-demo-patients.js",
+    "seed:patients:force": "node scripts/seed-demo-patients.js --force",
+    "seed:catalog": "node -e \"const {load,save}=require('./server/data/store');const {ensureCatalogData}=require('./server/data/herbCatalog');const {ensureTraceabilityData}=require('./server/data/traceabilityGenerator');const s=load();ensureCatalogData(s);const t=ensureTraceabilityData(s);s.meta.version=7;s.meta.traceabilityRecords=t.total;save(s);console.log('Herbs',s.herbs.length,'Trace',t.total);\"",
     "export:features": "node scripts/export_features.js",
     "generate:synth-prescriptions": "node scripts/generate_synthetic_prescriptions.js --n 500",
+    "dataset:expand": "node scripts/generate_synthetic_prescriptions.js --n 500 --out experiments/data/tcm/synth_n500.json && node scripts/merge-datasets.js",
+    "ml:train": "node scripts/train-ml-weights.js --data experiments/data/tcm/features_expanded.csv",
+    "cdss:pipeline": "npm run dataset:expand && node scripts/export_features.js --input benchmarks/prescription-review-dataset-expanded.json --out experiments/data/tcm/features_expanded.csv && npm run ml:train && npm run evaluate",
     "experiment:export": "npm run export:features",
     "experiment:train": "python experiments/tcm/train.py --data experiments/data/tcm/features_v1.csv --model xgb --cv 5 --seed 42",
     "experiment:summary": "python experiments/tcm/evaluate.py --results experiments/results --out experiments/results/summary.csv",
     "eject": "react-scripts eject",
+    "preserver": "node scripts/stop-dev.js --port 3002 --wait",
     "server": "node server.js",
-    "dev": "concurrently \"npm run server\" \"npm run start\""
+    "stop": "node scripts/stop-dev.js",
+    "restart:server": "node scripts/stop-dev.js --port 3002 --wait && node server.js",
+    "restart": "node scripts/stop-dev.js --wait && concurrently --kill-others-on-fail false \"npm run server\" \"npm run start\"",
+    "predev": "node scripts/stop-dev.js --wait",
+    "dev": "concurrently --kill-others-on-fail false \"npm run server\" \"npm run start\""
   },
   "eslintConfig": {
     "extends": [
