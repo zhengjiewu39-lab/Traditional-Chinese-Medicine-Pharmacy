@@ -49,23 +49,6 @@ export default function SimulationRun() {
     return normalized;
   };
 
-  const startRun = async (policyId) => {
-    setError('');
-    try {
-      const scenario = await resolveScenario();
-      const rep = Math.min(100, Math.max(1, Number(replicates) || 1));
-      const { data } = await simulationApi.run({ scenario, policyId, replicates: rep });
-      setJobs((prev) => [{ jobId: data.jobId, status: 'running', policyId }, ...prev]);
-      pollJob(data.jobId);
-    } catch (e) {
-      const errs = e.response?.data?.errors;
-      setError(
-        Array.isArray(errs) ? errs.join('; ')
-          : e.response?.data?.message || e.message || t('simulationRun.runFailed')
-      );
-    }
-  };
-
   const runAll = async () => {
     const policies = loadSelectedPolicies();
     if (!policies.length) {

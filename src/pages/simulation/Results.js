@@ -141,8 +141,6 @@ export default function Results() {
     inequality: e.summary?.serviceInequalityIndex?.mean ?? e.summary?.serviceInequalityIndex,
   })).filter((x) => x.stockoutRate != null);
 
-  const paired = groupPaired;
-
   const metricRows = displayMetrics ? [
     [t('results.totalCost'), formatMetric(displayMetrics.totalCost, 2), 'CNY'],
     [t('results.stockoutRate'), formatPercent(displayMetrics.stockoutRate), t('results.proportion')],
@@ -306,7 +304,7 @@ export default function Results() {
             </Paper>
           )}
 
-          {paired.length > 0 && (
+          {groupPaired.length > 0 && (
             <Paper sx={{ p: 2, mb: 2 }}>
               <Typography variant="subtitle2" gutterBottom>{t('results.pairedCi')}</Typography>
               <Table size="small">
@@ -319,7 +317,7 @@ export default function Results() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {paired.map((p) => (
+                  {groupPaired.map((p) => (
                     <TableRow key={`${p.policyA}-${p.policyB}`}>
                       <TableCell>{p.policyA}</TableCell>
                       <TableCell>{p.policyB}</TableCell>
