@@ -16,6 +16,7 @@ temp.txt
 
 # Runtime persistence (seeded on first API start)
 data/store.json
+data/simulation-experiments/*.json
 
 # Uploaded files
 uploads/*

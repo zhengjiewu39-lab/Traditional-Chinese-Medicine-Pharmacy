@@ -1,0 +1,73 @@
+# Methodology — synthetic pharmacy supply simulation
+
+## Purpose
+
+This platform simulates **community pharmacy networks** under **public-health-style disturbances** to compare inventory and distribution policies. It does **not** model individual patients, clinical outcomes, or real pharmacy transactions.
+
+## Data classification
+
+All inputs and outputs are **synthetic / simulated**. Experiment files are stored under `data/simulation-experiments/` and labeled `synthetic-simulation`.
+
+## Simulation assumptions
+
+- **Time step:** one day per step for a fixed horizon (`simulationDays`).
+- **Topology:** warehouses supply community pharmacies; pharmacies serve synthetic population buckets by region type (`urban`, `suburban`, `rural`).
+- **Demand:** generated from population, regional base demand, drug priority, volatility, and event multipliers.
+- **Fulfillment:** same-day demand met from pharmacy on-hand; unmet demand counts as stockout and adds a waiting proxy tied to transit disruption.
+- **Replenishment:** policy-specific orders from warehouse stock; shipments arrive after transit days (affected by events).
+- **Costs (synthetic CNY):** holding, fixed order cost, transport per unit — not calibrated to real markets.
+
+## Disturbance events
+
+| Type | Effect on simulation |
+|------|----------------------|
+| `demandSurge` | Multiplies regional demand |
+| `supplyDisruption` | Reduces effective supply (via warehouse availability in policy phase) |
+| `roadDisruption` | Multiplies transit time |
+| `leadTimeExtension` | Multiplies lead/transit factor |
+
+Default scenario `public-health-emergency-default` combines surge, supply cut, rural road delay, and extended lead times.
+
+## Policies (explicit names)
+
+1. **fixed-allocation-v1** — population-proportional target stock.
+2. **reorder-point-v1** — (s, Q) reorder point with fixed batch.
+3. **cost-first-v1** — defers replenishment for lower-priority SKUs.
+4. **equity-aware-v1** — raises targets for high-vulnerability regions and recent stockouts; essential SKU boost.
+
+## Multi-objective score (research penalty units)
+
+```
+compositeScore =
+  totalCost
+  + weightedStockoutPenalty(priority-specific)
+  + waitingTimePenaltyPerDay × weighted wait
+  + inequityPenaltyPerGap × (stockoutGap + waitGap)
+```
+
+**Not** a clinical benefit score. Do not interpret as health impact.
+
+## Metrics (units)
+
+| Metric | Unit | Definition |
+|--------|------|------------|
+| `stockoutRate` | proportion | Unmet demand / total demand |
+| `fillRate` | proportion | Filled / demand |
+| `avgAccessTimeDays` | days | Demand-weighted wait proxy |
+| `avgDeliveryTimeDays` | days | Shipment transit weighted by quantity |
+| `inventoryTurnover` | ratio | Filled demand / mean inventory |
+| `stockoutGap` | proportion | Max − min regional stockout rate |
+| `waitGap` | days | Max − min regional access time |
+| `giniCoverage` | 0–1 | Gini coefficient on regional fill rates |
+
+## Reproducibility
+
+- Randomness uses `createRng(seed)` (Mulberry32) in fixed draw order.
+- Replicates use `randomSeed + replicateIndex`.
+- Record: `scenarioId`, `policyId`, `policyVersion`, `engineVersion`, `nodeVersion`, timestamps, and full scenario JSON.
+
+## Non-applicability
+
+- Not for clinical decision support, dispensing, or real logistics contracts.
+- Not validated against real epidemic data or pharmacy ERP systems.
+- Legacy demo modules (prescription CDSS, CRM, etc.) are **out of scope** for this methodology.

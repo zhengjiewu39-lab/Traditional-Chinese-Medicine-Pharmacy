@@ -30,7 +30,7 @@
     "prestart": "node scripts/stop-dev.js --port 3000",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "test:server": "node --test server/__tests__/*.test.js",
+    "test:server": "node --test server/__tests__/*.test.js server/simulation/__tests__/*.test.js",
     "evaluate": "node scripts/evaluate-review.js",
     "seed:patients": "node scripts/seed-demo-patients.js",
     "seed:patients:force": "node scripts/seed-demo-patients.js --force",
@@ -48,6 +48,7 @@
     "server": "node server.js",
     "stop": "node scripts/stop-dev.js",
     "restart:server": "node scripts/stop-dev.js --port 3002 --wait && node server.js",
+    "verify:simulation": "node scripts/verify-simulation-api.js",
     "restart": "node scripts/stop-dev.js --wait && concurrently --kill-others-on-fail false \"npm run server\" \"npm run start\"",
     "predev": "node scripts/stop-dev.js --wait",
     "dev": "concurrently --kill-others-on-fail false \"npm run server\" \"npm run start\""

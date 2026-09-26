@@ -23,6 +23,7 @@ const analyticsRoutes = require('./server/routes/analytics');
 const exportRoutes = require('./server/routes/export');
 const researchRoutes = require('./server/routes/research');
 const traceabilityRoutes = require('./server/routes/traceability');
+const simulationRoutes = require('./server/routes/simulation');
 
 const app = express();
 const port = process.env.PORT || 3002;
@@ -102,6 +103,7 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/export', exportRoutes);
 app.use('/api/research', researchRoutes);
 app.use('/api/traceability', traceabilityRoutes);
+app.use('/api/simulation', simulationRoutes);
 
 // 处方文件上传分析
 app.post('/api/prescriptions/analyze/file', upload.single('file'), (req, res) => {
@@ -149,7 +151,7 @@ app.get('/api/health', (req, res) => {
     status: 'ok',
     service: 'TCM Pharmacy API',
     version: '2.1',
-    features: ['har-cdss', 'research-ablation', 'adr-taxonomy', 'demo-patients-rx', 'traceability-v1'],
+    features: ['supply-simulation-v1', 'legacy-har-cdss', 'synthetic-data-only'],
   });
 });
 

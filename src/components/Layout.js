@@ -6,47 +6,32 @@ import {
   Collapse, ListItemButton, Chip, alpha,
 } from '@mui/material';
 import {
-  Menu as MenuIcon, Dashboard, PointOfSale, ShoppingCart, People,
-  CardMembership, NetworkCheck, Business, Gavel, Science, Inventory,
-  Assessment, Logout, AccountCircle, ReceiptLong, Healing, QrCode,
-  PersonSearch, Book, AssignmentTurnedIn, School, KeyboardArrowDown,
-  KeyboardArrowUp, LocalPharmacy, AdminPanelSettings,
+  Menu as MenuIcon, Dashboard, Science, Assessment, PlayArrow,
+  AssignmentTurnedIn, Inventory, NetworkCheck, ReceiptLong,
+  Logout, AccountCircle, KeyboardArrowDown, KeyboardArrowUp,
+  LocalPharmacy, AdminPanelSettings,
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
-import { getNavForRole, getPageTitle } from '../config/navigation';
+import { buildNav, getPageTitleForPath } from '../config/navigation';
+import SimulationDisclaimer from './SimulationDisclaimer';
+import ApiStatusBanner from './ApiStatusBanner';
+import LanguageSwitcher from './LanguageSwitcher';
+import { useLanguage } from '../i18n/LanguageContext';
 
 const drawerWidth = 260;
 
 const ICONS = {
-  '运营驾驶舱': Dashboard,
-  '智慧收银台': PointOfSale,
-  '订单管理': ShoppingCart,
-  '客户管理': People,
-  '会员管理': CardMembership,
-  '分销网络': NetworkCheck,
-  '组织结构': Business,
-  '监管合规': Gavel,
-  '科研评价中心': Science,
-  '库存管理': Inventory,
-  '库存查询': Inventory,
-  '处方统计分析': Assessment,
-  'AI 处方审理': ReceiptLong,
-  '医生工作台': Healing,
-  '取药查询': QrCode,
-  '患者档案': PersonSearch,
-  '处方模板库': ReceiptLong,
-  '中药知识库': Book,
-  '中药溯源': QrCode,
-  '质量管理': AssignmentTurnedIn,
-  '药师培训': School,
-  '部门管理': Business,
-  '人员管理': People,
-  '职位管理': Business,
-  '绩效管理': Assessment,
+  overview: Dashboard,
+  scenario: Science,
+  strategies: Assessment,
+  run: PlayArrow,
+  results: Assessment,
+  reproducibility: AssignmentTurnedIn,
+  legacy: Inventory,
 };
 
-function NavIcon({ name }) {
-  const Icon = ICONS[name] || Dashboard;
+function NavIcon({ icon }) {
+  const Icon = ICONS[icon] || Dashboard;
   return <Icon fontSize="small" />;
 }
 
@@ -57,9 +42,10 @@ function Layout({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout, isAdmin, isPharmacist } = useAuth();
+  const { t, lang } = useLanguage();
 
-  const sections = useMemo(() => getNavForRole(user?.role), [user?.role]);
-  const pageTitle = getPageTitle(location.pathname, user?.role);
+  const sections = useMemo(() => buildNav(t), [t, lang]);
+  const pageTitle = getPageTitleForPath(location.pathname, t);
 
   const isPathActive = (path) =>
     location.pathname === path || location.pathname.startsWith(`${path}/`);
@@ -68,15 +54,15 @@ function Layout({ children }) {
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <Toolbar sx={{ flexDirection: 'column', alignItems: 'flex-start', py: 2, px: 2 }}>
         <Typography variant="h6" sx={{ fontWeight: 800, color: 'primary.main' }}>
-          中药连锁药房
+          {t('app.title')}
         </Typography>
         <Typography variant="caption" color="text.secondary">
-          {isPharmacist ? '药师临床工作台' : '运营管理平台'}
+          {t('app.subtitle')}
         </Typography>
         <Chip
           size="small"
           icon={isAdmin ? <AdminPanelSettings sx={{ fontSize: 14 }} /> : <LocalPharmacy sx={{ fontSize: 14 }} />}
-          label={isAdmin ? '管理员' : '药师'}
+          label={isAdmin ? t('roles.admin') : t('roles.pharmacist')}
           color={isAdmin ? 'primary' : 'secondary'}
           sx={{ mt: 1, height: 22, fontSize: '0.7rem' }}
         />
@@ -84,7 +70,7 @@ function Layout({ children }) {
       <Divider />
       <List sx={{ px: 1, py: 1, flex: 1, overflowY: 'auto' }}>
         {sections.map((section) => (
-          <Box key={section.section} sx={{ mb: 1.5 }}>
+          <Box key={section.sectionKey} sx={{ mb: 1.5 }}>
             <Typography
               variant="caption"
               sx={{
@@ -96,11 +82,11 @@ function Layout({ children }) {
             </Typography>
             {section.items.map((item) => {
               if (item.children) {
-                const open = openSubMenus[item.text];
+                const open = openSubMenus[item.labelKey];
                 return (
-                  <React.Fragment key={item.text}>
-                    <ListItemButton onClick={() => setOpenSubMenus((p) => ({ ...p, [item.text]: !p[item.text] }))}>
-                      <ListItemIcon sx={{ minWidth: 38 }}><NavIcon name={item.text} /></ListItemIcon>
+                  <React.Fragment key={item.labelKey}>
+                    <ListItemButton onClick={() => setOpenSubMenus((p) => ({ ...p, [item.labelKey]: !p[item.labelKey] }))}>
+                      <ListItemIcon sx={{ minWidth: 38 }}><NavIcon icon={item.icon} /></ListItemIcon>
                       <ListItemText primary={item.text} primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: 600 }} />
                       {open ? <KeyboardArrowUp fontSize="small" /> : <KeyboardArrowDown fontSize="small" />}
                     </ListItemButton>
@@ -129,12 +115,9 @@ function Layout({ children }) {
                   sx={{ borderRadius: 1.5, mx: 0.5, mb: 0.25 }}
                 >
                   <ListItemIcon sx={{ minWidth: 38, color: isPathActive(item.path) ? 'primary.main' : 'text.secondary' }}>
-                    <NavIcon name={item.text} />
+                    <NavIcon icon={item.icon} />
                   </ListItemIcon>
                   <ListItemText primary={item.text} primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: isPathActive(item.path) ? 700 : 500 }} />
-                  {item.badge && (
-                    <Chip label={item.badge} size="small" color="error" sx={{ height: 18, fontSize: '0.6rem' }} />
-                  )}
                 </ListItemButton>
               );
             })}
@@ -161,8 +144,9 @@ function Layout({ children }) {
           <Typography variant="h6" sx={{ flexGrow: 1, fontWeight: 700 }}>
             {pageTitle}
           </Typography>
+          <LanguageSwitcher />
           <Chip
-            label={isPharmacist ? '药师模式' : '管理模式'}
+            label={isPharmacist ? t('roles.pharmacistMode') : t('roles.adminMode')}
             size="small"
             sx={{ mr: 2, bgcolor: alpha('#fff', 0.15), color: '#fff', fontWeight: 600 }}
           />
@@ -173,12 +157,12 @@ function Layout({ children }) {
           </IconButton>
           <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={() => setAnchorEl(null)}>
             <MenuItem disabled>
-              <Typography variant="body2">{user?.name} · {isAdmin ? '管理员' : '药师'}</Typography>
+              <Typography variant="body2">{user?.name} · {isAdmin ? t('roles.admin') : t('roles.pharmacist')}</Typography>
             </MenuItem>
             <Divider />
             <MenuItem onClick={() => { logout(); navigate('/login'); }}>
               <ListItemIcon><Logout fontSize="small" /></ListItemIcon>
-              <ListItemText>退出登录</ListItemText>
+              <ListItemText>{t('auth.logout')}</ListItemText>
             </MenuItem>
           </Menu>
         </Toolbar>
@@ -192,7 +176,9 @@ function Layout({ children }) {
         </Drawer>
       </Box>
       <Box component="main" sx={{ flexGrow: 1, p: 3, width: { sm: `calc(100% - ${drawerWidth}px)` }, mt: '64px' }}>
+        <ApiStatusBanner />
         {children}
+        <SimulationDisclaimer />
       </Box>
     </Box>
   );

@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Container, Box, Typography, TextField, Button, Paper, Alert, Chip, Stack } from '@mui/material';
+import { Container, Box, Typography, TextField, Button, Paper, Alert, Stack } from '@mui/material';
 import { AdminPanelSettings, LocalPharmacy } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { getHomeForRole } from '../config/navigation';
+import { useLanguage } from '../i18n/LanguageContext';
+import LanguageSwitcher from '../components/LanguageSwitcher';
 
 function Login() {
   const [username, setUsername] = useState('');
@@ -12,6 +14,7 @@ function Login() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { t } = useLanguage();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -20,8 +23,8 @@ function Login() {
       setLoading(true);
       const loggedIn = await login(username, password);
       navigate(getHomeForRole(loggedIn?.role));
-    } catch (error) {
-      setError('登录失败，请检查用户名和密码');
+    } catch {
+      setError(t('auth.loginFailed'));
     } finally {
       setLoading(false);
     }
@@ -29,43 +32,24 @@ function Login() {
 
   return (
     <Container component="main" maxWidth="xs">
-      <Box
-        sx={{
-          marginTop: 8,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-        }}
-      >
-        <Paper
-          elevation={3}
-          sx={{
-            padding: 4,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            width: '100%',
-          }}
-        >
-          <Typography component="h1" variant="h5" sx={{ mb: 1, fontWeight: 700 }}>
-            中药药房管理系统
+      <Box sx={{ marginTop: 8, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <Box sx={{ alignSelf: 'flex-end', mb: 1 }}>
+          <LanguageSwitcher sx={{ '& .MuiToggleButton-root': { color: 'text.primary', borderColor: 'divider' } }} />
+        </Box>
+        <Paper elevation={3} sx={{ padding: 4, display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
+          <Typography component="h1" variant="h5" sx={{ mb: 1, fontWeight: 700, textAlign: 'center' }}>
+            {t('login.title')}
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2, textAlign: 'center' }}>
-            管理员侧重运营 · 药师侧重处方与患者
+            {t('login.subtitle')}
           </Typography>
-          {error && (
-            <Alert severity="error" sx={{ width: '100%', mb: 2 }}>
-              {error}
-            </Alert>
-          )}
+          {error && <Alert severity="error" sx={{ width: '100%', mb: 2 }}>{error}</Alert>}
           <Box component="form" onSubmit={handleSubmit} sx={{ width: '100%' }}>
             <TextField
               margin="normal"
               required
               fullWidth
-              id="username"
-              label="用户名"
-              name="username"
+              label={t('login.username')}
               autoComplete="username"
               autoFocus
               value={username}
@@ -75,16 +59,14 @@ function Login() {
               margin="normal"
               required
               fullWidth
-              name="password"
-              label="密码"
+              label={t('login.password')}
               type="password"
-              id="password"
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
             <Button type="submit" fullWidth variant="contained" sx={{ mt: 3, mb: 2 }} disabled={loading}>
-              {loading ? '登录中...' : '登录'}
+              {loading ? t('auth.loggingIn') : t('auth.login')}
             </Button>
           </Box>
           <Stack direction="row" spacing={1} justifyContent="center" sx={{ mt: 1 }}>
@@ -94,16 +76,14 @@ function Login() {
               startIcon={<AdminPanelSettings />}
               disabled={loading}
               onClick={async () => {
-                setUsername('admin');
-                setPassword('admin123');
                 try {
                   setLoading(true);
                   const u = await login('admin', 'admin123');
                   navigate(getHomeForRole(u?.role));
-                } catch { setError('登录失败'); } finally { setLoading(false); }
+                } catch { setError(t('auth.loginFailed')); } finally { setLoading(false); }
               }}
             >
-              管理员
+              {t('roles.admin')}
             </Button>
             <Button
               size="small"
@@ -111,20 +91,18 @@ function Login() {
               startIcon={<LocalPharmacy />}
               disabled={loading}
               onClick={async () => {
-                setUsername('pharmacist');
-                setPassword('pharm123');
                 try {
                   setLoading(true);
                   const u = await login('pharmacist', 'pharm123');
                   navigate(getHomeForRole(u?.role));
-                } catch { setError('登录失败'); } finally { setLoading(false); }
+                } catch { setError(t('auth.loginFailed')); } finally { setLoading(false); }
               }}
             >
-              药师
+              {t('roles.pharmacist')}
             </Button>
           </Stack>
           <Typography variant="caption" color="text.secondary" display="block" textAlign="center" sx={{ mt: 1 }}>
-            admin / admin123 · pharmacist / pharm123
+            {t('login.demoAdmin')} · {t('login.demoPharm')}
           </Typography>
         </Paper>
       </Box>
@@ -132,4 +110,4 @@ function Login() {
   );
 }
 
-export default Login; 
+export default Login;
