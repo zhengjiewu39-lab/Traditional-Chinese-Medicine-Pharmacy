@@ -1,0 +1,41 @@
+{
+  "synthetic": true,
+  "disclaimer": "All data are synthetic. Conclusions hold only 在预定义仿真场景中 and must not be read as real-world policy effects.",
+  "engineVersion": "simulation-engine-v3.0.0",
+  "matrixVersion": "1.1.0",
+  "matrixSha256": "3fcc792214b89c43409c5f9b43fb10ca2237c3ee77befb955db3b27b3e334ced",
+  "seedsSha256": "765dced33f13d7b9f71a241a464a1e2497d5d2813bbfadda1badb4b47c165629",
+  "gitCommit": "d4c3a4e4cf59e2b762bb1bbeeee3d4d5fe0dac10",
+  "node": "v24.17.0",
+  "quick": false,
+  "seedsUsed": {
+    "calibration": 20,
+    "test": 100,
+    "sensitivity": 5
+  },
+  "errraParams": {
+    "serviceFloor": 0.95,
+    "maxRegionalGap": 0.1,
+    "vulnerabilityBeta": 0.05,
+    "projectionZ": 1,
+    "batchFraction": 0.1,
+    "disruptionBufferDays": 2,
+    "surgeDetectionRatio": 1.15,
+    "useServiceFloor": true,
+    "useVulnerability": true,
+    "useRollingHorizon": true,
+    "useEssentialPriority": true,
+    "useCompoundAwareness": true
+  },
+  "stageSeconds": {
+    "docs": 0.002,
+    "calibrate": 252.324,
+    "main": 52.383,
+    "ablation": 39.909,
+    "sensitivity": 31.289,
+    "stress": 21.469,
+    "ciStability": 0.024,
+    "crossModel": 0.078
+  },
+  "generatedAt": "2026-09-26T23:32:05.859Z"
+}

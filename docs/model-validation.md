@@ -22,7 +22,7 @@ Scope: verification (the code does what `docs/algorithm.md` says) and structural
 - **Common random numbers**: demand is drawn from the seed in a fixed order before any policy acts, so every policy faces identical demand paths.
 - **Disjoint seeds**: 20 calibration seeds (900001–900020) are used only to tune reorder-point; 100 test seeds (100001–100100) are used for every reported table; 5 sensitivity seeds (500001–500005) are used for LHS.
 - **No cherry-picking**: every scenario and every seed in the matrix is reported. ERRRA parameters are the a-priori defaults in `ERRRA_DEFAULTS`.
-- **Baseline strength**: reorder-point is tuned per scenario (an advantage ERRRA does not get), over a grid wide enough to reach the plateau where larger (s, Q) stops helping. In some disrupted scenarios the best grid point is at the upper z edge; a probe on S10 beyond the grid (z = 10, qScale = 40) did not improve the objective (1.465M vs 1.460M at z = 8, qScale = 24).
+- **Baseline strength**: reorder-point is tuned per scenario, an advantage ERRRA does not get. The tuning uses a 10 × 11 base grid that is extended by ×1.5 along any axis whose upper edge holds the optimum, until the optimum lies inside the grid. In the final run every scenario's optimum is inside the grid; in disrupted scenarios it sits at high z (up to 27), i.e. stockpiling.
 
 ## 3. CI stability
 

@@ -1,0 +1,211 @@
+{
+  "tolerance": 0.01,
+  "nSamples": 256,
+  "seeds": [
+    500001,
+    500002,
+    500003,
+    500004,
+    500005
+  ],
+  "betterCount": 144,
+  "worseCount": 0,
+  "tieCount": 112,
+  "errraAbsoluteFailureCount": 40,
+  "worseOnUnmetEssentialCount": 41,
+  "factors": [
+    {
+      "key": "surge",
+      "label": "Demand surge magnitude",
+      "lo": 1,
+      "hi": 2.2
+    },
+    {
+      "key": "supply",
+      "label": "Supply factor during disruption",
+      "lo": 0.2,
+      "hi": 1
+    },
+    {
+      "key": "road",
+      "label": "Rural road delay factor",
+      "lo": 1,
+      "hi": 2.5
+    },
+    {
+      "key": "lead",
+      "label": "Lead-time extension (rural, suburban)",
+      "lo": 1,
+      "hi": 2.5
+    },
+    {
+      "key": "duration",
+      "label": "Disruption duration (days)",
+      "lo": 10,
+      "hi": 45
+    },
+    {
+      "key": "capacity",
+      "label": "Dispatch/truck capacity multiplier",
+      "lo": 0.6,
+      "hi": 1.4
+    },
+    {
+      "key": "inbound",
+      "label": "Upstream inbound coverage",
+      "lo": 1,
+      "hi": 1.4
+    },
+    {
+      "key": "whStock",
+      "label": "Warehouse initial stock (days)",
+      "lo": 5,
+      "hi": 30
+    },
+    {
+      "key": "ruralVuln",
+      "label": "Rural vulnerability weight",
+      "lo": 1,
+      "hi": 2
+    },
+    {
+      "key": "volatility",
+      "label": "Demand volatility scale",
+      "lo": 0.5,
+      "hi": 1.5
+    }
+  ],
+  "worseSplit": null,
+  "worseOnUnmetSplit": {
+    "g": 0.2339421228791092,
+    "factor": "supply",
+    "label": "Supply factor during disruption",
+    "threshold": 0.487036639355938,
+    "badRateBelow": 0.33695652173913043,
+    "badRateAbove": 0.06097560975609756,
+    "nBelow": 92,
+    "nAbove": 164
+  },
+  "absoluteFailureSplit": {
+    "g": 0.2270347295864263,
+    "factor": "supply",
+    "label": "Supply factor during disruption",
+    "threshold": 0.487036639355938,
+    "badRateBelow": 0.33695652173913043,
+    "badRateAbove": 0.054878048780487805,
+    "nBelow": 92,
+    "nAbove": 164
+  },
+  "quintileMeanDWorst": [
+    {
+      "factor": "surge",
+      "label": "Demand surge magnitude",
+      "cells": [
+        0.025453094635218717,
+        0.0613657360663312,
+        0.07758341309779127,
+        0.08533835310052033,
+        0.1005423154699874
+      ]
+    },
+    {
+      "factor": "supply",
+      "label": "Supply factor during disruption",
+      "cells": [
+        0.11974123097329792,
+        0.10285078784617274,
+        0.07281993162819188,
+        0.030127377177351967,
+        0.026201252643394977
+      ]
+    },
+    {
+      "factor": "road",
+      "label": "Rural road delay factor",
+      "cells": [
+        0.05490662828194848,
+        0.07108909047125174,
+        0.07073343515384102,
+        0.07521134338883616,
+        0.07876933623543331
+      ]
+    },
+    {
+      "factor": "lead",
+      "label": "Lead-time extension (rural, suburban)",
+      "cells": [
+        0.05165989310512673,
+        0.07236819960357578,
+        0.0807744500292054,
+        0.06140654828751493,
+        0.08439052315453294
+      ]
+    },
+    {
+      "factor": "duration",
+      "label": "Disruption duration (days)",
+      "cells": [
+        0.03979610868648356,
+        0.07482515345651719,
+        0.08031647823049147,
+        0.07164915217658262,
+        0.08401998704381654
+      ]
+    },
+    {
+      "factor": "capacity",
+      "label": "Dispatch/truck capacity multiplier",
+      "cells": [
+        0.09846510916016263,
+        0.08260904273686265,
+        0.05884336058044296,
+        0.06097283100279634,
+        0.05037621786228436
+      ]
+    },
+    {
+      "factor": "inbound",
+      "label": "Upstream inbound coverage",
+      "cells": [
+        0.07237699002751245,
+        0.08128835811667849,
+        0.08316230416524892,
+        0.05759475268397996,
+        0.056719772916689726
+      ]
+    },
+    {
+      "factor": "whStock",
+      "label": "Warehouse initial stock (days)",
+      "cells": [
+        0.07257249689392477,
+        0.08208304499076152,
+        0.05558556937470396,
+        0.07569392749367489,
+        0.06504392057549915
+      ]
+    },
+    {
+      "factor": "ruralVuln",
+      "label": "Rural vulnerability weight",
+      "cells": [
+        0.060504104437755474,
+        0.07915269509537838,
+        0.06480821062359962,
+        0.07952948609781756,
+        0.06694714494904179
+      ]
+    },
+    {
+      "factor": "volatility",
+      "label": "Demand volatility scale",
+      "cells": [
+        0.05720942228549619,
+        0.08092890074119274,
+        0.06064151531699428,
+        0.08747067925776913,
+        0.06473450862804252
+      ]
+    }
+  ]
+}

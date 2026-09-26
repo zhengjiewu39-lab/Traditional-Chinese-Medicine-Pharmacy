@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="330" viewBox="0 0 640 330" font-family="Helvetica, Arial, sans-serif" font-size="11">
+<rect width="100%" height="100%" fill="white"/>
+<text x="20" y="22" font-size="14" font-weight="bold">Sensitivity of Δ worst-region essential fill (ERRRA − cost-first)</text>
+<text x="204" y="59" text-anchor="end">Supply factor during disruption</text>
+<rect x="210" y="48" width="200" height="16" fill="#d62728"/>
+<text x="206" y="59" text-anchor="end" font-size="10">-0.51</text>
+<text x="204" y="81" text-anchor="end">Demand surge magnitude</text>
+<rect x="410" y="70" width="188.9438871734252" height="16" fill="#2ca02c"/>
+<text x="602.9438871734252" y="81" text-anchor="start" font-size="10">0.48</text>
+<text x="204" y="103" text-anchor="end">Dispatch/truck capacity multiplier</text>
+<rect x="343.79507441695785" y="92" width="66.20492558304215" height="16" fill="#d62728"/>
+<text x="339.79507441695785" y="103" text-anchor="end" font-size="10">-0.17</text>
+<text x="204" y="125" text-anchor="end">Disruption duration (days)</text>
+<rect x="410" y="114" width="58.85534291328531" height="16" fill="#2ca02c"/>
+<text x="472.8553429132853" y="125" text-anchor="start" font-size="10">0.15</text>
+<text x="204" y="147" text-anchor="end">Demand volatility scale</text>
+<rect x="410" y="136" width="54.51375419481428" height="16" fill="#2ca02c"/>
+<text x="468.5137541948143" y="147" text-anchor="start" font-size="10">0.14</text>
+<text x="204" y="169" text-anchor="end">Lead-time extension (rural, suburban)</text>
+<rect x="410" y="158" width="37.925494173457594" height="16" fill="#2ca02c"/>
+<text x="451.9254941734576" y="169" text-anchor="start" font-size="10">0.10</text>
+<text x="204" y="191" text-anchor="end">Rural road delay factor</text>
+<rect x="410" y="180" width="37.28535740029423" height="16" fill="#2ca02c"/>
+<text x="451.28535740029423" y="191" text-anchor="start" font-size="10">0.09</text>
+<text x="204" y="213" text-anchor="end">Upstream inbound coverage</text>
+<rect x="384.00181405000063" y="202" width="25.998185949999367" height="16" fill="#d62728"/>
+<text x="380.00181405000063" y="213" text-anchor="end" font-size="10">-0.07</text>
+<text x="204" y="235" text-anchor="end">Warehouse initial stock (days)</text>
+<rect x="393.16234336891375" y="224" width="16.837656631086247" height="16" fill="#d62728"/>
+<text x="389.16234336891375" y="235" text-anchor="end" font-size="10">-0.04</text>
+<text x="204" y="257" text-anchor="end">Rural vulnerability weight</text>
+<rect x="410" y="246" width="0.03216200623211307" height="16" fill="#2ca02c"/>
+<text x="414.0321620062321" y="257" text-anchor="start" font-size="10">0.00</text>
+<line x1="410" y1="40" x2="410" y2="265" stroke="#333"/>
+<text x="410" y="290" text-anchor="middle">Spearman rank correlation (LHS, N = 256, 5 seeds per sample)</text>
+</svg>

@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="530" height="315" viewBox="0 0 530 315" font-family="Helvetica, Arial, sans-serif" font-size="11">
+<rect width="100%" height="100%" fill="white"/>
+<text x="20" y="22" font-size="14" font-weight="bold">Δ worst-region essential fill, ERRRA − cost-first (S10 structure)</text>
+<text x="84" y="69" text-anchor="end">1</text>
+<rect x="90" y="45" width="78" height="38" fill="rgb(255,255,255)"/>
+<text x="130" y="69" text-anchor="middle">+0.001</text>
+<rect x="170" y="45" width="78" height="38" fill="rgb(252,254,252)"/>
+<text x="210" y="69" text-anchor="middle">+0.007</text>
+<rect x="250" y="45" width="78" height="38" fill="rgb(249,253,249)"/>
+<text x="290" y="69" text-anchor="middle">+0.011</text>
+<rect x="330" y="45" width="78" height="38" fill="rgb(161,220,161)"/>
+<text x="370" y="69" text-anchor="middle">+0.179</text>
+<rect x="410" y="45" width="78" height="38" fill="rgb(164,221,164)"/>
+<text x="450" y="69" text-anchor="middle">+0.174</text>
+<text x="84" y="109" text-anchor="end">0.7</text>
+<rect x="90" y="85" width="78" height="38" fill="rgb(254,255,254)"/>
+<text x="130" y="109" text-anchor="middle">+0.001</text>
+<rect x="170" y="85" width="78" height="38" fill="rgb(252,254,252)"/>
+<text x="210" y="109" text-anchor="middle">+0.006</text>
+<rect x="250" y="85" width="78" height="38" fill="rgb(176,226,176)"/>
+<text x="290" y="109" text-anchor="middle">+0.150</text>
+<rect x="330" y="85" width="78" height="38" fill="rgb(158,218,158)"/>
+<text x="370" y="109" text-anchor="middle">+0.186</text>
+<rect x="410" y="85" width="78" height="38" fill="rgb(173,224,173)"/>
+<text x="450" y="109" text-anchor="middle">+0.157</text>
+<text x="84" y="149" text-anchor="end">0.5</text>
+<rect x="90" y="125" width="78" height="38" fill="rgb(254,255,254)"/>
+<text x="130" y="149" text-anchor="middle">+0.001</text>
+<rect x="170" y="125" width="78" height="38" fill="rgb(249,253,249)"/>
+<text x="210" y="149" text-anchor="middle">+0.011</text>
+<rect x="250" y="125" width="78" height="38" fill="rgb(108,200,108)"/>
+<text x="290" y="149" text-anchor="middle">+0.281</text>
+<rect x="330" y="125" width="78" height="38" fill="rgb(165,221,165)"/>
+<text x="370" y="149" text-anchor="middle">+0.172</text>
+<rect x="410" y="125" width="78" height="38" fill="rgb(211,239,211)"/>
+<text x="450" y="149" text-anchor="middle">+0.084</text>
+<text x="84" y="189" text-anchor="end">0.3</text>
+<rect x="90" y="165" width="78" height="38" fill="rgb(252,254,252)"/>
+<text x="130" y="189" text-anchor="middle">+0.006</text>
+<rect x="170" y="165" width="78" height="38" fill="rgb(95,195,95)"/>
+<text x="210" y="189" text-anchor="middle">+0.305</text>
+<rect x="250" y="165" width="78" height="38" fill="rgb(187,229,187)"/>
+<text x="290" y="189" text-anchor="middle">+0.130</text>
+<rect x="330" y="165" width="78" height="38" fill="rgb(225,244,225)"/>
+<text x="370" y="189" text-anchor="middle">+0.058</text>
+<rect x="410" y="165" width="78" height="38" fill="rgb(248,252,248)"/>
+<text x="450" y="189" text-anchor="middle">+0.013</text>
+<text x="84" y="229" text-anchor="end">0.1</text>
+<rect x="90" y="205" width="78" height="38" fill="rgb(212,239,212)"/>
+<text x="130" y="229" text-anchor="middle">+0.081</text>
+<rect x="170" y="205" width="78" height="38" fill="rgb(193,232,193)"/>
+<text x="210" y="229" text-anchor="middle">+0.118</text>
+<rect x="250" y="205" width="78" height="38" fill="rgb(250,253,250)"/>
+<text x="290" y="229" text-anchor="middle">+0.010</text>
+<rect x="330" y="205" width="78" height="38" fill="rgb(255,252,252)"/>
+<text x="370" y="229" text-anchor="middle">-0.006</text>
+<rect x="410" y="205" width="78" height="38" fill="rgb(255,251,251)"/>
+<text x="450" y="229" text-anchor="middle">-0.008</text>
+<text x="130" y="259" text-anchor="middle">×1</text>
+<text x="210" y="259" text-anchor="middle">×1.5</text>
+<text x="290" y="259" text-anchor="middle">×2</text>
+<text x="370" y="259" text-anchor="middle">×2.5</text>
+<text x="450" y="259" text-anchor="middle">×3</text>
+<text x="290" y="279" text-anchor="middle">Demand surge magnitude</text>
+<text transform="translate(14,145) rotate(-90)" text-anchor="middle">Supply factor</text>
+</svg>

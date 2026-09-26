@@ -19,7 +19,7 @@
 - **ERRRA stage 1** is exact only for a single shared capacity. With several warehouse capacities it is a heuristic (cross-model: 86–91% of instances exact, mean gap < 0.01, max gap ≈ 0.2 in projected service).
 - **Unmet versus gap trade-off.** Under severe scarcity (S12 limited warehouse stock, S14 extreme), ERRRA lowers the regional gap and raises worst-region fill, but cumulative unmet essential demand increases, because scarce units go to pharmacies with backlog.
 - **Vulnerability tilt** (β = 0.05) has a negligible measured effect in the ablation. It is a tie-breaker, not a driver.
-- **Reorder-point calibration** optimises cost + weighted stockout penalty. In disrupted scenarios this favours stockpiling, and the optimum lies at the high-z edge of the grid (a plateau; see `docs/validation-report.md`).
+- **Reorder-point calibration** optimises cost + weighted stockout penalty, not equity. In disrupted scenarios the optimum is very high z (8–27): the tuned baseline stockpiles, which buys high overall fill at high cost, but not worst-region essential fill. A baseline tuned for equity could look different.
 - ERRRA parameters (φ, δ, β, …) were fixed a priori and not tuned. Other settings may perform better or worse; LHS explores scenario factors, not ERRRA parameters.
 - **Face validation** with domain reviewers is planned but not yet conducted.
 
