@@ -1,7 +1,6 @@
 const express = require('express');
 const { getStore, updateStore, nextId } = require('../data/store');
 
-const { logInventoryHistory } = require('../services/stats');
 const { appendTimeline } = require('../services/prescriptionWorkflow');
 
 const router = express.Router();

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Quick synthetic demo: default public-health scenario × four policies (7-day, 1 replicate each).
+ * Quick synthetic demo: default public-health scenario × all registered policies (14-day, 1 replicate each).
  */
 const { DEFAULT_SCENARIO } = require('../server/simulation/scenarioSchema');
 const { runSimulation } = require('../server/simulation/simulationEngine');
@@ -14,6 +14,7 @@ for (const p of listPolicies()) {
   const m = r.metrics;
   console.log(
     `${p.id}: cost=${m.totalCost.toFixed(0)} stockout=${(m.stockoutRate * 100).toFixed(2)}% `
-    + `essential=${(m.essentialStockoutRate * 100).toFixed(2)}% inequality=${m.serviceInequalityIndex.toFixed(4)}`,
+    + `essential=${(m.essentialStockoutRate * 100).toFixed(2)}% worstRegionEssFill=${m.worstRegionEssentialFillRate.toFixed(4)} `
+    + `gap=${m.essentialServiceGap.toFixed(4)}`,
   );
 }

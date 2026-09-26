@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  Box,
   Button,
   Paper,
   Table,
@@ -71,19 +70,6 @@ const initialComplianceData = {
 
 function Compliance() {
   const [complianceData] = useState(initialComplianceData);
-
-  const getSeverityColor = (severity) => {
-    switch (severity) {
-      case 'error':
-        return 'error';
-      case 'warning':
-        return 'warning';
-      case 'info':
-        return 'info';
-      default:
-        return 'default';
-    }
-  };
 
   return (
     <div>

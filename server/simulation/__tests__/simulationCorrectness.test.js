@@ -1,6 +1,6 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert');
-const { isEventActive, getEventEndDay, computeEventFactors } = require('../eventUtils');
+const { isEventActive, getEventEndDay } = require('../eventUtils');
 const { computeServiceInequalityIndex } = require('../metricsEngine');
 const { runSimulation } = require('../simulationEngine');
 const { DEFAULT_SCENARIO, validateScenario } = require('../scenarioSchema');

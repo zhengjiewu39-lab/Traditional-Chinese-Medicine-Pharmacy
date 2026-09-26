@@ -16,9 +16,7 @@ import {
   ListItemText,
   CircularProgress,
   Alert,
-  Stack,
   Chip,
-  IconButton,
   Tooltip,
   FormControl,
   InputLabel,
@@ -38,19 +36,12 @@ import {
   TablePagination,
 } from '@mui/material';
 import {
-  Upload as UploadIcon,
   CheckCircle as CheckIcon,
-  MedicalServices as MedicalIcon,
   HealthAndSafety as HealthIcon,
-  Info as InfoIcon,
-  CloudUpload as CloudUploadIcon,
   WarningAmber as WarningIcon,
   Search as SearchIcon,
-  Print as PrintIcon,
   History as HistoryIcon,
-  Assignment as AssignmentIcon,
   Save as SaveIcon,
-  Delete as DeleteIcon
 } from '@mui/icons-material';
 
 import { prescriptionApi, herbsApi } from '../services/api';

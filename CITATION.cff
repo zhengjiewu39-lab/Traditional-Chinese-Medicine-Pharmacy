@@ -1,0 +1,25 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below. All data and results are synthetic; conclusions hold only within the predefined simulation scenarios."
+title: "Community Pharmacy Access and Supply Resilience Simulator: equitable essential-medicine access under compound public-health disruptions (synthetic simulation)"
+abstract: >-
+  Daily discrete simulation of a synthetic warehouse-to-community-pharmacy network with
+  inventory-position replenishment, backorders and capacity constraints, and the ERRRA
+  heuristic (Equity-constrained Resilient Rolling-horizon Allocation). Includes a frozen
+  scenario matrix, common-random-number experiments, ablation, LHS sensitivity, stress tests
+  and validation tests. Synthetic data only; not for clinical or operational use.
+type: software
+authors:
+  - alias: zhengjiewu39-lab
+    email: zhengjiewu39@gmail.com
+repository-code: "https://github.com/zhengjiewu39-lab/Traditional-Chinese-Medicine-Pharmacy"
+version: 3.0.0
+date-released: 2026-09-26
+license: MIT
+keywords:
+  - community pharmacy
+  - essential medicines
+  - supply chain resilience
+  - equity
+  - simulation
+  - inventory allocation
+  - heuristic

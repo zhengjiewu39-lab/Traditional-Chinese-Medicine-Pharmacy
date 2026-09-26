@@ -6,7 +6,7 @@
  *   node scripts/paper/run-all.js --quick    # smoke run with few seeds → paper/results-quick
  *   node scripts/paper/run-all.js --stage main,ablation
  *
- * Stages: calibrate, main, ablation, sensitivity, stress, ciStability, crossModel.
+ * Stages: docs, calibrate, main, ablation, sensitivity, stress, ciStability, crossModel.
  * Reads only the frozen paper/config/scenario-matrix.json and paper/config/seeds.json.
  * The reorder-point baseline is tuned on calibration seeds; every reported number uses test
  * seeds (or the dedicated sensitivity seeds). ERRRA parameters are the a-priori defaults.
@@ -26,7 +26,7 @@ const QUICK = args.includes('--quick');
 const stageArg = args.find((a) => a.startsWith('--stage'));
 const STAGES = stageArg
   ? (stageArg.includes('=') ? stageArg.split('=')[1] : args[args.indexOf(stageArg) + 1]).split(',')
-  : ['calibrate', 'main', 'ablation', 'sensitivity', 'stress', 'ciStability', 'crossModel'];
+  : ['docs', 'calibrate', 'main', 'ablation', 'sensitivity', 'stress', 'ciStability', 'crossModel'];
 
 const OUT = path.join(L.ROOT, QUICK ? 'paper/results-quick' : 'paper/results');
 const TABLES = path.join(OUT, '..', QUICK ? 'tables-quick' : 'tables');
@@ -55,7 +55,10 @@ function stage(name, fn) {
 }
 
 // ---------------------------------------------------------------- calibration
-const CALIB_GRID = { z: [0.84, 1.28, 1.65, 2.05, 2.58], qScale: [0.5, 1, 1.5, 2, 3] };
+// Wide enough to reach the plateau where larger (s, Q) no longer lowers the objective under
+// disruption (pharmacy orders become capacity-capped); see docs/model-validation.md.
+const CALIB_GRID = { z: [0.84, 1.28, 1.65, 2.05, 2.58, 3, 4, 5, 6, 8], qScale: [0.5, 1, 1.5, 2, 3, 4, 6, 8, 12, 16, 24] };
+const CALIB_MAX_EXTENSIONS = 6;
 const calibPath = path.join(OUT, 'calibration/reorder-point.json');
 
 function calibrate() {
@@ -65,24 +68,46 @@ function calibrate() {
   const total = matrix.scenarios.length * CALIB_GRID.z.length * CALIB_GRID.qScale.length;
   for (const sc of matrix.scenarios) {
     let bestRow = null;
-    for (const z of CALIB_GRID.z) {
-      for (const qScale of CALIB_GRID.qScale) {
+    const evaluated = new Set();
+    const evalPoint = (z, qScale) => {
+      const id = `${z}|${qScale}`;
+      if (evaluated.has(id)) return;
+      evaluated.add(id);
+      const recs = SEEDS.calibration.map((seed) => L.runRecord({
+        scenario: sc.scenario, scenarioKey: sc.key, policyId: 'reorder-point', seed, policyParams: { z, qScale },
+      }));
+      const objective = recs.reduce((s, r) => s + r.totalCost + r.weightedStockoutPenalty, 0) / recs.length;
+      const row = {
+        scenario: sc.key, z, qScale, objective,
+        meanCost: recs.reduce((s, r) => s + r.totalCost, 0) / recs.length,
+        meanWorstEF: recs.reduce((s, r) => s + r.worstRegionEssentialFillRate, 0) / recs.length,
+      };
+      rows.push(row);
+      if (!bestRow || row.objective < bestRow.objective) bestRow = row;
+    };
+    const zs = [...CALIB_GRID.z];
+    const qs = [...CALIB_GRID.qScale];
+    for (const z of zs) {
+      for (const qScale of qs) {
         k += 1;
         L.progress('calibrate', k, total);
-        const recs = SEEDS.calibration.map((seed) => L.runRecord({
-          scenario: sc.scenario, scenarioKey: sc.key, policyId: 'reorder-point', seed, policyParams: { z, qScale },
-        }));
-        const objective = recs.reduce((s, r) => s + r.totalCost + r.weightedStockoutPenalty, 0) / recs.length;
-        const row = {
-          scenario: sc.key, z, qScale, objective,
-          meanCost: recs.reduce((s, r) => s + r.totalCost, 0) / recs.length,
-          meanWorstEF: recs.reduce((s, r) => s + r.worstRegionEssentialFillRate, 0) / recs.length,
-        };
-        rows.push(row);
-        if (!bestRow || row.objective < bestRow.objective) bestRow = row;
+        evalPoint(z, qScale);
       }
     }
-    best[sc.key] = { z: bestRow.z, qScale: bestRow.qScale, objective: bestRow.objective };
+    // Extend the grid by ×1.5 along any axis whose upper edge holds the optimum, until it moves inside.
+    let extensions = 0;
+    while (extensions < CALIB_MAX_EXTENSIONS && (bestRow.z === zs.at(-1) || bestRow.qScale === qs.at(-1))) {
+      if (bestRow.z === zs.at(-1)) zs.push(+(zs.at(-1) * 1.5).toFixed(2));
+      if (bestRow.qScale === qs.at(-1)) qs.push(+(qs.at(-1) * 1.5).toFixed(2));
+      for (const z of zs) for (const qScale of qs) evalPoint(z, qScale);
+      extensions += 1;
+    }
+    const atGridBoundary = bestRow.z === zs.at(-1) || bestRow.qScale === qs.at(-1);
+    if (atGridBoundary) console.warn(`\n[calibrate] ${sc.key}: optimum still at the upper grid boundary after ${extensions} extensions (z ${bestRow.z}, qScale ${bestRow.qScale})`);
+    best[sc.key] = {
+      z: bestRow.z, qScale: bestRow.qScale, objective: bestRow.objective, atGridBoundary,
+      extensions, zMax: zs.at(-1), qScaleMax: qs.at(-1), pointsEvaluated: evaluated.size,
+    };
   }
   L.writeCsv(path.join(OUT, 'calibration/grid.csv'), rows);
   L.writeJson(calibPath, {
@@ -91,7 +116,7 @@ function calibrate() {
     calibrationSeeds: SEEDS.calibration,
     perScenario: best,
   });
-  L.writeText(path.join(TABLES, 'calibration.md'), `# Reorder-point (s,Q) calibration\n\nTuned per scenario on calibration seeds ${SEEDS.calibration[0]}–${SEEDS.calibration.at(-1)} (disjoint from test seeds). Objective: mean total cost + weighted stockout penalty. Grid z ∈ {${CALIB_GRID.z.join(', ')}}, qScale ∈ {${CALIB_GRID.qScale.join(', ')}}.\n\n${L.mdTable(['Scenario', 'z', 'qScale', 'Objective'], Object.entries(best).map(([s, b]) => [s, b.z, b.qScale, L.fmt(b.objective, 0)]))}\n`);
+  L.writeText(path.join(TABLES, 'calibration.md'), `# Reorder-point (s,Q) calibration\n\nTuned per scenario on calibration seeds ${SEEDS.calibration[0]}–${SEEDS.calibration.at(-1)} (disjoint from test seeds). Objective: mean total cost + weighted stockout penalty. Base grid z ∈ {${CALIB_GRID.z.join(', ')}}, qScale ∈ {${CALIB_GRID.qScale.join(', ')}}; when the optimum lies on an upper edge the grid is extended by ×1.5 on that axis (at most ${CALIB_MAX_EXTENSIONS} times) until it moves inside. Large z means the tuned baseline stockpiles ahead of disruptions.\n\n${L.mdTable(['Scenario', 'z', 'qScale', 'Objective', 'Grid extensions', 'Still at edge'], Object.entries(best).map(([s, b]) => [s, b.z, b.qScale, L.fmt(b.objective, 0), b.extensions, b.atGridBoundary ? 'yes' : 'no']))}\n`);
 }
 
 function rpParams(key) {
@@ -605,8 +630,52 @@ function runCrossModel() {
   L.writeText(path.join(TABLES, 'cross-model.md'), `# ERRRA stage 1 vs exhaustive enumeration (small integer instances)\n\nObjective: max over integer allocations of min_r min(φ, SR_r). Random instances: 3 regions, 1–2 lines per region, needs 2–8, capacity 1–12 per warehouse, unit batch, β = 0.\n\n${L.mdTable(['Warehouses', 'Floor φ', 'Instances', 'Exactly optimal', 'Mean gap', 'Max gap'], rows.map((r) => [r.warehouses, r.floor, r.n, `${r.exactMatches} (${L.fmt(r.exactShare * 100, 1)}%)`, L.fmt(r.meanGap, 4), L.fmt(r.maxGap, 4)]))}\n`);
 }
 
+// ---------------------------------------------------------------- scenario and parameter tables
+function runDocs() {
+  const { POLICIES } = require(path.join(L.ROOT, 'server/simulation/policyEngine'));
+  const evText = (e) => {
+    const where = e.targetRegions.length === 3 ? 'all regions' : e.targetRegions.join('+');
+    return `${e.type} ×${e.magnitude} (${where}, day ${e.startDay}–${e.startDay + e.durationDays - 1})`;
+  };
+  const scenRows = matrix.scenarios.map((s) => {
+    const lg = s.scenario.logistics;
+    return [s.key, s.label, s.scenario.events.length ? s.scenario.events.map(evText).join('; ') : 'none',
+      lg.capacityMultiplier ?? 1, lg.upstreamInboundCoverage, lg.warehouseInitialStockDays, lg.pharmacyInitialStockDays];
+  });
+  const base = matrix.scenarios[0].scenario;
+  const regionRows = Object.entries(base.regions).map(([rt, r]) => [rt, base.regionPharmacyCounts[rt], r.population, r.baseDemand, r.demandVolatility, r.distanceKm, r.roadAccessibility, r.transitDays, r.vulnerabilityWeight]);
+  const drugRows = base.drugs.map((d) => [d.id, d.priority, d.unitProcurementCost, d.holdingCostPerUnitDay, d.stockoutPenalty, d.leadTimeDays]);
+  const lg = base.logistics;
+  const logRows = Object.entries(lg).map(([k, v]) => [k, v]);
+  const polRows = Object.values(POLICIES).map((p) => [p.id, p.version, `\`${JSON.stringify(p.params)}\``, p.rationing || 'rank']);
+  L.writeText(path.join(TABLES, 'scenarios.md'), `# Frozen scenario matrix v${matrix.matrixVersion}\n\nHorizon ${matrix.horizonDays} days: warm-up [0,30), disruption [30,60), recovery [60,120). ${matrix.scenarios.length} scenarios; ${seedsCfg.test.length} common-random-number test seeds each. All values synthetic.\n\n${L.mdTable(['Key', 'Label', 'Events', 'Capacity ×', 'Inbound coverage', 'WH stock (days)', 'Pharmacy stock (days)'], scenRows)}\n\nMatrix revisions: ${(matrix.revisions || []).map((r) => `v${r.version}: ${r.change}${r.reason ? ` — ${r.reason}` : ''}`).join(' ')}\n`);
+  L.writeText(path.join(TABLES, 'parameters.md'), [
+    '# Model parameters (synthetic, illustrative)',
+    '',
+    `Network: ${base.warehouseCount} warehouses, ${base.pharmacyCount} pharmacies, ${base.drugs.length} SKUs, ${base.simulationDays} days.`,
+    '',
+    '## Regions',
+    '',
+    L.mdTable(['Region', 'Pharmacies', 'Population', 'Base demand /1000', 'Volatility (CV)', 'Distance km', 'Road accessibility', 'Base transit days', 'Vulnerability v_r'], regionRows),
+    '',
+    '## SKUs (priority demand scale: essential 1.2, chronic-care 1.0, routine 0.75)',
+    '',
+    L.mdTable(['SKU', 'Priority', 'Procurement c', 'Holding h /unit·day', 'Stockout penalty p', 'Lead time days'], drugRows),
+    '',
+    '## Logistics (base network)',
+    '',
+    L.mdTable(['Parameter', 'Value'], logRows),
+    '',
+    '## Policies (defaults; reorder-point z and qScale are replaced by per-scenario calibration)',
+    '',
+    L.mdTable(['Policy', 'Version', 'Parameters', 'Shortage rationing'], polRows),
+    '',
+  ].join('\n'));
+}
+
 // ---------------------------------------------------------------- run
 const t0 = Date.now();
+if (!stageArg || STAGES.includes('docs')) stage('docs', runDocs);
 stage('calibrate', calibrate);
 stage('main', runMain);
 stage('ablation', runAblation);

@@ -32,10 +32,6 @@ function pick(rng, arr) {
   return arr[Math.floor(rng() * arr.length)];
 }
 
-function fmtHerb(name, dosage, unit = 'g') {
-  return `${name}${dosage}${unit}`;
-}
-
 function parseHerbsFromText(text) {
   return text.split(/[，,、]+/).filter(Boolean).map((part) => {
     const m = part.trim().match(/^(.+?)(\d+(?:\.\d+)?\s*(?:g|克|盒|瓶|袋)?)$/);

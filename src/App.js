@@ -1,4 +1,4 @@
-import React, { Suspense } from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
@@ -19,29 +19,31 @@ import SimulationResults from './pages/simulation/Results';
 import Reproducibility from './pages/simulation/Reproducibility';
 import ExperimentArchive from './pages/simulation/ExperimentArchive';
 import Documentation from './pages/simulation/Documentation';
-import OperationsDashboard from './pages/OperationsDashboard';
-import DoctorWorkbench from './pages/DoctorWorkbench';
-import PatientPickup from './pages/PatientPickup';
-import Inventory from './pages/Inventory';
-import Orders from './pages/Orders';
-import Customers from './pages/Customers';
-import Billing from './pages/Billing';
-import Compliance from './pages/Compliance';
-import Organization from './pages/Organization';
-import Distribution from './pages/Distribution';
-import PatientRecords from './pages/PatientRecords';
-import TraceabilitySystem from './pages/TraceabilitySystem';
-import QualityManagement from './pages/QualityManagement';
-import MembershipManagement from './pages/MembershipManagement';
-import PrescriptionReview from './pages/PrescriptionReview';
-import PrescriptionTemplates from './pages/PrescriptionTemplates';
-import PrescriptionAnalytics from './pages/PrescriptionAnalytics';
-import ResearchHub from './pages/ResearchHub';
-import HerbalKnowledgeBase from './pages/HerbalKnowledgeBase';
-import PharmacistTraining from './pages/PharmacistTraining';
-import PersonnelManagement from './pages/organization/PersonnelManagement';
-import PositionsManagement from './pages/organization/PositionsManagement';
-import PerformanceManagement from './pages/organization/PerformanceManagement';
+
+// Legacy CDSS demo (tag legacy-cdss-v1): code-split so it never loads with the research platform.
+const OperationsDashboard = lazy(() => import('./pages/OperationsDashboard'));
+const DoctorWorkbench = lazy(() => import('./pages/DoctorWorkbench'));
+const PatientPickup = lazy(() => import('./pages/PatientPickup'));
+const Inventory = lazy(() => import('./pages/Inventory'));
+const Orders = lazy(() => import('./pages/Orders'));
+const Customers = lazy(() => import('./pages/Customers'));
+const Billing = lazy(() => import('./pages/Billing'));
+const Compliance = lazy(() => import('./pages/Compliance'));
+const Organization = lazy(() => import('./pages/Organization'));
+const Distribution = lazy(() => import('./pages/Distribution'));
+const PatientRecords = lazy(() => import('./pages/PatientRecords'));
+const TraceabilitySystem = lazy(() => import('./pages/TraceabilitySystem'));
+const QualityManagement = lazy(() => import('./pages/QualityManagement'));
+const MembershipManagement = lazy(() => import('./pages/MembershipManagement'));
+const PrescriptionReview = lazy(() => import('./pages/PrescriptionReview'));
+const PrescriptionTemplates = lazy(() => import('./pages/PrescriptionTemplates'));
+const PrescriptionAnalytics = lazy(() => import('./pages/PrescriptionAnalytics'));
+const ResearchHub = lazy(() => import('./pages/ResearchHub'));
+const HerbalKnowledgeBase = lazy(() => import('./pages/HerbalKnowledgeBase'));
+const PharmacistTraining = lazy(() => import('./pages/PharmacistTraining'));
+const PersonnelManagement = lazy(() => import('./pages/organization/PersonnelManagement'));
+const PositionsManagement = lazy(() => import('./pages/organization/PositionsManagement'));
+const PerformanceManagement = lazy(() => import('./pages/organization/PerformanceManagement'));
 
 const Loading = () => (
   <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>

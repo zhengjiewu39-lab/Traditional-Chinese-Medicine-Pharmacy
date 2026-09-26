@@ -38,7 +38,7 @@ function ResearchHub() {
   const [tab, setTab] = useState(0);
   const [results, setResults] = useState(null);
   const [dataset, setDataset] = useState(null);
-  const [rules, setRules] = useState(null);
+  const [, setRules] = useState(null);
   const [loading, setLoading] = useState(true);
   const [evaluating, setEvaluating] = useState(false);
   const [compareInput, setCompareInput] = useState({

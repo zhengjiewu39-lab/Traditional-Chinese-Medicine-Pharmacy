@@ -40,7 +40,6 @@ import {
   Delete as DeleteIcon,
   Phone as PhoneIcon,
   Email as EmailIcon,
-  Business as BusinessIcon,
   Search as SearchIcon,
   PersonPin as PersonPinIcon,
   LocationOn as LocationIcon,

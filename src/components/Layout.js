@@ -6,10 +6,19 @@ import {
   Collapse, ListItemButton, Chip, alpha,
 } from '@mui/material';
 import {
-  Menu as MenuIcon, Dashboard, Science, Assessment, PlayArrow,
-  AssignmentTurnedIn, Inventory, NetworkCheck, ReceiptLong,
-  Logout, AccountCircle, KeyboardArrowDown, KeyboardArrowUp,
-  LocalPharmacy, AdminPanelSettings,
+  Menu as MenuIcon,
+  Dashboard,
+  Science,
+  Assessment,
+  PlayArrow,
+  AssignmentTurnedIn,
+  Inventory,
+  Logout,
+  AccountCircle,
+  KeyboardArrowDown,
+  KeyboardArrowUp,
+  LocalPharmacy,
+  AdminPanelSettings,
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { buildNav, getPageTitleForPath } from '../config/navigation';
@@ -44,9 +53,9 @@ function Layout({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout, isAdmin, isPharmacist } = useAuth();
-  const { t, lang } = useLanguage();
+  const { t } = useLanguage();
 
-  const sections = useMemo(() => buildNav(t), [t, lang]);
+  const sections = useMemo(() => buildNav(t), [t]);
   const pageTitle = getPageTitleForPath(location.pathname, t);
 
   const isPathActive = (path) =>

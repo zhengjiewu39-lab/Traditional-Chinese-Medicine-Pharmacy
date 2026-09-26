@@ -39,9 +39,7 @@ import {
 } from '@mui/material';
 import {
   Visibility as VisibilityIcon,
-  Edit as EditIcon,
   Delete as DeleteIcon,
-  LocalShipping as ShippingIcon,
   SmartToy as AIIcon,
   Route as RouteIcon,
   Add as AddIcon,
@@ -709,7 +707,7 @@ function Orders() {
                           {index < optimizationResult.optimizedRoute.length - 1 && (
                             <Box sx={{ display: 'flex', alignItems: 'center', pl: 8, py: 0.5 }}>
                               <Typography variant="caption" color="text.secondary">
-                                行驶约 {point.orderId && optimizationResult.estimatedDeliveryTimes[point.orderId]?.distance || '5-10'} 公里
+                                行驶约 {(point.orderId && optimizationResult.estimatedDeliveryTimes[point.orderId]?.distance) || '5-10'} 公里
                               </Typography>
                             </Box>
                           )}

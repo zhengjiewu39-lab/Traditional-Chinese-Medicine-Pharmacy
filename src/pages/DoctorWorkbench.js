@@ -1,7 +1,22 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Box, Typography, Paper, Grid, TextField, Button, Autocomplete, Chip, Alert,
-  LinearProgress, List, ListItem, ListItemText, Divider, Card, CardContent, Stepper, Step, StepLabel,
+  Box,
+  Typography,
+  Paper,
+  Grid,
+  TextField,
+  Button,
+  Autocomplete,
+  Chip,
+  Alert,
+  LinearProgress,
+  List,
+  ListItem,
+  ListItemText,
+  Divider,
+  Stepper,
+  Step,
+  StepLabel,
 } from '@mui/material';
 import { Save, CheckCircle, ContentCopy, LocalHospital } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';

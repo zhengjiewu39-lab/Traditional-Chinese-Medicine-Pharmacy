@@ -1,5 +1,3 @@
-const { getStore, updateStore, nextId } = require('../data/store');
-
 function computeInventoryStats(inventory) {
   const totalItems = inventory.length;
   const totalValue = inventory.reduce((s, i) => s + i.stock * i.price, 0);

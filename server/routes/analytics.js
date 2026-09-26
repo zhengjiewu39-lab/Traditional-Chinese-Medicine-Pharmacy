@@ -1,6 +1,5 @@
 const express = require('express');
 const { getStore } = require('../data/store');
-const { computeSalesStats } = require('../services/stats');
 
 const router = express.Router();
 

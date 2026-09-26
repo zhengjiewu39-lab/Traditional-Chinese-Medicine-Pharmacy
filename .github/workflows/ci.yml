@@ -20,8 +20,17 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Dependency audit (fail on high or critical)
+        run: npm audit --audit-level=high
+
+      - name: Lint (zero warnings)
+        run: npm run lint
+
       - name: Simulation unit tests
         run: npm run simulation:test
+
+      - name: Paper pipeline smoke run (few seeds)
+        run: npm run paper:quick
 
       - name: Simulation demo
         run: npm run simulation:demo
@@ -33,11 +42,10 @@ jobs:
         run: npm run research:reproduce -- --latest
         continue-on-error: true
 
-      - name: Frontend build
+      - name: Frontend build (strict, warnings are errors)
         run: npm run build
         env:
-          # Legacy demo pages have pre-existing ESLint noise; research CI focuses on simulation tests.
-          DISABLE_ESLINT_PLUGIN: true
+          CI: true
 
       - name: Upload simulation experiments artifact
         uses: actions/upload-artifact@v4

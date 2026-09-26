@@ -1,92 +1,64 @@
-# Methodology — synthetic pharmacy supply simulation
+# Methodology — synthetic pharmacy supply simulation (engine v3)
 
 ## Purpose
 
-This platform simulates **community pharmacy networks** under **public-health-style disturbances** to compare inventory and distribution policies. It does **not** model individual patients, clinical outcomes, or real pharmacy transactions.
+The platform simulates **community pharmacy networks** under **compound public-health-style disturbances** to compare essential-medicine replenishment and allocation policies on equitable access and supply resilience. It does **not** model individual patients, clinical outcomes or real pharmacy transactions. All inputs and outputs are **synthetic**, and conclusions hold only 在预定义仿真场景中.
 
-## Data classification
+Detailed definitions:
 
-All inputs and outputs are **synthetic / simulated**. Experiment files are stored under `data/simulation-experiments/` and labeled `synthetic-simulation`.
+- Dynamics, line economics, policies and ERRRA pseudo-code: [algorithm.md](algorithm.md)
+- Metric formulas, units, directions and ranges: [metrics.md](metrics.md)
+- Validation design and results: [model-validation.md](model-validation.md), [validation-report.md](validation-report.md)
+- Parameter and scenario tables, generated from the frozen matrix: `paper/tables/parameters.md` and `paper/tables/scenarios.md`
 
-## Simulation assumptions
+## Simulation summary
 
-- **Time step:** one day per step for a fixed horizon (`simulationDays`).
-- **Topology:** warehouses supply community pharmacies; pharmacies serve synthetic population buckets by region type (`urban`, `suburban`, `rural`).
-- **Demand:** generated from population, regional base demand, drug priority, volatility, and event multipliers.
-- **Fulfillment (backorder model):** unmet same-day demand enters a per-SKU backlog queue; **synthetic access delay** accumulates as backlog unit-days (not clinical wait times).
-- **Replenishment:** policies emit requested lines; warehouse outbound is capped by `dailyDispatchCapacity × supplyFactor` during `supplyDisruption`; truck capacity is enforced **per warehouse** with vulnerability/priority sorting.
-- **Costs (synthetic CNY):** SKU `holdingCostPerUnitDay`, `unitProcurementCost`, distance/road-adjusted transport, and fixed `orderCost` per shipment line.
-- **Events:** active when `startDay <= day < startDay + durationDays` (`getEventEndDay = startDay + durationDays`).
+- **Time step:** one day; the paper horizon is 120 days (30 warm-up, 30 disruption, 60 recovery).
+- **Topology:** warehouses supply community pharmacies in urban, suburban and rural regions. Warehouses receive an exogenous upstream inbound scaled by the supply factor.
+- **Inventory position:** every replenishment decision uses \(IP = \text{onHand} + \text{onOrder} - \text{backlog}\).
+- **Backorders:** unmet demand is backordered and served FIFO when stock arrives. *Synthetic access delay* is measured in backlog unit-days, not clinical waiting time.
+- **Capacity:** per-warehouse dispatch cap × supply factor, and a per-warehouse truck cap.
+  - Scored policies are served in `policyRank` order through both caps.
+  - Unscored baselines are rationed proportionally.
+  - Only units the warehouse can actually issue consume capacity.
+- **Costs (synthetic currency):** procurement, distance- and road-adjusted transport, a fixed order cost per shipped line, and holding at pharmacies and warehouses. The stockout penalty is reported separately and is not part of `totalCost`.
 
 ## Disturbance events
 
-| Type | Effect on simulation |
-|------|----------------------|
-| `demandSurge` | Multiplies regional demand |
-| `supplyDisruption` | Multiplies each warehouse **daily dispatch cap** (not double-deducting on-hand); logs requested vs shipped vs unmet replenishment |
-| `roadDisruption` | Multiplies transit time |
-| `leadTimeExtension` | Multiplies lead/transit factor |
+| Type | Effect |
+|------|--------|
+| `demandSurge` | Multiplies regional demand. Policies never see the multiplier; ERRRA detects a surge only from demand history. |
+| `supplyDisruption` | Multiplies each warehouse's daily dispatch cap and upstream inbound |
+| `roadDisruption` | Multiplies transit time in the target regions |
+| `leadTimeExtension` | Multiplies the lead-time part of transit |
 
-Default scenario `public-health-emergency-default` combines surge, supply cut, rural road delay, and extended lead times.
+Events are active when `startDay <= day < startDay + durationDays`.
 
-## Policies (explicit names)
+## Policies
 
-1. **fixed-allocation** — population-proportional target stock (review-day heuristic).
-2. **reorder-point** — (s, Q) reorder point with fixed batch.
-3. **cost-first** — greedy ranking by `(expected stockout penalty reduction − marginal logistics cost)` per candidate line.
-4. **equity-aware heuristic** — greedy ranking by weighted marginal score (stockout, backlog/wait proxy, regional inequity signal − cost); **not** a global optimizer.
+| Policy | Type |
+|---|---|
+| `fixed-allocation` | periodic order-up-to on prior demand, staggered reviews |
+| `reorder-point` | (s, Q), tuned per scenario on calibration seeds |
+| `cost-first` | newsvendor (s, S); a line is ordered only if its net benefit is positive |
+| `equity-aware` | weighted heuristic using the regional deficit signal |
+| `equity-constrained-rolling-horizon` | **ERRRA heuristic**: two-stage max–min essential service floor, then cost-aware additions under a regional gap bound |
 
-## Experiment groups (fair comparison)
+None of these is AI, and none is claimed to be globally optimal.
 
-`POST /api/simulation/run-group` freezes one scenario JSON and runs all selected policies with **identical replicate seeds** (common random numbers). Results compare only within the same `experimentGroupId` / `scenarioHash`.
+## Fair comparison
 
-## Service inequality index (0–1)
-
-```
-index = (w_s·min(stockoutGap,1) + w_w·min(waitGap/maxWait,1) + w_g·giniCoverage) / (w_s+w_w+w_g)
-```
-
-Higher Gini on regional fill rates increases the index (Gini=0 means equal coverage).
-
-Default parameters in `scenarioSchema.js` are **simulation assumptions** (`illustrative` / `literature-informed` in `parameterMeta`), not empirical pharmacy records.
-
-## Multi-objective score (research penalty units)
-
-```
-compositeScore =
-  totalCost
-  + weightedStockoutPenalty(priority-specific)
-  + waitingTimePenaltyPerDay × weighted wait
-  + inequityPenaltyPerGap × (stockoutGap + waitGap)
-```
-
-**Not** a clinical benefit score. Do not interpret as health impact.
-
-## Metrics (units)
-
-| Metric | Unit | Definition |
-|--------|------|------------|
-| `stockoutRate` | proportion | Unmet demand / total demand |
-| `fillRate` | proportion | Filled / demand |
-| `avgAccessTimeDays` | days | Demand-weighted wait proxy |
-| `avgDeliveryTimeDays` | days | Shipment transit weighted by quantity |
-| `inventoryTurnover` | ratio | Filled demand / mean inventory |
-| `stockoutGap` | proportion | Max − min regional stockout rate |
-| `waitGap` | days | Max − min regional access time |
-| `giniCoverage` | 0–1 | Gini coefficient on regional fill rates |
-| `essentialStockoutRate` | proportion | Stockouts for `essential` priority SKUs |
-| `chronicStockoutRate` | proportion | Stockouts for `chronic-care` SKUs |
-| `serviceInequalityIndex` | composite | Mean of stockout gap, wait gap, and (1 − Gini fill) |
-| `resilience.daysToRecover` | days | Days after last event until daily stockout ≤ 110% pre-event baseline |
+- All policies in a comparison share one frozen scenario JSON and identical seeds (common random numbers). Demand is drawn before any policy acts.
+- Paper results come only from the frozen matrix (`paper/config/scenario-matrix.json`) and the 100 test seeds. Reorder-point tuning uses 20 separate calibration seeds.
+- ERRRA parameters are fixed a priori.
 
 ## Reproducibility
 
-- Randomness uses `seededRandom.js` (`createRng`, Mulberry32); simulation code must not call `Math.random()`.
-- Replicates use `randomSeed + replicateIndex`.
-- Record: `scenarioId`, `policyId`, `policyVersion`, `engineVersion`, `nodeVersion`, timestamps, and full scenario JSON.
+- Randomness comes from `seededRandom.js` (Mulberry32); simulation code never calls `Math.random()`.
+- `npm run paper:all` regenerates every table and figure. `paper/results/manifest.json` records the engine version, the matrix and seed hashes, the git commit and the stage timings.
 
 ## Non-applicability
 
-- Not for clinical decision support, dispensing, or real logistics contracts.
-- Not validated against real epidemic data or pharmacy ERP systems.
-- Legacy demo modules (prescription CDSS, CRM, etc.) are **out of scope** for this methodology.
+- Not for clinical decision support, dispensing or real logistics contracts.
+- Not validated against real epidemic or pharmacy data.
+- Legacy demo modules (prescription CDSS, CRM, etc.) are out of scope (tag `legacy-cdss-v1`).

@@ -27,17 +27,15 @@ import {
   Chip,
   IconButton
 } from '@mui/material';
-import { 
-  PlayArrow, 
-  Assessment, 
-  Bookmark, 
-  CheckCircle, 
-  OndemandVideo, 
+import {
+  PlayArrow,
+  Assessment,
+  OndemandVideo,
   MenuBook,
   CloudDownload,
   School,
   EmojiEvents,
-  Close
+  Close,
 } from '@mui/icons-material';
 
 function PharmacistTraining() {

@@ -23,17 +23,14 @@ import {
   DialogContent,
   DialogTitle,
   Chip,
-  Divider,
   List,
   ListItem,
   ListItemText,
-  Badge,
 } from '@mui/material';
 import {
   Search,
   Add,
   Edit,
-  Delete,
   CreditCard,
   Cake,
   LocalActivity,
@@ -176,7 +173,7 @@ const promotions = [
 
 function MembershipManagement() {
   const [tabValue, setTabValue] = useState(0);
-  const [members, setMembers] = useState(initialMembers);
+  const [members] = useState(initialMembers);
   const [filteredMembers, setFilteredMembers] = useState(initialMembers);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMember, setSelectedMember] = useState(null);

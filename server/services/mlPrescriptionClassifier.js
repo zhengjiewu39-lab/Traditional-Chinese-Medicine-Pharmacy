@@ -3,7 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const { loadRules } = require('./ruleLoader');
-const { parseHerbs, extractFeatures, mapStatusToLabel } = require('./prescriptionAnalyzer');
+const { parseHerbs, extractFeatures } = require('./prescriptionAnalyzer');
 
 const WEIGHTS_PATH = path.join(__dirname, '../config/ml-weights.json');
 

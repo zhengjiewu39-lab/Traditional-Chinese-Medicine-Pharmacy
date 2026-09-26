@@ -7,7 +7,13 @@ import {
   DialogActions, Autocomplete,
 } from '@mui/material';
 import {
-  Add, Remove, Delete, PointOfSale, Search, Receipt, CheckCircle, Person, QrCode2,
+  Add,
+  Remove,
+  Delete,
+  PointOfSale,
+  Search,
+  CheckCircle,
+  QrCode2,
 } from '@mui/icons-material';
 import { billingApi, herbsApi, customerApi, prescriptionApi } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
