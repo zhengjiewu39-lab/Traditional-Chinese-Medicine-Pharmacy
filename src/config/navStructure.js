@@ -11,23 +11,15 @@ export const NAV_STRUCTURE = [
       { labelKey: 'nav.strategies', path: '/simulation/strategies', icon: 'strategies' },
       { labelKey: 'nav.run', path: '/simulation/run', icon: 'run' },
       { labelKey: 'nav.results', path: '/simulation/results', icon: 'results' },
+      { labelKey: 'nav.archive', path: '/simulation/archive', icon: 'archive' },
       { labelKey: 'nav.reproducibility', path: '/simulation/reproducibility', icon: 'reproducibility' },
+      { labelKey: 'nav.documentation', path: '/simulation/documentation', icon: 'documentation' },
     ],
   },
   {
     sectionKey: 'nav.sectionLegacy',
     items: [
-      {
-        labelKey: 'nav.legacyGroup',
-        icon: 'legacy',
-        children: [
-          { labelKey: 'nav.legacyDashboard', path: '/legacy/dashboard' },
-          { labelKey: 'nav.legacyDistribution', path: '/legacy/distribution' },
-          { labelKey: 'nav.legacyInventory', path: '/legacy/inventory' },
-          { labelKey: 'nav.legacyResearch', path: '/legacy/research' },
-          { labelKey: 'nav.legacyRx', path: '/legacy/prescriptions/review' },
-        ],
-      },
+      { labelKey: 'nav.legacyDemo', path: '/legacy/dashboard', icon: 'legacy' },
     ],
   },
 ];

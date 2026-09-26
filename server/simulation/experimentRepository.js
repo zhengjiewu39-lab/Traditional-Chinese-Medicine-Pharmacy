@@ -35,12 +35,14 @@ function listExperiments() {
       return {
         id: raw.id,
         scenarioId: raw.scenarioId,
+        scenarioVersion: raw.scenarioVersion,
         policyId: raw.policyId,
         randomSeed: raw.randomSeed,
         replicates: raw.replicates,
         startedAt: raw.startedAt,
         finishedAt: raw.finishedAt,
         engineVersion: raw.engineVersion,
+        gitCommitHash: raw.gitCommitHash,
         summary: raw.summary,
       };
     })

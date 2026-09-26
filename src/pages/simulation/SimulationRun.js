@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Box, Typography, Paper, TextField, Button, LinearProgress, Alert, List, ListItem, ListItemText,
 } from '@mui/material';
@@ -9,9 +9,16 @@ import { useLanguage } from '../../i18n/LanguageContext';
 
 export default function SimulationRun() {
   const { t } = useLanguage();
-  const [replicates, setReplicates] = useState(1);
+  const [replicates, setReplicates] = useState(30);
   const [jobs, setJobs] = useState([]);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    simulationApi.getDefaultScenario().then((res) => {
+      const n = res.data?.scenario?.defaultReplicates;
+      if (typeof n === 'number' && n >= 1) setReplicates(n);
+    }).catch(() => {});
+  }, []);
 
   const pollJob = (jobId) => {
     const interval = setInterval(async () => {

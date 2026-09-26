@@ -21,11 +21,28 @@ export const simulationApi = {
   listExperiments: () => client.get('/experiments'),
   getExperiment: (id) => client.get(`/experiments/${id}`),
   run: (body) => client.post('/run', body),
+  rerunExact: (id) => client.post(`/experiments/${id}/rerun-exact`),
   getJob: (jobId) => client.get(`/jobs/${jobId}`),
   cancelJob: (jobId) => client.post(`/jobs/${jobId}/cancel`),
   exportCsvUrl: (id) => `${baseURL}/experiments/${id}/export.csv`,
   exportJsonUrl: (id) => `${baseURL}/experiments/${id}/export.json`,
   reportMdUrl: (id) => `${baseURL}/experiments/${id}/report.md`,
+  async downloadExperimentFile(id, kind) {
+    const path = kind === 'csv'
+      ? `/experiments/${id}/export.csv`
+      : kind === 'json'
+        ? `/experiments/${id}/export.json`
+        : `/experiments/${id}/report.md`;
+    const res = await client.get(path, { responseType: 'blob' });
+    const ext = kind === 'md' ? 'md' : kind;
+    const blob = new Blob([res.data], { type: res.headers['content-type'] || 'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${id}.${ext}`;
+    a.click();
+    URL.revokeObjectURL(url);
+  },
 };
 
 /** Shared scenario draft in sessionStorage for cross-page workflow */

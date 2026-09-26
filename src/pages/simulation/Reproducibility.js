@@ -39,12 +39,8 @@ export default function Reproducibility() {
   const rerun = async () => {
     if (!detail) return;
     saveScenarioDraft(detail.scenario);
-    const { data } = await simulationApi.run({
-      scenario: detail.scenario,
-      policyId: detail.policyId,
-      replicates: detail.replicates || 1,
-    });
-    setRerunMsg(`${t('reproducibility.rerunAccepted')} ${data.jobId} ${t('reproducibility.sameConfig')}`);
+    const { data } = await simulationApi.rerunExact(detail.id);
+    setRerunMsg(`${t('reproducibility.rerunExactAccepted')} ${data.jobId} (${t('reproducibility.from')} ${detail.id})`);
   };
 
   return (
@@ -69,10 +65,13 @@ export default function Reproducibility() {
             <ListItem><ListItemText primary={t('reproducibility.randomSeed')} secondary={detail.randomSeed} /></ListItem>
             <ListItem><ListItemText primary={t('reproducibility.startedFinished')} secondary={`${detail.startedAt} → ${detail.finishedAt}`} /></ListItem>
             <ListItem><ListItemText primary={t('reproducibility.dataClass')} secondary={detail.dataClassification} /></ListItem>
+            <ListItem><ListItemText primary={t('reproducibility.gitCommit')} secondary={detail.gitCommitHash || '—'} /></ListItem>
+            <ListItem><ListItemText primary={t('reproducibility.schemaVersion')} secondary={detail.scenarioVersion || detail.scenario?.schemaVersion || '—'} /></ListItem>
+            <ListItem><ListItemText primary={t('reproducibility.replicateSeeds')} secondary={(detail.replicateSeeds || [detail.randomSeed]).join(', ')} /></ListItem>
           </List>
           <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
             <Button variant="outlined" onClick={copyConfig}>{t('reproducibility.copyConfig')}</Button>
-            <Button variant="contained" onClick={rerun}>{t('reproducibility.rerun')}</Button>
+            <Button variant="contained" onClick={rerun}>{t('reproducibility.rerunExact')}</Button>
           </Box>
           {copied && <Alert severity="success" sx={{ mt: 2 }}>{t('reproducibility.copied')}</Alert>}
           {rerunMsg && <Alert severity="info" sx={{ mt: 2 }}>{rerunMsg}</Alert>}

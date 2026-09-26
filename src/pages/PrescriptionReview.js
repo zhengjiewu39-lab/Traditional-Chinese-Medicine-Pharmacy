@@ -832,14 +832,18 @@ function PrescriptionReview() {
 
   return (
     <Container maxWidth="lg">
+      <Alert severity="warning" sx={{ mb: 2 }}>
+        Legacy Demo：合成处方与规则触发的模拟标签，非临床验证。{' '}
+        <code>needs_revision</code> 为合成规则模拟高风险标签，不是真实 ADR 结局；不得作为临床有效性或 ADR 预防证据。
+      </Alert>
       <Box sx={{ mt: 2, mb: 4 }}>
         <Typography variant="h4" gutterBottom>
-          草药不良反应预防 CDSS
+          Legacy Demo — 合成处方规则审方演示
         </Typography>
         <Typography variant="subtitle1" color="text.secondary" gutterBottom>
-          融合专家知识规则与可解释机器学习 · 辅助药师识别配伍禁忌、剂量风险与潜在 ADR 信号
+          专家规则引擎与可解释线性分类器 · 仅用于合成案例演示，不用于真实发药决策
         </Typography>
-        <Chip label="HAR-CDSS v1.0" size="small" color="primary" variant="outlined" sx={{ mt: 0.5 }} />
+        <Chip label="Legacy · synthetic only" size="small" color="warning" variant="outlined" sx={{ mt: 0.5 }} />
       </Box>
 
       {viewMode === 'input' && renderInputForm()}

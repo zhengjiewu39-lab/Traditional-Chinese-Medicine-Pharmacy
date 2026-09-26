@@ -36,6 +36,10 @@ export function resolveExperimentView(detail) {
       if (first?.metrics) {
         flat.regional = first.metrics.regional;
         flat.equity = first.metrics.equity;
+        flat.resilience = first.metrics.resilience;
+        flat.essentialStockoutRate = flat.essentialStockoutRate ?? first.metrics.essentialStockoutRate;
+        flat.chronicStockoutRate = flat.chronicStockoutRate ?? first.metrics.chronicStockoutRate;
+        flat.serviceInequalityIndex = flat.serviceInequalityIndex ?? first.metrics.serviceInequalityIndex;
       }
       return {
         metrics: flat,
@@ -64,10 +68,14 @@ function flattenAggregateSummary(summary) {
     totalCost: metricValue(summary.totalCost),
     stockoutRate: metricValue(summary.stockoutRate),
     fillRate: metricValue(summary.fillRate),
+    essentialStockoutRate: metricValue(summary.essentialStockoutRate),
+    chronicStockoutRate: metricValue(summary.chronicStockoutRate),
     avgAccessTimeDays: metricValue(summary.avgAccessTimeDays),
     inventoryTurnover: metricValue(summary.inventoryTurnover),
     avgDeliveryTimeDays: metricValue(summary.avgDeliveryTimeDays),
+    serviceInequalityIndex: metricValue(summary.serviceInequalityIndex),
     regional: null,
     equity: null,
+    resilience: null,
   };
 }

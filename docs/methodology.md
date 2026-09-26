@@ -30,10 +30,12 @@ Default scenario `public-health-emergency-default` combines surge, supply cut, r
 
 ## Policies (explicit names)
 
-1. **fixed-allocation-v1** — population-proportional target stock.
-2. **reorder-point-v1** — (s, Q) reorder point with fixed batch.
-3. **cost-first-v1** — defers replenishment for lower-priority SKUs.
-4. **equity-aware-v1** — raises targets for high-vulnerability regions and recent stockouts; essential SKU boost.
+1. **fixed-allocation** — population-proportional target stock (review-day heuristic).
+2. **reorder-point** — (s, Q) reorder point with fixed batch.
+3. **cost-first** — greedy cost heuristic; defers lower-priority SKUs.
+4. **equity-aware** — weighted penalty scoring using cost, stockout, wait, and regional inequity signals.
+
+Default parameters in `scenarioSchema.js` are **simulation assumptions** (`illustrative` / `literature-informed` in `parameterMeta`), not empirical pharmacy records.
 
 ## Multi-objective score (research penalty units)
 
@@ -59,10 +61,14 @@ compositeScore =
 | `stockoutGap` | proportion | Max − min regional stockout rate |
 | `waitGap` | days | Max − min regional access time |
 | `giniCoverage` | 0–1 | Gini coefficient on regional fill rates |
+| `essentialStockoutRate` | proportion | Stockouts for `essential` priority SKUs |
+| `chronicStockoutRate` | proportion | Stockouts for `chronic-care` SKUs |
+| `serviceInequalityIndex` | composite | Mean of stockout gap, wait gap, and (1 − Gini fill) |
+| `resilience.daysToRecover` | days | Days after last event until daily stockout ≤ 110% pre-event baseline |
 
 ## Reproducibility
 
-- Randomness uses `createRng(seed)` (Mulberry32) in fixed draw order.
+- Randomness uses `seededRandom.js` (`createRng`, Mulberry32); simulation code must not call `Math.random()`.
 - Replicates use `randomSeed + replicateIndex`.
 - Record: `scenarioId`, `policyId`, `policyVersion`, `engineVersion`, `nodeVersion`, timestamps, and full scenario JSON.
 

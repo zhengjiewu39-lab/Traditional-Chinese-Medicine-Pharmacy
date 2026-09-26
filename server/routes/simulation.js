@@ -5,7 +5,8 @@ const {
   FIELD_HELP,
   LIMITS,
 } = require('../simulation/scenarioSchema');
-const { listPolicies, getPolicy } = require('../simulation/policyEngine');
+const { listPolicies, getPolicy, resolvePolicyId } = require('../simulation/policyEngine');
+const { getGitCommitHash } = require('../simulation/gitInfo');
 const { runSimulation, runReplicates, ENGINE_VERSION } = require('../simulation/simulationEngine');
 const { aggregateReplicates } = require('../simulation/metricsEngine');
 const {
@@ -14,17 +15,19 @@ const {
   getExperiment,
   newExperimentId,
 } = require('../simulation/experimentRepository');
-const { metricsToCsv, experimentSummaryMarkdown } = require('../simulation/exportService');
+const { metricsToCsv, experimentSummaryMarkdown, pickExportMetrics } = require('../simulation/exportService');
 
 const router = express.Router();
 const activeJobs = new Map();
 
 router.get('/meta', (_req, res) => {
   res.json({
-    platform: 'Community pharmacy supply resilience simulation',
+    platform: 'Community Pharmacy Access and Supply Resilience Simulator',
+    platformZh: '社区药房药品可及性与供应韧性仿真平台',
     dataClassification: 'synthetic-simulation-only',
     engineVersion: ENGINE_VERSION,
-    disclaimer: 'Simulation research only. No real patient or pharmacy transaction data.',
+    gitCommitHash: getGitCommitHash(),
+    disclaimer: 'Synthetic simulation research platform. No real patient, prescription, pharmacy transaction, or clinical outcome data.',
   });
 });
 
@@ -64,11 +67,13 @@ router.post('/run', (req, res) => {
   if (!policyId) {
     return res.status(400).json({ message: 'Missing policyId', errors: ['policyId is required'] });
   }
-  if (!getPolicy(policyId)) {
+  const canonicalPolicyId = resolvePolicyId(policyId);
+  if (!canonicalPolicyId) {
     return res.status(400).json({ message: 'Unknown policyId', errors: [`Unknown policy: ${policyId}`] });
   }
 
   const jobId = newExperimentId();
+  const gitCommitHash = getGitCommitHash();
   const startedAt = new Date().toISOString();
   activeJobs.set(jobId, { cancel: false, status: 'running' });
 
@@ -90,7 +95,7 @@ router.post('/run', (req, res) => {
       if (replicates > 1) {
         const rep = runReplicates({
           scenario,
-          policyId,
+          policyId: canonicalPolicyId,
           replicates: Math.min(replicates, 100),
           onProgress,
           shouldCancel,
@@ -100,15 +105,20 @@ router.post('/run', (req, res) => {
           return;
         }
         const metricsList = rep.results.map((r) => r.metrics);
+        const seeds = rep.results.map((r) => r.seed);
         payload = {
           id: jobId,
           scenarioId: scenario.id,
+          scenarioVersion: scenario.schemaVersion,
           scenario,
-          policyId,
-          policyVersion: getPolicy(policyId).version,
+          policyId: canonicalPolicyId,
+          policyVersion: getPolicy(canonicalPolicyId).version,
+          policyParams: getPolicy(canonicalPolicyId).params,
           randomSeed: scenario.randomSeed,
+          replicateSeeds: seeds,
           replicates: rep.results.length,
           engineVersion: ENGINE_VERSION,
+          gitCommitHash,
           nodeVersion: process.version,
           startedAt,
           finishedAt: new Date().toISOString(),
@@ -116,7 +126,7 @@ router.post('/run', (req, res) => {
           summary: aggregateReplicates(metricsList),
         };
       } else {
-        const single = runSimulation({ scenario, policyId, onProgress, shouldCancel });
+        const single = runSimulation({ scenario, policyId: canonicalPolicyId, onProgress, shouldCancel });
         if (single.cancelled) {
           activeJobs.set(jobId, { status: 'cancelled', progress: activeJobs.get(jobId)?.progress });
           return;
@@ -124,12 +134,16 @@ router.post('/run', (req, res) => {
         payload = {
           id: jobId,
           scenarioId: scenario.id,
+          scenarioVersion: scenario.schemaVersion,
           scenario,
-          policyId,
-          policyVersion: getPolicy(policyId).version,
+          policyId: canonicalPolicyId,
+          policyVersion: getPolicy(canonicalPolicyId).version,
+          policyParams: getPolicy(canonicalPolicyId).params,
           randomSeed: scenario.randomSeed,
+          replicateSeeds: [scenario.randomSeed],
           replicates: 1,
           engineVersion: ENGINE_VERSION,
+          gitCommitHash,
           nodeVersion: process.version,
           startedAt,
           finishedAt: new Date().toISOString(),
@@ -162,7 +176,8 @@ router.post('/jobs/:jobId/cancel', (req, res) => {
 router.get('/experiments/:id/export.csv', (req, res) => {
   const exp = getExperiment(req.params.id);
   if (!exp) return res.status(404).json({ message: 'Not found' });
-  const m = exp.metrics || exp.summary;
+  const m = pickExportMetrics(exp);
+  if (!m) return res.status(400).json({ message: 'No exportable metrics on experiment' });
   res.setHeader('Content-Type', 'text/csv');
   res.setHeader('Content-Disposition', `attachment; filename="${exp.id}.csv"`);
   res.send(metricsToCsv(m));
@@ -174,6 +189,100 @@ router.get('/experiments/:id/export.json', (req, res) => {
   res.setHeader('Content-Type', 'application/json');
   res.setHeader('Content-Disposition', `attachment; filename="${exp.id}.json"`);
   res.send(JSON.stringify(exp, null, 2));
+});
+
+router.post('/experiments/:id/rerun-exact', (req, res) => {
+  const source = getExperiment(req.params.id);
+  if (!source) return res.status(404).json({ message: 'Experiment not found' });
+  const { scenario, policyId, replicates = 1 } = source;
+  if (!scenario || !policyId) {
+    return res.status(400).json({ message: 'Stored experiment missing scenario or policyId' });
+  }
+  const canonicalPolicyId = resolvePolicyId(policyId);
+  if (!canonicalPolicyId) {
+    return res.status(400).json({ message: 'Unknown stored policyId', policyId });
+  }
+  const jobId = newExperimentId();
+  const startedAt = new Date().toISOString();
+  const gitCommitHash = getGitCommitHash();
+  activeJobs.set(jobId, { cancel: false, status: 'running' });
+  res.json({
+    jobId,
+    status: 'accepted',
+    sourceExperimentId: source.id,
+    message: 'Exact re-run started with stored scenario, seeds, and policy.',
+  });
+
+  setImmediate(() => {
+    try {
+      const repCount = Math.max(1, replicates);
+      let payload;
+      if (repCount > 1) {
+        const n = source.results?.length || repCount;
+        const seeds = source.replicateSeeds?.length === n
+          ? source.replicateSeeds
+          : Array.from({ length: n }, (_, i) => source.randomSeed + i);
+        const results = [];
+        for (let i = 0; i < n; i += 1) {
+          const seed = seeds[i];
+          const scen = { ...scenario, randomSeed: seed };
+          const r = runSimulation({ scenario: scen, policyId: canonicalPolicyId });
+          results.push({ replicateIndex: i, seed, metrics: r.metrics, runLog: r.runLog });
+        }
+        payload = {
+          scenarioId: source.scenarioId,
+          scenarioVersion: source.scenarioVersion || scenario.schemaVersion,
+          scenario,
+          policyId: canonicalPolicyId,
+          policyVersion: getPolicy(canonicalPolicyId).version,
+          policyParams: getPolicy(canonicalPolicyId).params,
+          randomSeed: source.randomSeed,
+          replicateSeeds: seeds,
+          replicates: n,
+          engineVersion: ENGINE_VERSION,
+          nodeVersion: process.version,
+          dataClassification: 'synthetic-simulation',
+          id: jobId,
+          rerunOf: source.id,
+          startedAt,
+          finishedAt: new Date().toISOString(),
+          gitCommitHash,
+          results,
+          summary: aggregateReplicates(results.map((x) => x.metrics)),
+        };
+      } else {
+        const seed = source.replicateSeeds?.[0] ?? source.randomSeed;
+        const scen = { ...scenario, randomSeed: seed };
+        const single = runSimulation({ scenario: scen, policyId: canonicalPolicyId });
+        payload = {
+          scenarioId: source.scenarioId,
+          scenarioVersion: source.scenarioVersion || scenario.schemaVersion,
+          scenario,
+          policyId: canonicalPolicyId,
+          policyVersion: getPolicy(canonicalPolicyId).version,
+          policyParams: getPolicy(canonicalPolicyId).params,
+          randomSeed: seed,
+          replicateSeeds: [seed],
+          replicates: 1,
+          engineVersion: ENGINE_VERSION,
+          nodeVersion: process.version,
+          dataClassification: 'synthetic-simulation',
+          id: jobId,
+          rerunOf: source.id,
+          startedAt,
+          finishedAt: new Date().toISOString(),
+          gitCommitHash,
+          metrics: single.metrics,
+          runLog: single.runLog,
+          summary: single.metrics,
+        };
+      }
+      saveExperiment(payload);
+      activeJobs.set(jobId, { status: 'completed', experimentId: jobId, progress: { pct: 100 } });
+    } catch (e) {
+      activeJobs.set(jobId, { status: 'failed', error: e.message });
+    }
+  });
 });
 
 router.get('/experiments/:id/report.md', (req, res) => {

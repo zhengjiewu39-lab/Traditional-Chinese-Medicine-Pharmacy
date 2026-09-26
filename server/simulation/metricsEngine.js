@@ -32,6 +32,11 @@ function computeRunMetrics(runLog, instance, policyId) {
   let transitCount = 0;
   let inventorySum = 0;
   let inventoryDays = 0;
+  const priorityAgg = {
+    essential: { demand: 0, stockout: 0 },
+    'chronic-care': { demand: 0, stockout: 0 },
+    routine: { demand: 0, stockout: 0 },
+  };
 
   const byRegion = {};
   for (const day of runLog.daily) {
@@ -59,6 +64,11 @@ function computeRunMetrics(runLog, instance, policyId) {
     }
     inventorySum += day.totalInventory;
     inventoryDays += 1;
+    for (const [pk, row] of Object.entries(day.priorityTotals || {})) {
+      if (!priorityAgg[pk]) continue;
+      priorityAgg[pk].demand += row.demand;
+      priorityAgg[pk].stockout += row.stockout;
+    }
     for (const sh of day.shipments || []) {
       transitSum += sh.transitDays * sh.qty;
       transitCount += sh.qty;
@@ -79,8 +89,14 @@ function computeRunMetrics(runLog, instance, policyId) {
       fillRate: r.demand > 0 ? r.filled / r.demand : 1,
       stockoutRate: r.demand > 0 ? r.stockout / r.demand : 0,
       avgAccessTimeDays: r.waitN > 0 ? r.waitSum / r.waitN : 0,
+      serviceCoverage: r.demand > 0 ? r.filled / r.demand : 1,
     };
   }
+
+  const essentialStockoutRate = rate(priorityAgg.essential);
+  const chronicStockoutRate = rate(priorityAgg['chronic-care']);
+  const routineStockoutRate = rate(priorityAgg.routine);
+  const orderFillRate = fillRate;
 
   const stockoutRates = Object.values(regional).map((x) => x.stockoutRate);
   const waitTimes = Object.values(regional).map((x) => x.avgAccessTimeDays);
@@ -89,6 +105,8 @@ function computeRunMetrics(runLog, instance, policyId) {
   const stockoutGap = Math.max(...stockoutRates) - Math.min(...stockoutRates);
   const waitGap = Math.max(...waitTimes) - Math.min(...waitTimes);
   const giniCoverage = gini(fillRates);
+  const resilience = computeResilienceMetrics(runLog.daily, scenario);
+  const serviceInequalityIndex = (stockoutGap + waitGap + (1 - giniCoverage)) / 3;
 
   const waitingTimePenalty = waitSum * waitW;
   const inequityPenalty = (stockoutGap + waitGap) * ineqW;
@@ -99,15 +117,22 @@ function computeRunMetrics(runLog, instance, policyId) {
     totalCost,
     stockoutRate,
     fillRate,
+    orderFillRate,
+    essentialStockoutRate,
+    chronicStockoutRate,
+    routineStockoutRate,
     avgAccessTimeDays,
     inventoryTurnover,
     avgDeliveryTimeDays,
     regional,
+    resilience,
+    serviceInequalityIndex,
     equity: {
       stockoutGap,
       waitGap,
       giniCoverage,
-      definition: 'Gini on regional fill rates; gaps are max-min across urban/suburban/rural.',
+      serviceInequalityIndex,
+      definition: 'Gini on regional fill rates; gaps are max-min across urban/suburban/rural; serviceInequalityIndex averages normalized gaps.',
     },
     penalties: {
       weightedStockoutPenalty,
@@ -135,15 +160,53 @@ function gini(values) {
   return num / (2 * n * n * mean);
 }
 
+function rate(agg) {
+  return agg.demand > 0 ? agg.stockout / agg.demand : 0;
+}
+
+function computeResilienceMetrics(daily, scenario) {
+  const events = scenario?.events || [];
+  const lastEnd = events.reduce((m, e) => Math.max(m, e.endDay ?? e.startDay ?? 0), -1);
+  const preDays = daily.filter((d) => d.day < (events[0]?.startDay ?? 999));
+  const baseline = preDays.length
+    ? preDays.reduce((s, d) => s + (d.dailyStockoutRate || 0), 0) / preDays.length
+    : (daily[0]?.dailyStockoutRate ?? 0);
+  let recoveryDay = null;
+  if (lastEnd >= 0) {
+    for (const d of daily) {
+      if (d.day <= lastEnd) continue;
+      if ((d.dailyStockoutRate ?? 1) <= baseline * 1.1 + 0.001) {
+        recoveryDay = d.day;
+        break;
+      }
+    }
+  }
+  const disruptionPeak = daily.length
+    ? Math.max(...daily.map((d) => d.dailyStockoutRate || 0))
+    : 0;
+  return {
+    baselinePreDisruptionStockoutRate: baseline,
+    disruptionPeakStockoutRate: disruptionPeak,
+    lastDisruptionEndDay: lastEnd,
+    recoveryDay,
+    daysToRecover: recoveryDay != null && lastEnd >= 0 ? recoveryDay - lastEnd : null,
+    definition: 'Recovery = first day after last event when daily stockout rate ≤ 110% of pre-event baseline.',
+  };
+}
+
 function aggregateReplicates(metricsList) {
   if (!metricsList.length) return null;
-  const keys = ['totalCost', 'stockoutRate', 'fillRate', 'avgAccessTimeDays', 'inventoryTurnover', 'avgDeliveryTimeDays'];
+  const keys = [
+    'totalCost', 'stockoutRate', 'fillRate', 'essentialStockoutRate', 'chronicStockoutRate',
+    'avgAccessTimeDays', 'inventoryTurnover', 'avgDeliveryTimeDays', 'serviceInequalityIndex',
+  ];
   const summary = {};
   for (const k of keys) {
     const vals = metricsList.map((m) => m[k]);
     summary[k] = stats(vals);
   }
   summary.replicates = metricsList.length;
+  summary.replicateStockoutRates = metricsList.map((m) => m.stockoutRate);
   return summary;
 }
 

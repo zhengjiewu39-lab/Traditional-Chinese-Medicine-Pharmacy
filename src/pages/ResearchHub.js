@@ -149,14 +149,22 @@ function ResearchHub() {
 
   return (
     <Box>
+      <Alert severity="warning" sx={{ mb: 2 }}>
+        Legacy Demo only: synthetic prescription labels are produced by the same rule engine used for training and evaluation (label leakage).
+        {' '}
+        <code>needs_revision</code>
+        {' '}
+        denotes a rule-triggered simulated high-risk tag, not a verified ADR or clinical outcome.
+        Do not cite macro-F1 or ablation results as clinical validation, pharmacist concordance, or ADR prevention effectiveness.
+      </Alert>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3, flexWrap: 'wrap', gap: 2 }}>
         <Box>
           <Typography variant="h5" fontWeight={700}>
             <Science sx={{ mr: 1, verticalAlign: 'middle' }} />
-            HAR-CDSS 科研评价中心
+            Legacy Demo — synthetic prescription rule benchmark
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            融合专家知识规则与可解释 ML · 草药不良反应预防 · 消融实验 · 可复现 Benchmark
+            Rule engine and interpretable linear classifier on synthetic cases only — not clinical CDSS validation
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 1 }}>

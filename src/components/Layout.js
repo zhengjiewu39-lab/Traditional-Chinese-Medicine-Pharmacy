@@ -27,6 +27,8 @@ const ICONS = {
   run: PlayArrow,
   results: Assessment,
   reproducibility: AssignmentTurnedIn,
+  archive: AssignmentTurnedIn,
+  documentation: Science,
   legacy: Inventory,
 };
 

@@ -9,7 +9,7 @@ const {
   processArrivals,
   allocateTruckCapacity,
 } = require('./distributionEngine');
-const { decideReplenishment, getPolicy } = require('./policyEngine');
+const { decideReplenishment, getPolicy, resolvePolicyId } = require('./policyEngine');
 const { computeRunMetrics } = require('./metricsEngine');
 
 const ENGINE_VERSION = 'simulation-engine-v1.0.0';
@@ -18,6 +18,7 @@ const ORDER_COST = 25;
 const TRANSPORT_COST_PER_UNIT = 0.15;
 
 function runSimulation({ scenario, policyId, onProgress, shouldCancel }) {
+  const canonicalPolicyId = resolvePolicyId(policyId);
   const policy = getPolicy(policyId);
   if (!policy) throw new Error(`Unknown policy: ${policyId}`);
 
@@ -41,6 +42,13 @@ function runSimulation({ scenario, policyId, onProgress, shouldCancel }) {
     const plan = instance.dailyPlans[day];
     const pharmacyResults = [];
     let dayInventory = 0;
+    const priorityTotals = {
+      essential: { demand: 0, filled: 0, stockout: 0 },
+      'chronic-care': { demand: 0, filled: 0, stockout: 0 },
+      routine: { demand: 0, filled: 0, stockout: 0 },
+    };
+    let dayDemand = 0;
+    let dayStockout = 0;
 
     for (const phState of pharmacyStates) {
       const ph = phMap[phState.id];
@@ -56,6 +64,14 @@ function runSimulation({ scenario, policyId, onProgress, shouldCancel }) {
         const res = fulfillDemand(ph, drugId, units, phState);
         filled += res.filled;
         stockout += res.stockout;
+        const pr = drugMeta[drugId]?.priority || 'routine';
+        if (priorityTotals[pr]) {
+          priorityTotals[pr].demand += units;
+          priorityTotals[pr].filled += res.filled;
+          priorityTotals[pr].stockout += res.stockout;
+        }
+        dayDemand += units;
+        dayStockout += res.stockout;
         if (res.stockout > 0) {
           const meta = drugMeta[drugId];
           stockoutByDrug.push({ drugId, units: res.stockout, priority: meta.priority });
@@ -85,7 +101,7 @@ function runSimulation({ scenario, policyId, onProgress, shouldCancel }) {
     totalCost += dayInventory * HOLDING_COST;
 
     const orders = decideReplenishment({
-      policyId,
+      policyId: canonicalPolicyId,
       day,
       instance,
       pharmacyStates,
@@ -111,13 +127,21 @@ function runSimulation({ scenario, policyId, onProgress, shouldCancel }) {
       shipments.push({ ...o, transitDays: transit });
     }
 
-    daily.push({ day, pharmacyResults, shipments, totalInventory: dayInventory });
+    daily.push({
+      day,
+      pharmacyResults,
+      shipments,
+      totalInventory: dayInventory,
+      priorityTotals,
+      dailyStockoutRate: dayDemand > 0 ? dayStockout / dayDemand : 0,
+      dailyFillRate: dayDemand > 0 ? (dayDemand - dayStockout) / dayDemand : 1,
+    });
     if (onProgress) onProgress({ day, totalDays: scenario.simulationDays, pct: ((day + 1) / scenario.simulationDays) * 100 });
   }
 
   const runLog = {
     engineVersion: ENGINE_VERSION,
-    policyId,
+    policyId: canonicalPolicyId,
     policyVersion: policy.version,
     scenarioId: scenario.id,
     randomSeed: scenario.randomSeed,
@@ -125,7 +149,7 @@ function runSimulation({ scenario, policyId, onProgress, shouldCancel }) {
     daily,
   };
 
-  const metrics = computeRunMetrics(runLog, instance, policyId);
+  const metrics = computeRunMetrics(runLog, instance, canonicalPolicyId);
   return {
     cancelled: false,
     instanceMeta: instance.meta,

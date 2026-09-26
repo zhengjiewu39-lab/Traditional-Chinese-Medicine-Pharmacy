@@ -1,4 +1,4 @@
-const { createRng } = require('./rng');
+const { createRng } = require('./seededRandom');
 const { REGION_TYPES } = require('./scenarioSchema');
 
 /**

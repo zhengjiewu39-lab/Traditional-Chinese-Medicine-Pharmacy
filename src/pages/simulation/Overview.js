@@ -37,7 +37,11 @@ export default function Overview() {
   return (
     <Box>
       <Typography variant="h5" fontWeight={700} gutterBottom>{t('overview.title')}</Typography>
-      <Chip label={t('overview.badge')} color="warning" sx={{ mb: 2 }} />
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+        <Chip label={t('overview.badgeSynthetic')} color="warning" size="small" />
+        <Chip label={t('overview.badgeNoReal')} variant="outlined" size="small" />
+        <Chip label={t('overview.badgeNotClinical')} variant="outlined" size="small" />
+      </Box>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       <Grid container spacing={2}>
         <Grid item xs={12} md={7}>
@@ -59,6 +63,10 @@ export default function Overview() {
           </Paper>
         </Grid>
         <Grid item xs={12}>
+          <Paper sx={{ p: 3, mb: 2 }}>
+            <Typography variant="h6" gutterBottom>{t('overview.defaultScenarioTitle')}</Typography>
+            <Typography variant="body2" color="text.secondary">{t('overview.defaultScenarioBody')}</Typography>
+          </Paper>
           <Paper sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom>{t('overview.latestTitle')}</Typography>
             {!latest ? (

@@ -22,6 +22,9 @@ export default function SimulationDisclaimer() {
       <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
         {t('disclaimer.sub')}
       </Typography>
+      <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
+        {t('disclaimer.notForAllocation')}
+      </Typography>
     </Box>
   );
 }

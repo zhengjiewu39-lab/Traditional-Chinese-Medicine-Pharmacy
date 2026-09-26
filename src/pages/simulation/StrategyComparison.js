@@ -38,7 +38,7 @@ export default function StrategyComparison() {
               <TableCell>{t('strategies.policyId')}</TableCell>
               <TableCell>{t('strategies.name')}</TableCell>
               <TableCell>{t('strategies.version')}</TableCell>
-              <TableCell>{t('strategies.description')}</TableCell>
+              <TableCell>{t('strategies.algorithm')}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -48,7 +48,7 @@ export default function StrategyComparison() {
                 <TableCell>{p.id}</TableCell>
                 <TableCell>{p.name}</TableCell>
                 <TableCell>{p.version}</TableCell>
-                <TableCell>{p.description}</TableCell>
+                <TableCell>{p.algorithm || p.description}</TableCell>
               </TableRow>
             ))}
           </TableBody>

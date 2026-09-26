@@ -17,6 +17,8 @@ import StrategyComparison from './pages/simulation/StrategyComparison';
 import SimulationRun from './pages/simulation/SimulationRun';
 import SimulationResults from './pages/simulation/Results';
 import Reproducibility from './pages/simulation/Reproducibility';
+import ExperimentArchive from './pages/simulation/ExperimentArchive';
+import Documentation from './pages/simulation/Documentation';
 import OperationsDashboard from './pages/OperationsDashboard';
 import DoctorWorkbench from './pages/DoctorWorkbench';
 import PatientPickup from './pages/PatientPickup';
@@ -86,6 +88,9 @@ function App() {
               <Route path="/simulation/run" element={<SimulationRun />} />
               <Route path="/simulation/results" element={<SimulationResults />} />
               <Route path="/simulation/reproducibility" element={<Reproducibility />} />
+              <Route path="/simulation/archive" element={<ExperimentArchive />} />
+              <Route path="/simulation/documentation" element={<Documentation />} />
+              <Route path="/legacy" element={<Navigate to="/legacy/dashboard" replace />} />
               <Route path="/legacy/dashboard" element={<OperationsDashboard />} />
               <Route path="/dashboard" element={<Navigate to="/simulation/overview" replace />} />
               <Route path="/legacy/billing" element={<Billing />} />

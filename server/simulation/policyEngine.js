@@ -1,41 +1,62 @@
 /**
- * Inventory & distribution policies (explicit names — not "AI").
+ * Inventory & distribution policies (explicit algorithm names — not generic "AI").
  */
 
 const POLICIES = {
-  'fixed-allocation-v1': {
-    id: 'fixed-allocation-v1',
+  'fixed-allocation': {
+    id: 'fixed-allocation',
     name: 'Fixed allocation baseline',
     version: '1.0.0',
-    description: 'Replenish each pharmacy to a population-proportional target stock each review day.',
+    algorithm: 'Population-proportional target stock replenishment on fixed review days',
+    description: 'Replenish each pharmacy toward a population-proportional target stock each review day.',
+    params: {},
   },
-  'reorder-point-v1': {
-    id: 'reorder-point-v1',
+  'reorder-point': {
+    id: 'reorder-point',
     name: 'Reorder point (s, Q) baseline',
     version: '1.0.0',
-    description: 'Classic (s, Q): order fixed batch Q when on-hand ≤ s.',
+    algorithm: 'Classic (s, Q) inventory control',
+    description: 'Order fixed batch Q when on-hand ≤ s.',
     params: { s: 80, Q: 200 },
   },
-  'cost-first-v1': {
-    id: 'cost-first-v1',
+  'cost-first': {
+    id: 'cost-first',
     name: 'Cost-first heuristic',
     version: '1.0.0',
+    algorithm: 'Greedy cost minimization with priority deferral',
     description: 'Minimize holding + ordering + transport; defer low-priority SKUs when budget tight.',
+    params: {},
   },
-  'equity-aware-v1': {
-    id: 'equity-aware-v1',
-    name: 'Equity-aware multi-objective',
+  'equity-aware': {
+    id: 'equity-aware',
+    name: 'Equity-aware multi-objective heuristic',
     version: '1.0.0',
-    description: 'Score = cost + stockout + waiting + inequity penalties (see metricsEngine).',
+    algorithm: 'Weighted penalty scoring (cost + stockout + wait + inequity)',
+    description: 'Replenishment driven by composite penalty: totalCost + stockoutPenalty + waitingTimePenalty + inequityPenalty.',
+    params: {},
   },
 };
+
+const POLICY_ALIASES = {
+  'fixed-allocation-v1': 'fixed-allocation',
+  'reorder-point-v1': 'reorder-point',
+  'cost-first-v1': 'cost-first',
+  'equity-aware-v1': 'equity-aware',
+};
+
+function resolvePolicyId(id) {
+  if (!id) return null;
+  if (POLICIES[id]) return id;
+  return POLICY_ALIASES[id] || null;
+}
 
 function listPolicies() {
   return Object.values(POLICIES);
 }
 
 function getPolicy(id) {
-  return POLICIES[id] || null;
+  const canonical = resolvePolicyId(id);
+  return canonical ? POLICIES[canonical] : null;
 }
 
 function decideReplenishment({
@@ -46,8 +67,9 @@ function decideReplenishment({
   warehouseStates,
   recentStockoutsByPharmacy,
 }) {
+  const canonical = resolvePolicyId(policyId);
   const orders = [];
-  const { pharmacies, drugs, scenario } = instance;
+  const { pharmacies, drugs } = instance;
   const totalPop = pharmacies.reduce((s, p) => s + p.population, 0);
 
   for (const ph of pharmacies) {
@@ -59,17 +81,17 @@ function decideReplenishment({
       const onHand = phState.onHand[drug.id] || 0;
       let orderQty = 0;
 
-      if (policyId === 'fixed-allocation-v1') {
+      if (canonical === 'fixed-allocation') {
         const target = Math.round((ph.population / totalPop) * 400 * (drug.priority === 'essential' ? 1.3 : 1));
         if (day % 3 === 0 && onHand < target) orderQty = target - onHand;
-      } else if (policyId === 'reorder-point-v1') {
-        const { s, Q } = POLICIES['reorder-point-v1'].params;
+      } else if (canonical === 'reorder-point') {
+        const { s, Q } = POLICIES['reorder-point'].params;
         if (onHand <= s) orderQty = Q;
-      } else if (policyId === 'cost-first-v1') {
+      } else if (canonical === 'cost-first') {
         if (onHand < 60 && day % 2 === 0) {
           orderQty = drug.priority === 'routine' ? 80 : 150;
         }
-      } else if (policyId === 'equity-aware-v1') {
+      } else if (canonical === 'equity-aware') {
         const stockouts = recentStockoutsByPharmacy[ph.id] || 0;
         const vuln = ph.vulnerabilityWeight;
         const target = Math.round(120 * vuln + stockouts * 10);
@@ -99,6 +121,8 @@ function decideReplenishment({
 
 module.exports = {
   POLICIES,
+  POLICY_ALIASES,
+  resolvePolicyId,
   listPolicies,
   getPolicy,
   decideReplenishment,

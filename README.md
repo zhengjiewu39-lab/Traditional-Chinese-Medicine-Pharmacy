@@ -1,27 +1,32 @@
-# Community pharmacy supply resilience simulation platform
+# Community Pharmacy Access and Supply Resilience Simulator
 
-**Research positioning:** A reproducible **simulation** platform for studying inventory–distribution policies in **community pharmacy networks** under public-health-style disturbances (demand surges, supply interruptions, delivery constraints).
+**中文：** 社区药房药品可及性与供应韧性仿真平台  
 
-**Not** a production pharmacy ERP, **not** clinical decision support, **not** validated on real patient or transaction data.
+**Research positioning:** Simulation-based study of **equitable medicine access** and **supply resilience** in **community pharmacy networks** under **synthetic public-health disturbances** (demand surges, supply interruptions, delivery constraints).
 
-> **Disclaimer:** This platform uses **synthetic data** for simulation research only. It does not provide clinical advice and must not be used for real-world dispensing or patient care.
+**Working title:** *Simulation-based optimisation of equitable medicine access and supply resilience in community pharmacy networks during public health disruptions.*
+
+> **Synthetic simulation research platform.** No real patient, prescription, pharmacy transaction, or clinical outcome data. Not for clinical decision-making, dispensing, or real-world resource allocation.
+
+Legacy ERP / prescription CDSS / CRM features remain as **Legacy Demo** under `/legacy/*` only.
 
 ## Research question
 
-Under simulated disturbances, can coordinated inventory and distribution policies reduce **synthetic** essential-medicine stockouts, shorten **simulated** access delays, and improve **regional equity** of service coverage — compared to baselines?
+When demand surges, supply breaks, or delivery is constrained in **simulated** scenarios, can inventory–distribution policies reduce essential-medicine stockouts, shorten **simulated** access delays, and narrow urban–suburban–rural service gaps?
 
-## Primary UI (6 pages)
+## Default navigation
 
 | Page | Route |
 |------|--------|
 | Overview | `/simulation/overview` |
 | Scenario Configuration | `/simulation/scenario` |
-| Strategy Comparison | `/simulation/strategies` |
-| Simulation Run | `/simulation/run` |
+| Strategies | `/simulation/strategies` |
+| Run Simulation | `/simulation/run` |
 | Results | `/simulation/results` |
+| Experiment Archive | `/simulation/archive` |
 | Reproducibility | `/simulation/reproducibility` |
-
-Legacy demo modules (prescription CDSS, CRM, patients, etc.) remain under `/legacy/*` — see `docs/refactor-mapping.md`.
+| Documentation | `/simulation/documentation` |
+| Legacy Demo | `/legacy/dashboard` |
 
 ## Quick start
 
@@ -29,68 +34,37 @@ Legacy demo modules (prescription CDSS, CRM, patients, etc.) remain under `/lega
 cd chinese-medicine-pharmacy
 npm install
 npm run dev          # API :3002 + React :3000
-# or
-npm run server       # API only
-npm start            # frontend only
 ```
 
-Demo login (development): `admin` / `admin123`
+Demo login: `admin` / `admin123`
 
-### Troubleshooting 404 on simulation pages
-
-1. Run commands **inside** `chinese-medicine-pharmacy` (not the parent folder only).
-2. Restart API so `/api/health` lists `supply-simulation-v1`: `npm run restart:server`
-3. Ensure `.env.development` sets `REACT_APP_API_BASE_URL=http://localhost:3002/api` (committed in repo).
-4. Do **not** add `"proxy"` to `package.json` — it breaks `react-scripts start` on some Node versions.
-5. Smoke test: `npm run verify:simulation`
-
-## Backend architecture
-
-| Module | Path |
-|--------|------|
-| Scenario schema & default emergency scenario | `server/simulation/scenarioSchema.js` |
-| Seeded RNG | `server/simulation/rng.js` |
-| Scenario generator | `server/simulation/scenarioGenerator.js` |
-| Inventory | `server/simulation/inventoryEngine.js` |
-| Distribution | `server/simulation/distributionEngine.js` |
-| Policies | `server/simulation/policyEngine.js` |
-| Simulation runner | `server/simulation/simulationEngine.js` |
-| Metrics & equity | `server/simulation/metricsEngine.js` |
-| Experiment store | `server/simulation/experimentRepository.js` |
-| Export | `server/simulation/exportService.js` |
-| REST API | `server/routes/simulation.js` |
-
-API prefix: `/api/simulation/*`
-
-## Policies (explicit algorithm names)
-
-- `fixed-allocation-v1` — fixed allocation baseline  
-- `reorder-point-v1` — (s, Q) reorder point  
-- `cost-first-v1` — cost-first heuristic  
-- `equity-aware-v1` — multi-objective with stockout, wait, and inequity penalties  
-
-## Tests & reproducibility
+## Research commands
 
 ```bash
-npm run test:server    # includes simulation determinism & metrics tests
-npm run build
+npm run simulation:demo       # four policies, synthetic 14-day run
+npm run simulation:test       # server + simulation unit tests
+npm run research:reproduce    # default scenario, 30 replicates, equity-aware
+npm run simulation:export     # export latest experiment JSON/CSV
+npm run verify:simulation     # API smoke test
 ```
 
-Same scenario JSON + `randomSeed` → identical key metrics (see `server/simulation/__tests__/simulation.test.js`).
+Legacy prescription ablation (not for supply-resilience papers):
 
-Methodology: [`docs/methodology.md`](docs/methodology.md)  
-Refactor mapping: [`docs/refactor-mapping.md`](docs/refactor-mapping.md)
+```bash
+npm run evaluate:ablation
+```
 
-## Limitations
+## Policies (algorithm names)
 
-- Simplified daily time step; no individual patient agents.
-- Costs and demands are synthetic, not econometrically calibrated.
-- Legacy modules may still display old marketing copy; they are not part of the research workflow.
+- `fixed-allocation` — fixed allocation baseline  
+- `reorder-point` — (s, Q) baseline  
+- `cost-first` — cost-first heuristic  
+- `equity-aware` — multi-objective penalty heuristic (cost + stockout + wait + inequity)
 
----
+## Documentation
 
-## Legacy stack (preserved, not deleted)
+- [methodology.md](docs/methodology.md) · [assumptions.md](docs/assumptions.md) · [reproducibility.md](docs/reproducibility.md) · [limitations.md](docs/limitations.md) · [legacy-cdss.md](docs/legacy-cdss.md) · [paper-outline.md](docs/paper-outline.md)
 
-The repository retains the original React + Express TCM chain pharmacy demo (prescription review, billing, patients, etc.) under `/legacy/*` routes and original API routes. That code is **legacy demo only** and uses **synthetic/demo** datasets where applicable.
+## Troubleshooting
 
-For prescription CDSS benchmarks and `npm run evaluate`, see historical sections in git history or `benchmarks/` — separate from the supply simulation study.
+If simulation API returns 404, restart the backend: `npm run restart:server`. Frontend should use `REACT_APP_API_BASE_URL=http://localhost:3002/api` (see `.env.development`).

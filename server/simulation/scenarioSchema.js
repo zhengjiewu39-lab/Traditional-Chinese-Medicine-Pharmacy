@@ -4,29 +4,39 @@ const REGION_TYPES = ['urban', 'suburban', 'rural'];
 const DRUG_PRIORITIES = ['essential', 'chronic-care', 'routine'];
 const EVENT_TYPES = ['demandSurge', 'supplyDisruption', 'roadDisruption', 'leadTimeExtension'];
 
+const SCHEMA_VERSION = '2.0.0';
+
 const DEFAULT_SCENARIO = {
+  schemaVersion: SCHEMA_VERSION,
   id: 'public-health-emergency-default',
   name: 'Default public health emergency (synthetic)',
   description: 'Synthetic surge + partial supply disruption + rural delivery delay.',
+  parameterMeta: {
+    population: 'illustrative',
+    baseDemand: 'illustrative',
+    costs: 'illustrative',
+    events: 'literature-informed',
+  },
   randomSeed: 20240901,
+  defaultReplicates: 30,
   simulationDays: 30,
   warehouseCount: 2,
   pharmacyCount: 12,
   drugCount: 8,
   regions: {
-    urban: { population: 50000, baseDemand: 1.0, demandVolatility: 0.15, transitDays: 0.5, vulnerabilityWeight: 1.0 },
-    suburban: { population: 20000, baseDemand: 0.85, demandVolatility: 0.2, transitDays: 1.0, vulnerabilityWeight: 1.2 },
-    rural: { population: 8000, baseDemand: 0.7, demandVolatility: 0.25, transitDays: 2.5, vulnerabilityWeight: 1.6 },
+    urban: { population: 50000, baseDemand: 1.0, demandVolatility: 0.15, distanceKm: 8, roadAccessibility: 1.0, transitDays: 0.5, vulnerabilityWeight: 1.0 },
+    suburban: { population: 20000, baseDemand: 0.85, demandVolatility: 0.2, distanceKm: 25, roadAccessibility: 0.85, transitDays: 1.0, vulnerabilityWeight: 1.2 },
+    rural: { population: 8000, baseDemand: 0.7, demandVolatility: 0.25, distanceKm: 60, roadAccessibility: 0.6, transitDays: 2.5, vulnerabilityWeight: 1.6 },
   },
   drugs: [
-    { id: 'D1', name: 'Synthetic essential A', priority: 'essential' },
-    { id: 'D2', name: 'Synthetic essential B', priority: 'essential' },
-    { id: 'D3', name: 'Synthetic chronic C', priority: 'chronic-care' },
-    { id: 'D4', name: 'Synthetic chronic D', priority: 'chronic-care' },
-    { id: 'D5', name: 'Synthetic routine E', priority: 'routine' },
-    { id: 'D6', name: 'Synthetic routine F', priority: 'routine' },
-    { id: 'D7', name: 'Synthetic routine G', priority: 'routine' },
-    { id: 'D8', name: 'Synthetic routine H', priority: 'routine' },
+    { id: 'D1', name: 'Synthetic essential A', priority: 'essential', initialStock: 220, unitProcurementCost: 4, holdingCostPerUnitDay: 0.03, stockoutPenalty: 50, leadTimeDays: 2 },
+    { id: 'D2', name: 'Synthetic essential B', priority: 'essential', initialStock: 220, unitProcurementCost: 4.2, holdingCostPerUnitDay: 0.03, stockoutPenalty: 50, leadTimeDays: 2 },
+    { id: 'D3', name: 'Synthetic chronic C', priority: 'chronic-care', initialStock: 180, unitProcurementCost: 3, holdingCostPerUnitDay: 0.025, stockoutPenalty: 35, leadTimeDays: 3 },
+    { id: 'D4', name: 'Synthetic chronic D', priority: 'chronic-care', initialStock: 180, unitProcurementCost: 3.1, holdingCostPerUnitDay: 0.025, stockoutPenalty: 35, leadTimeDays: 3 },
+    { id: 'D5', name: 'Synthetic routine E', priority: 'routine', initialStock: 150, unitProcurementCost: 2, holdingCostPerUnitDay: 0.02, stockoutPenalty: 15, leadTimeDays: 4 },
+    { id: 'D6', name: 'Synthetic routine F', priority: 'routine', initialStock: 150, unitProcurementCost: 2, holdingCostPerUnitDay: 0.02, stockoutPenalty: 15, leadTimeDays: 4 },
+    { id: 'D7', name: 'Synthetic routine G', priority: 'routine', initialStock: 140, unitProcurementCost: 1.8, holdingCostPerUnitDay: 0.02, stockoutPenalty: 15, leadTimeDays: 4 },
+    { id: 'D8', name: 'Synthetic routine H', priority: 'routine', initialStock: 140, unitProcurementCost: 1.8, holdingCostPerUnitDay: 0.02, stockoutPenalty: 15, leadTimeDays: 4 },
   ],
   events: [
     { type: 'demandSurge', startDay: 5, durationDays: 10, magnitude: 1.8, targetRegions: ['urban', 'suburban', 'rural'] },
@@ -100,6 +110,11 @@ function normalizeScenario(s) {
       id: `D${i}`,
       name: `Synthetic drug ${i}`,
       priority: DRUG_PRIORITIES[i % 3],
+      initialStock: 150,
+      unitProcurementCost: 2,
+      holdingCostPerUnitDay: 0.02,
+      stockoutPenalty: DRUG_PRIORITIES[i % 3] === 'essential' ? 50 : 15,
+      leadTimeDays: 3,
     });
   }
   out.drugs = out.drugs.slice(0, out.drugCount);
@@ -107,6 +122,7 @@ function normalizeScenario(s) {
 }
 
 module.exports = {
+  SCHEMA_VERSION,
   REGION_TYPES,
   DRUG_PRIORITIES,
   EVENT_TYPES,

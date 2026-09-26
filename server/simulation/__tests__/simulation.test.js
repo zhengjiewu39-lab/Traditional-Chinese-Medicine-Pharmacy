@@ -1,6 +1,7 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert');
-const { createRng } = require('../rng');
+const { createRng } = require('../seededRandom');
+const { resolvePolicyId, getPolicy } = require('../policyEngine');
 const { validateScenario, DEFAULT_SCENARIO } = require('../scenarioSchema');
 const { listPolicies } = require('../policyEngine');
 const { runSimulation } = require('../simulationEngine');
@@ -20,14 +21,19 @@ describe('policies', () => {
   it('includes four baseline strategies', () => {
     const p = listPolicies();
     assert.strictEqual(p.length, 4);
-    assert.ok(p.some((x) => x.id === 'equity-aware-v1'));
+    assert.ok(p.some((x) => x.id === 'equity-aware'));
+  });
+
+  it('resolves legacy -v1 policy aliases', () => {
+    assert.strictEqual(resolvePolicyId('equity-aware-v1'), 'equity-aware');
+    assert.ok(getPolicy('fixed-allocation-v1'));
   });
 
   for (const policyId of [
-    'fixed-allocation-v1',
-    'reorder-point-v1',
-    'cost-first-v1',
-    'equity-aware-v1',
+    'fixed-allocation',
+    'reorder-point',
+    'cost-first',
+    'equity-aware',
   ]) {
     it(`${policyId} completes a short synthetic run`, () => {
       const scenario = { ...DEFAULT_SCENARIO, simulationDays: 7, pharmacyCount: 6, randomSeed: 1 };
@@ -41,8 +47,8 @@ describe('policies', () => {
 describe('simulation determinism', () => {
   it('identical scenario and seed yield identical stockout rate', () => {
     const scenario = { ...DEFAULT_SCENARIO, simulationDays: 14, pharmacyCount: 6, randomSeed: 42 };
-    const r1 = runSimulation({ scenario, policyId: 'reorder-point-v1' });
-    const r2 = runSimulation({ scenario, policyId: 'reorder-point-v1' });
+    const r1 = runSimulation({ scenario, policyId: 'reorder-point' });
+    const r2 = runSimulation({ scenario, policyId: 'reorder-point' });
     assert.strictEqual(r1.metrics.stockoutRate, r2.metrics.stockoutRate);
     assert.strictEqual(r1.metrics.totalCost, r2.metrics.totalCost);
   });
@@ -62,10 +68,27 @@ describe('metricsEngine', () => {
       }],
     };
     const instance = { scenario: DEFAULT_SCENARIO };
-    const m = computeRunMetrics(runLog, instance, 'fixed-allocation-v1');
+    const m = computeRunMetrics(runLog, instance, 'fixed-allocation');
     assert.ok(m.stockoutRate > 0);
     assert.ok(m.equity.stockoutGap >= 0);
     assert.ok(m.penalties.compositeScore > m.totalCost);
+    assert.ok(m.serviceInequalityIndex >= 0);
+  });
+
+  it('essential stockout rate bounded 0-1', () => {
+    const scenario = { ...DEFAULT_SCENARIO, simulationDays: 5, pharmacyCount: 4, randomSeed: 3 };
+    const r = runSimulation({ scenario, policyId: 'cost-first' });
+    assert.ok(r.metrics.essentialStockoutRate >= 0 && r.metrics.essentialStockoutRate <= 1);
+  });
+});
+
+describe('experiment reproducibility', () => {
+  it('same seeds in replicates produce identical metrics', () => {
+    const { runReplicates } = require('../simulationEngine');
+    const scenario = { ...DEFAULT_SCENARIO, simulationDays: 10, pharmacyCount: 6, randomSeed: 100 };
+    const a = runReplicates({ scenario, policyId: 'fixed-allocation', replicates: 3 });
+    const b = runReplicates({ scenario, policyId: 'fixed-allocation', replicates: 3 });
+    assert.strictEqual(a.results[1].metrics.stockoutRate, b.results[1].metrics.stockoutRate);
   });
 });
 
@@ -75,5 +98,27 @@ describe('scenarioSchema', () => {
     assert.strictEqual(r.valid, true);
     assert.strictEqual(r.scenario.simulationDays, 365);
     assert.ok(r.warnings?.length);
+  });
+
+  it('includes schemaVersion on normalized scenario', () => {
+    const r = validateScenario({});
+    assert.ok(r.scenario.schemaVersion);
+  });
+});
+
+describe('exportService', () => {
+  it('flattens aggregate summary for CSV', () => {
+    const { pickExportMetrics, metricsToCsv } = require('../exportService');
+    const exp = {
+      summary: {
+        stockoutRate: { mean: 0.12, std: 0.01 },
+        totalCost: { mean: 1000 },
+      },
+      results: [{ metrics: { regional: { urban: { fillRate: 0.9, stockoutRate: 0.1, avgAccessTimeDays: 0.2 } } } }],
+    };
+    const m = pickExportMetrics(exp);
+    assert.strictEqual(m.stockoutRate, 0.12);
+    const csv = metricsToCsv(m);
+    assert.ok(csv.includes('stockoutRate,0.12'));
   });
 });
