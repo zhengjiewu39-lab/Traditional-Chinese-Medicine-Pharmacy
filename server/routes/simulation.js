@@ -4,16 +4,25 @@ const {
   validateScenario,
   FIELD_HELP,
   LIMITS,
+  SCENARIO_PRESETS,
+  buildPreset,
 } = require('../simulation/scenarioSchema');
+const { hashScenario } = require('../simulation/scenarioHash');
 const { listPolicies, getPolicy, resolvePolicyId } = require('../simulation/policyEngine');
-const { getGitCommitHash } = require('../simulation/gitInfo');
+const { getGitCommitHash, getPackageLockHash } = require('../simulation/gitInfo');
 const { runSimulation, runReplicates, ENGINE_VERSION } = require('../simulation/simulationEngine');
-const { aggregateReplicates } = require('../simulation/metricsEngine');
+const {
+  aggregateReplicates,
+  aggregateDailyTimeSeries,
+  aggregateRegionalReplicates,
+  pairedPolicyComparison,
+} = require('../simulation/metricsEngine');
 const {
   saveExperiment,
   listExperiments,
   getExperiment,
   newExperimentId,
+  newExperimentGroupId,
 } = require('../simulation/experimentRepository');
 const { metricsToCsv, experimentSummaryMarkdown, pickExportMetrics } = require('../simulation/exportService');
 
@@ -33,6 +42,18 @@ router.get('/meta', (_req, res) => {
 
 router.get('/scenario/default', (_req, res) => {
   res.json({ scenario: DEFAULT_SCENARIO, help: FIELD_HELP, limits: LIMITS });
+});
+
+router.get('/scenario/presets', (_req, res) => {
+  res.json({
+    presets: Object.entries(SCENARIO_PRESETS).map(([key, p]) => ({ key, id: p.id, name: p.name })),
+  });
+});
+
+router.get('/scenario/presets/:key', (req, res) => {
+  const scenario = buildPreset(req.params.key);
+  if (!scenario) return res.status(404).json({ message: 'Unknown preset' });
+  res.json({ scenario });
 });
 
 router.post('/scenario/validate', (req, res) => {
@@ -74,6 +95,7 @@ router.post('/run', (req, res) => {
 
   const jobId = newExperimentId();
   const gitCommitHash = getGitCommitHash();
+  const packageLockHash = getPackageLockHash();
   const startedAt = new Date().toISOString();
   activeJobs.set(jobId, { cancel: false, status: 'running' });
 
@@ -109,6 +131,7 @@ router.post('/run', (req, res) => {
         payload = {
           id: jobId,
           scenarioId: scenario.id,
+          scenarioHash: hashScenario(scenario),
           scenarioVersion: scenario.schemaVersion,
           scenario,
           policyId: canonicalPolicyId,
@@ -119,11 +142,14 @@ router.post('/run', (req, res) => {
           replicates: rep.results.length,
           engineVersion: ENGINE_VERSION,
           gitCommitHash,
+          packageLockHash,
           nodeVersion: process.version,
           startedAt,
           finishedAt: new Date().toISOString(),
           results: rep.results,
           summary: aggregateReplicates(metricsList),
+          regionalAggregate: aggregateRegionalReplicates(rep.results),
+          dailyAggregate: aggregateDailyTimeSeries(rep.results),
         };
       } else {
         const single = runSimulation({ scenario, policyId: canonicalPolicyId, onProgress, shouldCancel });
@@ -134,6 +160,7 @@ router.post('/run', (req, res) => {
         payload = {
           id: jobId,
           scenarioId: scenario.id,
+          scenarioHash: hashScenario(scenario),
           scenarioVersion: scenario.schemaVersion,
           scenario,
           policyId: canonicalPolicyId,
@@ -144,6 +171,7 @@ router.post('/run', (req, res) => {
           replicates: 1,
           engineVersion: ENGINE_VERSION,
           gitCommitHash,
+          packageLockHash,
           nodeVersion: process.version,
           startedAt,
           finishedAt: new Date().toISOString(),
@@ -180,7 +208,13 @@ router.get('/experiments/:id/export.csv', (req, res) => {
   if (!m) return res.status(400).json({ message: 'No exportable metrics on experiment' });
   res.setHeader('Content-Type', 'text/csv');
   res.setHeader('Content-Disposition', `attachment; filename="${exp.id}.csv"`);
-  res.send(metricsToCsv(m));
+  res.send(metricsToCsv(m, true, {
+    experimentGroupId: exp.experimentGroupId,
+    scenarioHash: exp.scenarioHash,
+    policyId: exp.policyId,
+    engineVersion: exp.engineVersion,
+    replicates: exp.replicates,
+  }));
 });
 
 router.get('/experiments/:id/export.json', (req, res) => {
@@ -205,12 +239,19 @@ router.post('/experiments/:id/rerun-exact', (req, res) => {
   const jobId = newExperimentId();
   const startedAt = new Date().toISOString();
   const gitCommitHash = getGitCommitHash();
+  const packageLockHash = getPackageLockHash();
+  const scenarioHash = hashScenario(scenario);
   activeJobs.set(jobId, { cancel: false, status: 'running' });
+  const engineMismatch = source.engineVersion && source.engineVersion !== ENGINE_VERSION;
   res.json({
     jobId,
     status: 'accepted',
     sourceExperimentId: source.id,
-    message: 'Exact re-run started with stored scenario, seeds, and policy.',
+    engineVersion: ENGINE_VERSION,
+    sourceEngineVersion: source.engineVersion,
+    reproductionNote: engineMismatch
+      ? 'Configuration re-run, not bitwise reproduction because engine version differs.'
+      : 'Exact re-run with frozen scenario and replicate seeds.',
   });
 
   setImmediate(() => {
@@ -231,6 +272,7 @@ router.post('/experiments/:id/rerun-exact', (req, res) => {
         }
         payload = {
           scenarioId: source.scenarioId,
+          scenarioHash,
           scenarioVersion: source.scenarioVersion || scenario.schemaVersion,
           scenario,
           policyId: canonicalPolicyId,
@@ -247,8 +289,11 @@ router.post('/experiments/:id/rerun-exact', (req, res) => {
           startedAt,
           finishedAt: new Date().toISOString(),
           gitCommitHash,
+          packageLockHash,
           results,
           summary: aggregateReplicates(results.map((x) => x.metrics)),
+          regionalAggregate: aggregateRegionalReplicates(results),
+          dailyAggregate: aggregateDailyTimeSeries(results),
         };
       } else {
         const seed = source.replicateSeeds?.[0] ?? source.randomSeed;
@@ -256,6 +301,7 @@ router.post('/experiments/:id/rerun-exact', (req, res) => {
         const single = runSimulation({ scenario: scen, policyId: canonicalPolicyId });
         payload = {
           scenarioId: source.scenarioId,
+          scenarioHash,
           scenarioVersion: source.scenarioVersion || scenario.schemaVersion,
           scenario,
           policyId: canonicalPolicyId,
@@ -272,6 +318,7 @@ router.post('/experiments/:id/rerun-exact', (req, res) => {
           startedAt,
           finishedAt: new Date().toISOString(),
           gitCommitHash,
+          packageLockHash,
           metrics: single.metrics,
           runLog: single.runLog,
           summary: single.metrics,
@@ -282,6 +329,113 @@ router.post('/experiments/:id/rerun-exact', (req, res) => {
     } catch (e) {
       activeJobs.set(jobId, { status: 'failed', error: e.message });
     }
+  });
+});
+
+router.post('/run-group', (req, res) => {
+  const { scenario: rawScenario, policyIds = [], replicates = 30 } = req.body || {};
+  const { valid, errors, scenario } = validateScenario(rawScenario || DEFAULT_SCENARIO);
+  if (!valid) return res.status(400).json({ message: 'Invalid scenario', errors });
+  if (!policyIds.length) return res.status(400).json({ message: 'policyIds required' });
+
+  const experimentGroupId = newExperimentGroupId();
+  const frozenScenario = JSON.parse(JSON.stringify(scenario));
+  const scenarioHash = hashScenario(frozenScenario);
+  const gitCommitHash = getGitCommitHash();
+  const packageLockHash = getPackageLockHash();
+  const startedAt = new Date().toISOString();
+  const jobId = newExperimentGroupId();
+  activeJobs.set(jobId, { status: 'running', experimentGroupId });
+
+  res.json({
+    jobId,
+    experimentGroupId,
+    status: 'accepted',
+    policyIds,
+    scenarioHash,
+    message: 'Experiment group started (common random numbers across policies).',
+  });
+
+  setImmediate(() => {
+    try {
+      const experimentIds = [];
+      const groupSummary = { policies: {}, pairedComparisons: null };
+      const resultsByPolicy = {};
+
+      const pendingPayloads = [];
+      for (const pid of policyIds) {
+        const canonical = resolvePolicyId(pid);
+        if (!canonical) continue;
+        const rep = runReplicates({
+          scenario: frozenScenario,
+          policyId: canonical,
+          replicates: Math.min(replicates, 100),
+        });
+        const expId = newExperimentId();
+        const payload = {
+          id: expId,
+          experimentGroupId,
+          scenarioId: frozenScenario.id,
+          scenarioHash,
+          scenarioVersion: frozenScenario.schemaVersion,
+          scenario: frozenScenario,
+          policyId: canonical,
+          policyVersion: getPolicy(canonical).version,
+          randomSeed: frozenScenario.randomSeed,
+          replicateSeeds: rep.results.map((r) => r.seed),
+          replicates: rep.results.length,
+          engineVersion: ENGINE_VERSION,
+          gitCommitHash,
+          packageLockHash,
+          nodeVersion: process.version,
+          startedAt,
+          finishedAt: new Date().toISOString(),
+          results: rep.results,
+          summary: aggregateReplicates(rep.results.map((r) => r.metrics)),
+          regionalAggregate: aggregateRegionalReplicates(rep.results),
+          dailyAggregate: aggregateDailyTimeSeries(rep.results),
+        };
+        pendingPayloads.push(payload);
+        experimentIds.push(expId);
+        groupSummary.policies[canonical] = payload.summary;
+        resultsByPolicy[canonical] = rep.results;
+      }
+      groupSummary.pairedComparisons = pairedPolicyComparison(resultsByPolicy);
+      for (const payload of pendingPayloads) {
+        saveExperiment({ ...payload, groupSummary });
+      }
+      activeJobs.set(jobId, {
+        status: 'completed',
+        experimentGroupId,
+        experimentIds,
+        groupSummary,
+      });
+    } catch (e) {
+      activeJobs.set(jobId, { status: 'failed', error: e.message });
+    }
+  });
+});
+
+router.get('/experiment-groups/:groupId', (req, res) => {
+  const list = listExperiments().filter((e) => e.experimentGroupId === req.params.groupId);
+  res.json({ experimentGroupId: req.params.groupId, experiments: list });
+});
+
+router.get('/experiment-groups/:groupId/analysis', (req, res) => {
+  const ids = listExperiments().filter((e) => e.experimentGroupId === req.params.groupId).map((e) => e.id);
+  const full = ids.map((id) => getExperiment(id)).filter(Boolean);
+  const first = full[0];
+  res.json({
+    experimentGroupId: req.params.groupId,
+    scenarioHash: first?.scenarioHash,
+    groupSummary: first?.groupSummary,
+    experiments: full.map((e) => ({
+      id: e.id,
+      policyId: e.policyId,
+      summary: e.summary,
+      regionalAggregate: e.regionalAggregate,
+      dailyAggregate: e.dailyAggregate,
+    })),
   });
 });
 

@@ -13,16 +13,17 @@ All inputs and outputs are **synthetic / simulated**. Experiment files are store
 - **Time step:** one day per step for a fixed horizon (`simulationDays`).
 - **Topology:** warehouses supply community pharmacies; pharmacies serve synthetic population buckets by region type (`urban`, `suburban`, `rural`).
 - **Demand:** generated from population, regional base demand, drug priority, volatility, and event multipliers.
-- **Fulfillment:** same-day demand met from pharmacy on-hand; unmet demand counts as stockout and adds a waiting proxy tied to transit disruption.
-- **Replenishment:** policy-specific orders from warehouse stock; shipments arrive after transit days (affected by events).
-- **Costs (synthetic CNY):** holding, fixed order cost, transport per unit — not calibrated to real markets.
+- **Fulfillment (backorder model):** unmet same-day demand enters a per-SKU backlog queue; **synthetic access delay** accumulates as backlog unit-days (not clinical wait times).
+- **Replenishment:** policies emit requested lines; warehouse outbound is capped by `dailyDispatchCapacity × supplyFactor` during `supplyDisruption`; truck capacity is enforced **per warehouse** with vulnerability/priority sorting.
+- **Costs (synthetic CNY):** SKU `holdingCostPerUnitDay`, `unitProcurementCost`, distance/road-adjusted transport, and fixed `orderCost` per shipment line.
+- **Events:** active when `startDay <= day < startDay + durationDays` (`getEventEndDay = startDay + durationDays`).
 
 ## Disturbance events
 
 | Type | Effect on simulation |
 |------|----------------------|
 | `demandSurge` | Multiplies regional demand |
-| `supplyDisruption` | Reduces effective supply (via warehouse availability in policy phase) |
+| `supplyDisruption` | Multiplies each warehouse **daily dispatch cap** (not double-deducting on-hand); logs requested vs shipped vs unmet replenishment |
 | `roadDisruption` | Multiplies transit time |
 | `leadTimeExtension` | Multiplies lead/transit factor |
 
@@ -32,8 +33,20 @@ Default scenario `public-health-emergency-default` combines surge, supply cut, r
 
 1. **fixed-allocation** — population-proportional target stock (review-day heuristic).
 2. **reorder-point** — (s, Q) reorder point with fixed batch.
-3. **cost-first** — greedy cost heuristic; defers lower-priority SKUs.
-4. **equity-aware** — weighted penalty scoring using cost, stockout, wait, and regional inequity signals.
+3. **cost-first** — greedy ranking by `(expected stockout penalty reduction − marginal logistics cost)` per candidate line.
+4. **equity-aware heuristic** — greedy ranking by weighted marginal score (stockout, backlog/wait proxy, regional inequity signal − cost); **not** a global optimizer.
+
+## Experiment groups (fair comparison)
+
+`POST /api/simulation/run-group` freezes one scenario JSON and runs all selected policies with **identical replicate seeds** (common random numbers). Results compare only within the same `experimentGroupId` / `scenarioHash`.
+
+## Service inequality index (0–1)
+
+```
+index = (w_s·min(stockoutGap,1) + w_w·min(waitGap/maxWait,1) + w_g·giniCoverage) / (w_s+w_w+w_g)
+```
+
+Higher Gini on regional fill rates increases the index (Gini=0 means equal coverage).
 
 Default parameters in `scenarioSchema.js` are **simulation assumptions** (`illustrative` / `literature-informed` in `parameterMeta`), not empirical pharmacy records.
 

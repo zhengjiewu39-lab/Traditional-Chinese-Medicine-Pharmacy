@@ -1,23 +1,34 @@
 /**
- * Simulation metrics — synthetic outcomes only, not health endpoints.
- *
- * Units:
- * - totalCost: currency units (CNY, synthetic)
- * - stockoutRate: fraction of unmet demand units
- * - fillRate: fraction of demand filled
- * - avgAccessTimeDays: mean patient wait proxy (days until demand filled from stock or arrival)
- * - inventoryTurnover: demand fulfilled / average inventory
- * - avgDeliveryTimeDays: mean shipment transit days
- * - inequityGap*: max-min across region types for stockout or wait
- * - giniCoverage: Gini on regional fill rates (0=equal, 1=max inequality)
+ * Simulation metrics — synthetic access delay, not clinical wait times.
  */
 
-const PRIORITY_WEIGHT = { essential: 3, 'chronic-care': 2, routine: 1 };
+const { PRIORITY_WEIGHT } = require('./simulationConstants');
+const { lastEventEndDay } = require('./eventUtils');
+
+function computeServiceInequalityIndex({
+  stockoutGap,
+  waitGap,
+  giniCoverage,
+  maxRelevantWaitDays = 30,
+  weights = { stockout: 1 / 3, wait: 1 / 3, gini: 1 / 3 },
+}) {
+  const normalizedStockoutGap = Math.min(Math.max(stockoutGap, 0), 1);
+  const normalizedWaitGap = Math.min(Math.max(waitGap / maxRelevantWaitDays, 0), 1);
+  const normalizedGini = Math.min(Math.max(giniCoverage, 0), 1);
+  const wSum = weights.stockout + weights.wait + weights.gini;
+  const index = (
+    weights.stockout * normalizedStockoutGap
+    + weights.wait * normalizedWaitGap
+    + weights.gini * normalizedGini
+  ) / wSum;
+  return Math.min(Math.max(index, 0), 1);
+}
 
 function computeRunMetrics(runLog, instance, policyId) {
   const { scenario } = instance;
   const weights = scenario.metricsWeights || {};
-  const stockoutW = weights.stockoutPenaltyByPriority || { essential: 50, 'chronic-care': 35, routine: 15 };
+  const ineqWeights = scenario.metricsWeights?.serviceInequalityWeights ?? { stockout: 1 / 3, wait: 1 / 3, gini: 1 / 3 };
+  const maxWait = scenario.metricsWeights?.maxRelevantWaitDays ?? 30;
   const waitW = weights.waitingTimePenaltyPerDay ?? 8;
   const ineqW = weights.inequityPenaltyPerGap ?? 120;
 
@@ -26,12 +37,14 @@ function computeRunMetrics(runLog, instance, policyId) {
   let totalStockout = 0;
   let weightedStockoutPenalty = 0;
   let totalCost = runLog.totalCost || 0;
-  let waitSum = 0;
-  let waitCount = 0;
+  let accessDelayUnitDays = 0;
   let transitSum = 0;
   let transitCount = 0;
   let inventorySum = 0;
   let inventoryDays = 0;
+  let permanentlyUnmet = 0;
+  let eventuallyFilled = 0;
+
   const priorityAgg = {
     essential: { demand: 0, stockout: 0 },
     'chronic-care': { demand: 0, stockout: 0 },
@@ -42,24 +55,23 @@ function computeRunMetrics(runLog, instance, policyId) {
   for (const day of runLog.daily) {
     for (const rt of ['urban', 'suburban', 'rural']) {
       if (!byRegion[rt]) {
-        byRegion[rt] = { demand: 0, filled: 0, stockout: 0, waitSum: 0, waitN: 0 };
+        byRegion[rt] = { demand: 0, filled: 0, stockout: 0, accessDelayUnitDays: 0 };
       }
     }
+    accessDelayUnitDays += day.dailyAccessDelayUnitDays ?? 0;
     for (const row of day.pharmacyResults) {
       const r = byRegion[row.regionType];
       r.demand += row.demand;
       r.filled += row.filled;
       r.stockout += row.stockout;
-      r.waitSum += row.waitDays * row.demand;
-      r.waitN += row.demand;
+      r.accessDelayUnitDays += row.accessDelayUnitDays ?? 0;
       totalDemand += row.demand;
       totalFilled += row.filled;
       totalStockout += row.stockout;
-      waitSum += row.waitDays * row.demand;
-      waitCount += row.demand;
       for (const sd of row.stockoutByDrug || []) {
-        const pw = stockoutW[sd.priority] ?? 15;
-        weightedStockoutPenalty += sd.units * pw * PRIORITY_WEIGHT[sd.priority];
+        const drug = instance.drugs?.find((d) => d.id === sd.drugId);
+        const pw = drug?.stockoutPenalty ?? weights.stockoutPenaltyByPriority?.[sd.priority] ?? 15;
+        weightedStockoutPenalty += sd.units * pw * (PRIORITY_WEIGHT[sd.priority] ?? 1);
       }
     }
     inventorySum += day.totalInventory;
@@ -75,9 +87,14 @@ function computeRunMetrics(runLog, instance, policyId) {
     }
   }
 
+  for (const row of runLog.pharmacyStatesSummary || []) {
+    permanentlyUnmet += row.permanentlyUnmetUnits ?? 0;
+    eventuallyFilled += row.eventuallyFilledUnits ?? 0;
+  }
+
   const stockoutRate = totalDemand > 0 ? totalStockout / totalDemand : 0;
   const fillRate = totalDemand > 0 ? totalFilled / totalDemand : 1;
-  const avgAccessTimeDays = waitCount > 0 ? waitSum / waitCount : 0;
+  const avgSyntheticAccessDelayDays = totalDemand > 0 ? accessDelayUnitDays / totalDemand : 0;
   const avgDeliveryTimeDays = transitCount > 0 ? transitSum / transitCount : 0;
   const avgInventory = inventoryDays > 0 ? inventorySum / inventoryDays : 0;
   const inventoryTurnover = avgInventory > 0 ? totalFilled / avgInventory : 0;
@@ -88,42 +105,46 @@ function computeRunMetrics(runLog, instance, policyId) {
       demand: r.demand,
       fillRate: r.demand > 0 ? r.filled / r.demand : 1,
       stockoutRate: r.demand > 0 ? r.stockout / r.demand : 0,
-      avgAccessTimeDays: r.waitN > 0 ? r.waitSum / r.waitN : 0,
+      avgSyntheticAccessDelayDays: r.demand > 0 ? r.accessDelayUnitDays / r.demand : 0,
       serviceCoverage: r.demand > 0 ? r.filled / r.demand : 1,
     };
   }
 
-  const essentialStockoutRate = rate(priorityAgg.essential);
-  const chronicStockoutRate = rate(priorityAgg['chronic-care']);
-  const routineStockoutRate = rate(priorityAgg.routine);
-  const orderFillRate = fillRate;
-
   const stockoutRates = Object.values(regional).map((x) => x.stockoutRate);
-  const waitTimes = Object.values(regional).map((x) => x.avgAccessTimeDays);
+  const waitTimes = Object.values(regional).map((x) => x.avgSyntheticAccessDelayDays);
   const fillRates = Object.values(regional).map((x) => x.fillRate);
 
-  const stockoutGap = Math.max(...stockoutRates) - Math.min(...stockoutRates);
-  const waitGap = Math.max(...waitTimes) - Math.min(...waitTimes);
+  const stockoutGap = stockoutRates.length ? Math.max(...stockoutRates) - Math.min(...stockoutRates) : 0;
+  const waitGap = waitTimes.length ? Math.max(...waitTimes) - Math.min(...waitTimes) : 0;
   const giniCoverage = gini(fillRates);
   const resilience = computeResilienceMetrics(runLog.daily, scenario);
-  const serviceInequalityIndex = (stockoutGap + waitGap + (1 - giniCoverage)) / 3;
+  const serviceInequalityIndex = computeServiceInequalityIndex({
+    stockoutGap,
+    waitGap,
+    giniCoverage,
+    maxRelevantWaitDays: maxWait,
+    weights: ineqWeights,
+  });
 
-  const waitingTimePenalty = waitSum * waitW;
-  const inequityPenalty = (stockoutGap + waitGap) * ineqW;
-  const compositeScore = totalCost + weightedStockoutPenalty + waitingTimePenalty + inequityPenalty;
+  const waitingTimePenalty = accessDelayUnitDays * waitW;
+  const inequityPenalty = serviceInequalityIndex * ineqW;
 
   return {
     policyId,
     totalCost,
     stockoutRate,
     fillRate,
-    orderFillRate,
-    essentialStockoutRate,
-    chronicStockoutRate,
-    routineStockoutRate,
-    avgAccessTimeDays,
+    orderFillRate: fillRate,
+    essentialStockoutRate: rate(priorityAgg.essential),
+    chronicStockoutRate: rate(priorityAgg['chronic-care']),
+    routineStockoutRate: rate(priorityAgg.routine),
+    avgSyntheticAccessDelayDays,
+    avgAccessTimeDays: avgSyntheticAccessDelayDays,
     inventoryTurnover,
     avgDeliveryTimeDays,
+    permanentlyUnmetUnits: permanentlyUnmet,
+    eventuallyFilledUnits: eventuallyFilled,
+    backlogUnitDaysTotal: accessDelayUnitDays,
     regional,
     resilience,
     serviceInequalityIndex,
@@ -132,16 +153,15 @@ function computeRunMetrics(runLog, instance, policyId) {
       waitGap,
       giniCoverage,
       serviceInequalityIndex,
-      definition: 'Gini on regional fill rates; gaps are max-min across urban/suburban/rural; serviceInequalityIndex averages normalized gaps.',
+      formula: 'weighted mean of normalized stockoutGap, waitGap/maxWait, giniCoverage in [0,1]',
     },
     penalties: {
       weightedStockoutPenalty,
       waitingTimePenalty,
       inequityPenalty,
-      compositeScore,
-      units: { cost: 'synthetic CNY', time: 'days', score: 'synthetic penalty units' },
+      compositeScore: totalCost + weightedStockoutPenalty + waitingTimePenalty + inequityPenalty,
     },
-    disclaimer: 'Metrics describe synthetic simulation outputs only, not real-world health or operational outcomes.',
+    disclaimer: 'Synthetic simulation metrics only.',
   };
 }
 
@@ -165,16 +185,18 @@ function rate(agg) {
 }
 
 function computeResilienceMetrics(daily, scenario) {
-  const events = scenario?.events || [];
-  const lastEnd = events.reduce((m, e) => Math.max(m, e.endDay ?? e.startDay ?? 0), -1);
-  const preDays = daily.filter((d) => d.day < (events[0]?.startDay ?? 999));
+  const lastEnd = lastEventEndDay(scenario);
+  const firstStart = scenario?.events?.length
+    ? Math.min(...scenario.events.map((e) => e.startDay))
+    : 999;
+  const preDays = daily.filter((d) => d.day < firstStart);
   const baseline = preDays.length
     ? preDays.reduce((s, d) => s + (d.dailyStockoutRate || 0), 0) / preDays.length
     : (daily[0]?.dailyStockoutRate ?? 0);
   let recoveryDay = null;
   if (lastEnd >= 0) {
     for (const d of daily) {
-      if (d.day <= lastEnd) continue;
+      if (d.day < lastEnd) continue;
       if ((d.dailyStockoutRate ?? 1) <= baseline * 1.1 + 0.001) {
         recoveryDay = d.day;
         break;
@@ -190,7 +212,6 @@ function computeResilienceMetrics(daily, scenario) {
     lastDisruptionEndDay: lastEnd,
     recoveryDay,
     daysToRecover: recoveryDay != null && lastEnd >= 0 ? recoveryDay - lastEnd : null,
-    definition: 'Recovery = first day after last event when daily stockout rate ≤ 110% of pre-event baseline.',
   };
 }
 
@@ -198,16 +219,86 @@ function aggregateReplicates(metricsList) {
   if (!metricsList.length) return null;
   const keys = [
     'totalCost', 'stockoutRate', 'fillRate', 'essentialStockoutRate', 'chronicStockoutRate',
-    'avgAccessTimeDays', 'inventoryTurnover', 'avgDeliveryTimeDays', 'serviceInequalityIndex',
+    'avgSyntheticAccessDelayDays', 'serviceInequalityIndex', 'avgDeliveryTimeDays',
   ];
   const summary = {};
   for (const k of keys) {
-    const vals = metricsList.map((m) => m[k]);
+    const vals = metricsList.map((m) => m[k] ?? m.avgAccessTimeDays);
     summary[k] = stats(vals);
   }
   summary.replicates = metricsList.length;
   summary.replicateStockoutRates = metricsList.map((m) => m.stockoutRate);
   return summary;
+}
+
+function aggregateRegionalReplicates(results) {
+  if (!results?.length) return null;
+  const regions = ['urban', 'suburban', 'rural'];
+  const out = {};
+  for (const rt of regions) {
+    const stockoutRates = [];
+    const fillRates = [];
+    const delays = [];
+    for (const r of results) {
+      const reg = r.metrics?.regional?.[rt];
+      if (!reg) continue;
+      stockoutRates.push(reg.stockoutRate);
+      fillRates.push(reg.fillRate);
+      delays.push(reg.avgSyntheticAccessDelayDays ?? reg.avgAccessTimeDays ?? 0);
+    }
+    if (stockoutRates.length) {
+      out[rt] = {
+        stockoutRate: stats(stockoutRates),
+        fillRate: stats(fillRates),
+        avgSyntheticAccessDelayDays: stats(delays),
+      };
+    }
+  }
+  return out;
+}
+
+function aggregateDailyTimeSeries(results) {
+  if (!results?.length) return null;
+  const maxDay = Math.max(...results.map((r) => r.runLog?.daily?.length ?? 0));
+  const series = [];
+  for (let day = 0; day < maxDay; day += 1) {
+    const stockoutRates = [];
+    const fillRates = [];
+    for (const r of results) {
+      const d = r.runLog?.daily?.[day];
+      if (d) {
+        stockoutRates.push(d.dailyStockoutRate ?? 0);
+        fillRates.push(d.dailyFillRate ?? 0);
+      }
+    }
+    if (stockoutRates.length) {
+      series.push({
+        day,
+        dailyStockoutRate: stats(stockoutRates),
+        dailyFillRate: stats(fillRates),
+      });
+    }
+  }
+  return series;
+}
+
+function pairedPolicyComparison(resultsByPolicy) {
+  const policies = Object.keys(resultsByPolicy);
+  if (policies.length < 2) return null;
+  const n = Math.min(...policies.map((p) => resultsByPolicy[p].length));
+  const pairs = [];
+  for (let i = 0; i < policies.length - 1; i += 1) {
+    for (let j = i + 1; j < policies.length; j += 1) {
+      const a = policies[i];
+      const b = policies[j];
+      const diffs = [];
+      for (let k = 0; k < n; k += 1) {
+        diffs.push(resultsByPolicy[a][k].metrics.stockoutRate - resultsByPolicy[b][k].metrics.stockoutRate);
+      }
+      pairs.push({ policyA: a, policyB: b, stockoutRateDiff: stats(diffs), pairedReplicates: n });
+    }
+  }
+  return pairs;
 }
 
 function stats(vals) {
@@ -221,6 +312,10 @@ function stats(vals) {
 
 module.exports = {
   computeRunMetrics,
+  computeServiceInequalityIndex,
   aggregateReplicates,
+  aggregateRegionalReplicates,
+  aggregateDailyTimeSeries,
+  pairedPolicyComparison,
   PRIORITY_WEIGHT,
 };

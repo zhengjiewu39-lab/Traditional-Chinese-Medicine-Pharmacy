@@ -12,17 +12,26 @@ function newExperimentId() {
   return `exp_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
 }
 
+function newExperimentGroupId() {
+  return `grp_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
+}
+
 function saveExperiment(record) {
   ensureDir();
   const id = record.id || newExperimentId();
   const file = path.join(DATA_DIR, `${id}.json`);
+  if (fs.existsSync(file)) {
+    throw new Error(`Experiment ${id} already exists; immutable archive`);
+  }
   const payload = {
     ...record,
     id,
     savedAt: new Date().toISOString(),
     dataClassification: 'synthetic-simulation',
   };
-  fs.writeFileSync(file, JSON.stringify(payload, null, 2), 'utf8');
+  const tmp = `${file}.${process.pid}.tmp`;
+  fs.writeFileSync(tmp, JSON.stringify(payload, null, 2), 'utf8');
+  fs.renameSync(tmp, file);
   return payload;
 }
 
@@ -34,7 +43,9 @@ function listExperiments() {
       const raw = JSON.parse(fs.readFileSync(path.join(DATA_DIR, f), 'utf8'));
       return {
         id: raw.id,
+        experimentGroupId: raw.experimentGroupId,
         scenarioId: raw.scenarioId,
+        scenarioHash: raw.scenarioHash,
         scenarioVersion: raw.scenarioVersion,
         policyId: raw.policyId,
         randomSeed: raw.randomSeed,
@@ -62,4 +73,5 @@ module.exports = {
   listExperiments,
   getExperiment,
   newExperimentId,
+  newExperimentGroupId,
 };

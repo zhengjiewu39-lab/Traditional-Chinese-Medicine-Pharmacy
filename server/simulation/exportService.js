@@ -5,8 +5,14 @@ function scalarMetric(v) {
   return v;
 }
 
-function metricsToCsv(metrics, regional = true) {
+function metricsToCsv(metrics, regional = true, meta = {}) {
   const lines = ['metric,value,unit'];
+  if (meta.experimentGroupId) lines.push(`experimentGroupId,${meta.experimentGroupId},id`);
+  if (meta.scenarioHash) lines.push(`scenarioHash,${meta.scenarioHash},sha256`);
+  if (meta.policyId) lines.push(`policyId,${meta.policyId},id`);
+  if (meta.engineVersion) lines.push(`engineVersion,${meta.engineVersion},version`);
+  if (meta.replicates) lines.push(`replicates,${meta.replicates},count`);
+  lines.push('disclaimer,synthetic simulation only — not for clinical or real-world allocation,');
   const row = (name, v, unit) => lines.push(`${name},${scalarMetric(v)},${unit}`);
   row('totalCost', metrics.totalCost, 'synthetic CNY');
   row('stockoutRate', metrics.stockoutRate, 'proportion');

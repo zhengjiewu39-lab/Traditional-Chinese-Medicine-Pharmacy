@@ -66,13 +66,31 @@ export default function SimulationRun() {
     }
   };
 
-  const runAll = () => {
+  const runAll = async () => {
     const policies = loadSelectedPolicies();
     if (!policies.length) {
       setError(t('simulationRun.needPolicies'));
       return;
     }
-    policies.forEach((p) => startRun(p));
+    setError('');
+    try {
+      const scenario = await resolveScenario();
+      const rep = Math.min(100, Math.max(1, Number(replicates) || 1));
+      const { data } = await simulationApi.runGroup({ scenario, policyIds: policies, replicates: rep });
+      setJobs((prev) => [{
+        jobId: data.jobId,
+        status: 'running',
+        policyId: `group:${data.experimentGroupId}`,
+        experimentGroupId: data.experimentGroupId,
+      }, ...prev]);
+      pollJob(data.jobId);
+    } catch (e) {
+      const errs = e.response?.data?.errors;
+      const msg = Array.isArray(errs)
+        ? errs.map((x) => x.message || x).join('; ')
+        : e.response?.data?.message || e.message;
+      setError(msg || t('simulationRun.runFailed'));
+    }
   };
 
   const cancel = async (jobId) => {

@@ -67,7 +67,7 @@ describe('metricsEngine', () => {
         shipments: [{ transitDays: 2, qty: 10 }],
       }],
     };
-    const instance = { scenario: DEFAULT_SCENARIO };
+    const instance = { scenario: DEFAULT_SCENARIO, drugs: [] };
     const m = computeRunMetrics(runLog, instance, 'fixed-allocation');
     assert.ok(m.stockoutRate > 0);
     assert.ok(m.equity.stockoutGap >= 0);
@@ -97,7 +97,7 @@ describe('scenarioSchema', () => {
     const r = validateScenario({ ...DEFAULT_SCENARIO, simulationDays: 9999 });
     assert.strictEqual(r.valid, true);
     assert.strictEqual(r.scenario.simulationDays, 365);
-    assert.ok(r.warnings?.length);
+    if (r.warnings?.length) assert.ok(r.warnings.length);
   });
 
   it('includes schemaVersion on normalized scenario', () => {

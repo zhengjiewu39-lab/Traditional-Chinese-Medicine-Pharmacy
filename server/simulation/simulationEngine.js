@@ -2,20 +2,37 @@ const { generateScenarioInstance } = require('./scenarioGenerator');
 const {
   initPharmacyState,
   initWarehouseState,
-  fulfillDemand,
+  fulfillDemandWithBackorder,
+  warehouseIssue,
+  accrueBacklogWait,
+  finalizeHorizonBacklog,
 } = require('./inventoryEngine');
 const {
   scheduleShipment,
   processArrivals,
-  allocateTruckCapacity,
+  allocateTruckCapacityByWarehouse,
+  computeTransitDays,
+  transportCostPerUnit,
 } = require('./distributionEngine');
+const { applyWarehouseSupplyCaps } = require('./dispatchEngine');
 const { decideReplenishment, getPolicy, resolvePolicyId } = require('./policyEngine');
 const { computeRunMetrics } = require('./metricsEngine');
+const { ENGINE_VERSION } = require('./simulationConstants');
 
-const ENGINE_VERSION = 'simulation-engine-v1.0.0';
-const HOLDING_COST = 0.02;
-const ORDER_COST = 25;
-const TRANSPORT_COST_PER_UNIT = 0.15;
+function computeRegionalStockoutRates(pharmacyResults) {
+  const by = { urban: { d: 0, s: 0 }, suburban: { d: 0, s: 0 }, rural: { d: 0, s: 0 } };
+  for (const row of pharmacyResults) {
+    const b = by[row.regionType];
+    if (!b) continue;
+    b.d += row.demand;
+    b.s += row.stockout;
+  }
+  const out = {};
+  for (const [k, v] of Object.entries(by)) {
+    out[k] = v.d > 0 ? v.s / v.d : 0;
+  }
+  return out;
+}
 
 function runSimulation({ scenario, policyId, onProgress, shouldCancel }) {
   const canonicalPolicyId = resolvePolicyId(policyId);
@@ -28,17 +45,19 @@ function runSimulation({ scenario, policyId, onProgress, shouldCancel }) {
   let inTransit = [];
   let totalCost = 0;
   const daily = [];
-  const recentStockoutsByPharmacy = {};
+  const orderCost = scenario.logistics?.orderCost ?? 25;
+  let lastPharmacyResults = [];
 
   const drugMeta = Object.fromEntries(instance.drugs.map((d) => [d.id, d]));
   const phMap = Object.fromEntries(instance.pharmacies.map((p) => [p.id, p]));
+  const drugMap = drugMeta;
 
   for (let day = 0; day < scenario.simulationDays; day += 1) {
     if (shouldCancel?.()) {
       return { cancelled: true, day, engineVersion: ENGINE_VERSION };
     }
 
-    inTransit = processArrivals(day, inTransit, pharmacyStates);
+    inTransit = processArrivals(day, inTransit, pharmacyStates, drugMeta);
     const plan = instance.dailyPlans[day];
     const pharmacyResults = [];
     let dayInventory = 0;
@@ -49,6 +68,7 @@ function runSimulation({ scenario, policyId, onProgress, shouldCancel }) {
     };
     let dayDemand = 0;
     let dayStockout = 0;
+    let dayAccessDelayUnitDays = 0;
 
     for (const phState of pharmacyStates) {
       const ph = phMap[phState.id];
@@ -56,12 +76,11 @@ function runSimulation({ scenario, policyId, onProgress, shouldCancel }) {
       let demand = 0;
       let filled = 0;
       let stockout = 0;
-      let waitDays = 0;
       const stockoutByDrug = [];
 
       for (const [drugId, units] of Object.entries(demandRow?.drugDemand || {})) {
         demand += units;
-        const res = fulfillDemand(ph, drugId, units, phState);
+        const res = fulfillDemandWithBackorder(ph, drugId, units, phState, drugMeta[drugId]);
         filled += res.filled;
         stockout += res.stockout;
         const pr = drugMeta[drugId]?.priority || 'routine';
@@ -73,21 +92,23 @@ function runSimulation({ scenario, policyId, onProgress, shouldCancel }) {
         dayDemand += units;
         dayStockout += res.stockout;
         if (res.stockout > 0) {
-          const meta = drugMeta[drugId];
-          stockoutByDrug.push({ drugId, units: res.stockout, priority: meta.priority });
-          recentStockoutsByPharmacy[ph.id] = (recentStockoutsByPharmacy[ph.id] || 0) + res.stockout;
-          waitDays += 1.0 * plan.eventFactors.transit[ph.regionType];
+          stockoutByDrug.push({ drugId, units: res.stockout, priority: pr });
         }
       }
 
-      const avgWait = demand > 0 ? waitDays : 0;
+      const backlogBeforeWait = Object.values(phState.backlog).reduce((a, b) => a + b, 0);
+      accrueBacklogWait(phState);
+      dayAccessDelayUnitDays += backlogBeforeWait;
+
+      const backlogUnits = Object.values(phState.backlog).reduce((a, b) => a + b, 0);
       pharmacyResults.push({
         pharmacyId: ph.id,
         regionType: ph.regionType,
         demand,
         filled,
         stockout,
-        waitDays: avgWait,
+        backlogUnits,
+        accessDelayUnitDays: phState.backlogUnitDays,
         stockoutByDrug,
       });
 
@@ -98,46 +119,83 @@ function runSimulation({ scenario, policyId, onProgress, shouldCancel }) {
       for (const v of Object.values(wh.onHand)) dayInventory += v;
     }
 
-    totalCost += dayInventory * HOLDING_COST;
+    for (const drug of instance.drugs) {
+      for (const phState of pharmacyStates) {
+        totalCost += (phState.onHand[drug.id] || 0) * (drug.holdingCostPerUnitDay ?? 0.02);
+      }
+      for (const wh of warehouseStates) {
+        totalCost += (wh.onHand[drug.id] || 0) * (drug.holdingCostPerUnitDay ?? 0.02);
+      }
+    }
 
-    const orders = decideReplenishment({
+    const regionalStockoutRate = computeRegionalStockoutRates(lastPharmacyResults.length ? lastPharmacyResults : pharmacyResults);
+
+    const { orders: requestedOrders, decisions: policyDecisions } = decideReplenishment({
       policyId: canonicalPolicyId,
       day,
       instance,
       pharmacyStates,
       warehouseStates,
-      recentStockoutsByPharmacy,
+      regionalStockoutRate,
     });
 
+    const { accepted: afterSupply, supplyLog } = applyWarehouseSupplyCaps(
+      requestedOrders,
+      instance.warehouses,
+      instance.pharmacies,
+      plan.eventFactors,
+      phMap,
+      drugMap,
+    );
+
+    const { accepted: truckAccepted, allocationLog } = allocateTruckCapacityByWarehouse(
+      afterSupply,
+      instance.warehouses,
+      phMap,
+      drugMap,
+    );
+
     const shipments = [];
-    const batched = allocateTruckCapacity(orders);
-    for (const o of batched) {
+    for (const o of truckAccepted) {
+      const whState = warehouseStates.find((w) => w.id === o.warehouseId);
+      const shipped = warehouseIssue(whState, o.drugId, o.qty);
+      if (shipped <= 0) continue;
       const ph = phMap[o.pharmacyId];
-      const transit = ph.transitDaysBase * plan.eventFactors.transit[ph.regionType]
-        * plan.eventFactors.lead[ph.regionType];
+      const drug = drugMeta[o.drugId];
+      const transit = computeTransitDays(ph, scenario.regions[ph.regionType], drug, plan, scenario);
+      const transport = transportCostPerUnit(ph, scenario);
+      totalCost += orderCost + shipped * (transport + (drug.unitProcurementCost ?? 0));
       scheduleShipment({
         pharmacy: ph,
         drugId: o.drugId,
-        qty: o.qty,
+        qty: shipped,
         currentDay: day,
         transitDays: transit,
         inTransit,
       });
-      totalCost += ORDER_COST + o.qty * TRANSPORT_COST_PER_UNIT;
-      shipments.push({ ...o, transitDays: transit });
+      shipments.push({ ...o, qty: shipped, transitDays: transit, transportCostPerUnit: transport });
     }
 
     daily.push({
       day,
+      eventFactors: plan.eventFactors,
       pharmacyResults,
+      policyDecisions,
+      supplyLog,
+      allocationLog,
       shipments,
       totalInventory: dayInventory,
       priorityTotals,
       dailyStockoutRate: dayDemand > 0 ? dayStockout / dayDemand : 0,
       dailyFillRate: dayDemand > 0 ? (dayDemand - dayStockout) / dayDemand : 1,
+      dailyAccessDelayUnitDays: dayAccessDelayUnitDays,
     });
+
+    lastPharmacyResults = pharmacyResults;
     if (onProgress) onProgress({ day, totalDays: scenario.simulationDays, pct: ((day + 1) / scenario.simulationDays) * 100 });
   }
+
+  for (const phState of pharmacyStates) finalizeHorizonBacklog(phState);
 
   const runLog = {
     engineVersion: ENGINE_VERSION,
@@ -147,6 +205,12 @@ function runSimulation({ scenario, policyId, onProgress, shouldCancel }) {
     randomSeed: scenario.randomSeed,
     totalCost,
     daily,
+    pharmacyStatesSummary: pharmacyStates.map((p) => ({
+      id: p.id,
+      permanentlyUnmetUnits: p.permanentlyUnmetUnits,
+      eventuallyFilledUnits: p.eventuallyFilledUnits,
+      backlogUnitDays: p.backlogUnitDays,
+    })),
   };
 
   const metrics = computeRunMetrics(runLog, instance, canonicalPolicyId);

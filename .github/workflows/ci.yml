@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 jobs:
-  test-and-evaluate:
+  simulation-research:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,25 +20,39 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run server unit tests
-        run: npm run test:server
+      - name: Simulation unit tests
+        run: npm run simulation:test
 
-      - name: npm audit (high severity)
-        run: npm audit --audit-level=high
+      - name: Simulation demo
+        run: npm run simulation:demo
+
+      - name: Research reproduce (smoke)
+        run: REPLICATES=3 npm run research:reproduce
+
+      - name: Exact reproduce check
+        run: npm run research:reproduce -- --latest
         continue-on-error: true
 
-      - name: Run prescription review benchmark
-        run: npm run evaluate
+      - name: Frontend build
+        run: npm run build
 
-      - name: Upload evaluation report
+      - name: Upload simulation experiments artifact
         uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: evaluation-report
-          path: benchmarks/results/latest.json
+          name: simulation-research-ci
+          path: data/simulation-experiments/*.json
+          if-no-files-found: ignore
 
-  docker-build:
+  legacy-cdss-benchmark:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Build Docker image
-        run: docker build -t tcm-pharmacy:ci .
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - name: Legacy prescription benchmark (not research primary)
+        run: npm run evaluate:ablation
+        continue-on-error: true

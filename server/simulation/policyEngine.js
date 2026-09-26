@@ -1,38 +1,33 @@
-/**
- * Inventory & distribution policies (explicit algorithm names — not generic "AI").
- */
+const { PRIORITY_WEIGHT } = require('./simulationConstants');
+const { transportCostPerUnit } = require('./distributionEngine');
 
 const POLICIES = {
   'fixed-allocation': {
     id: 'fixed-allocation',
     name: 'Fixed allocation baseline',
-    version: '1.0.0',
+    version: '2.0.0',
     algorithm: 'Population-proportional target stock replenishment on fixed review days',
-    description: 'Replenish each pharmacy toward a population-proportional target stock each review day.',
     params: {},
   },
   'reorder-point': {
     id: 'reorder-point',
     name: 'Reorder point (s, Q) baseline',
-    version: '1.0.0',
+    version: '2.0.0',
     algorithm: 'Classic (s, Q) inventory control',
-    description: 'Order fixed batch Q when on-hand ≤ s.',
     params: { s: 80, Q: 200 },
   },
   'cost-first': {
     id: 'cost-first',
-    name: 'Cost-first heuristic',
-    version: '1.0.0',
-    algorithm: 'Greedy cost minimization with priority deferral',
-    description: 'Minimize holding + ordering + transport; defer low-priority SKUs when budget tight.',
+    name: 'Cost-first greedy heuristic',
+    version: '2.0.0',
+    algorithm: 'Greedy ranking by (expected stockout penalty reduction − marginal logistics cost) per candidate line',
     params: {},
   },
   'equity-aware': {
     id: 'equity-aware',
-    name: 'Equity-aware multi-objective heuristic',
-    version: '1.0.0',
-    algorithm: 'Weighted penalty scoring (cost + stockout + wait + inequity)',
-    description: 'Replenishment driven by composite penalty: totalCost + stockoutPenalty + waitingTimePenalty + inequityPenalty.',
+    name: 'Equity-aware heuristic',
+    version: '2.0.0',
+    algorithm: 'Greedy ranking by weighted marginal score (stockout, wait proxy, regional inequity signal − cost); not a global optimizer',
     params: {},
   },
 };
@@ -59,64 +54,133 @@ function getPolicy(id) {
   return canonical ? POLICIES[canonical] : null;
 }
 
-function decideReplenishment({
+function stockoutPenaltyPerUnit(drug, scenario) {
+  return drug.stockoutPenalty ?? scenario.metricsWeights?.stockoutPenaltyByPriority?.[drug.priority] ?? 15;
+}
+
+function buildCandidates({
   policyId,
   day,
   instance,
   pharmacyStates,
-  warehouseStates,
-  recentStockoutsByPharmacy,
+  regionalStockoutRate,
 }) {
   const canonical = resolvePolicyId(policyId);
-  const orders = [];
-  const { pharmacies, drugs } = instance;
+  const { pharmacies, drugs, scenario } = instance;
   const totalPop = pharmacies.reduce((s, p) => s + p.population, 0);
+  const phMap = Object.fromEntries(pharmacies.map((p) => [p.id, p]));
+  const candidates = [];
 
   for (const ph of pharmacies) {
     const phState = pharmacyStates.find((p) => p.id === ph.id);
-    const wh = warehouseStates.find((w) => w.id === ph.warehouseId);
-    if (!phState || !wh) continue;
-
+    if (!phState) continue;
     for (const drug of drugs) {
       const onHand = phState.onHand[drug.id] || 0;
+      const backlog = phState.backlog[drug.id] || 0;
       let orderQty = 0;
 
       if (canonical === 'fixed-allocation') {
         const target = Math.round((ph.population / totalPop) * 400 * (drug.priority === 'essential' ? 1.3 : 1));
-        if (day % 3 === 0 && onHand < target) orderQty = target - onHand;
+        if (day % 3 === 0 && onHand + backlog < target) orderQty = target - onHand - backlog;
       } else if (canonical === 'reorder-point') {
         const { s, Q } = POLICIES['reorder-point'].params;
-        if (onHand <= s) orderQty = Q;
-      } else if (canonical === 'cost-first') {
-        if (onHand < 60 && day % 2 === 0) {
-          orderQty = drug.priority === 'routine' ? 80 : 150;
-        }
-      } else if (canonical === 'equity-aware') {
-        const stockouts = recentStockoutsByPharmacy[ph.id] || 0;
-        const vuln = ph.vulnerabilityWeight;
-        const target = Math.round(120 * vuln + stockouts * 10);
-        if (onHand < target) orderQty = target - onHand;
-        if (drug.priority === 'essential') orderQty = Math.round(orderQty * 1.25);
+        if (onHand + backlog <= s) orderQty = Q;
+      } else if (canonical === 'cost-first' || canonical === 'equity-aware') {
+        const target = Math.max(0, 120 - onHand - backlog);
+        orderQty = target;
       }
 
-      if (orderQty > 0) {
-        const available = wh.onHand[drug.id] || 0;
-        const qty = Math.min(orderQty, available);
-        if (qty > 0) {
-          wh.onHand[drug.id] = available - qty;
-          orders.push({
-            pharmacyId: ph.id,
-            warehouseId: wh.id,
-            drugId: drug.id,
-            qty,
-            regionType: ph.regionType,
-          });
-        }
+      if (orderQty <= 0) continue;
+
+      const transport = transportCostPerUnit(ph, scenario);
+      const procurement = drug.unitProcurementCost ?? 2;
+      const holding = drug.holdingCostPerUnitDay ?? 0.02;
+      const penalty = stockoutPenaltyPerUnit(drug, scenario);
+      const pw = PRIORITY_WEIGHT[drug.priority] ?? 1;
+      const expectedStockoutReduction = Math.min(orderQty, backlog + 30);
+      const marginalCost = orderQty * (procurement + transport + holding * 3);
+
+      let score;
+      let selectedReason;
+      const w = scenario.policyWeights?.equityAware ?? {
+        stockout: 1,
+        wait: 0.5,
+        inequity: 1,
+        cost: 0.01,
+      };
+
+      if (canonical === 'cost-first') {
+        score = expectedStockoutReduction * penalty * pw - marginalCost;
+        selectedReason = 'cost-first: max penalty reduction minus marginal cost';
+      } else if (canonical === 'equity-aware') {
+        const rtRate = regionalStockoutRate[ph.regionType] ?? 0;
+        const maxRate = Math.max(...Object.values(regionalStockoutRate), 0.001);
+        const inequitySignal = maxRate - rtRate;
+        const waitProxy = (ph.vulnerabilityWeight ?? 1) * backlog;
+        score = expectedStockoutReduction * pw * w.stockout
+          + waitProxy * w.wait
+          + inequitySignal * 100 * w.inequity
+          - marginalCost * w.cost;
+        selectedReason = 'equity-aware heuristic marginal score';
+      } else {
+        score = orderQty;
+        selectedReason = `${canonical} rule`;
       }
+
+      candidates.push({
+        pharmacyId: ph.id,
+        warehouseId: ph.warehouseId,
+        drugId: drug.id,
+        qty: orderQty,
+        regionType: ph.regionType,
+        priority: drug.priority,
+        score,
+        marginalCost,
+        expectedStockoutReduction,
+        selectedReason,
+        policyId: canonical,
+      });
     }
   }
 
-  return orders;
+  if (canonical === 'cost-first' || canonical === 'equity-aware') {
+    candidates.sort((a, b) => b.score - a.score);
+  }
+
+  return candidates;
+}
+
+function decideReplenishment(ctx) {
+  const candidates = buildCandidates(ctx);
+  const decisions = [];
+  const orders = [];
+
+  for (const c of candidates) {
+    const wh = ctx.warehouseStates.find((w) => w.id === c.warehouseId);
+    const available = wh?.onHand[c.drugId] ?? 0;
+    const requestQty = c.qty;
+    const decision = {
+      ...c,
+      requestQty,
+      warehouseAvailable: available,
+      selected: requestQty > 0,
+      qty: requestQty,
+      notSelectedReason: requestQty <= 0 ? 'zero_request' : null,
+    };
+    decisions.push(decision);
+    if (requestQty > 0) {
+      orders.push({
+        pharmacyId: c.pharmacyId,
+        warehouseId: c.warehouseId,
+        drugId: c.drugId,
+        qty: requestQty,
+        regionType: c.regionType,
+        requestQty,
+      });
+    }
+  }
+
+  return { orders, decisions };
 }
 
 module.exports = {
@@ -126,4 +190,5 @@ module.exports = {
   listPolicies,
   getPolicy,
   decideReplenishment,
+  buildCandidates,
 };

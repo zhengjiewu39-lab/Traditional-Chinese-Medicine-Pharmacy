@@ -1,9 +1,21 @@
 const { createRng } = require('./seededRandom');
 const { REGION_TYPES } = require('./scenarioSchema');
+const { computeEventFactors } = require('./eventUtils');
 
-/**
- * Build synthetic network topology and daily demand multipliers from scenario + seed.
- */
+function assignPharmacyRegions(scenario) {
+  const counts = scenario.regionPharmacyCounts || {
+    urban: Math.ceil(scenario.pharmacyCount / 3),
+    suburban: Math.ceil(scenario.pharmacyCount / 3),
+    rural: scenario.pharmacyCount - 2 * Math.ceil(scenario.pharmacyCount / 3),
+  };
+  const list = [];
+  for (const rt of REGION_TYPES) {
+    for (let i = 0; i < (counts[rt] || 0); i += 1) list.push(rt);
+  }
+  while (list.length < scenario.pharmacyCount) list.push(REGION_TYPES[list.length % REGION_TYPES.length]);
+  return list.slice(0, scenario.pharmacyCount);
+}
+
 function generateScenarioInstance(scenario) {
   const rng = createRng(scenario.randomSeed);
   const drugs = scenario.drugs.map((d) => ({ ...d }));
@@ -12,20 +24,32 @@ function generateScenarioInstance(scenario) {
   for (let w = 0; w < scenario.warehouseCount; w += 1) {
     warehouses.push({
       id: `WH${w + 1}`,
-      capacityUnits: 50000 + rng.int(0, 20000),
+      capacityUnits: scenario.warehouses?.[w]?.capacityUnits ?? 50000 + rng.int(0, 20000),
+      dailyDispatchCapacity: scenario.warehouses?.[w]?.dailyDispatchCapacity ?? scenario.logistics?.dailyDispatchCapacityPerWarehouse ?? 2500,
+      truckCapacityUnits: scenario.warehouses?.[w]?.truckCapacityUnits ?? scenario.logistics?.truckCapacityUnits ?? 2000,
       initialStock: {},
     });
   }
 
+  const regionTypes = assignPharmacyRegions(scenario);
+  const popByRegion = {};
+  for (const rt of REGION_TYPES) popByRegion[rt] = scenario.regions[rt].population;
+
   const pharmacies = [];
-  const regionMix = REGION_TYPES;
+  const phCountByRegion = {};
+  for (const rt of regionTypes) {
+    phCountByRegion[rt] = (phCountByRegion[rt] || 0) + 1;
+  }
+
   for (let p = 0; p < scenario.pharmacyCount; p += 1) {
-    const regionType = regionMix[p % regionMix.length];
+    const regionType = regionTypes[p];
     const reg = scenario.regions[regionType];
+    const nInRegion = phCountByRegion[regionType] || 1;
+    const popShare = reg.population / nInRegion;
     pharmacies.push({
       id: `PH${p + 1}`,
       regionType,
-      population: Math.round(reg.population * (0.8 + rng.next() * 0.4)),
+      population: Math.round(popShare * (0.95 + rng.next() * 0.1)),
       warehouseId: warehouses[p % warehouses.length].id,
       vulnerabilityWeight: reg.vulnerabilityWeight,
       transitDaysBase: reg.transitDays,
@@ -35,12 +59,12 @@ function generateScenarioInstance(scenario) {
 
   for (const wh of warehouses) {
     for (const drug of drugs) {
-      wh.initialStock[drug.id] = 8000 + rng.int(0, 4000);
+      wh.initialStock[drug.id] = Math.round((drug.initialStock ?? 200) * 15 + rng.int(0, 500));
     }
   }
   for (const ph of pharmacies) {
     for (const drug of drugs) {
-      ph.onHand[drug.id] = 200 + rng.int(0, 150);
+      ph.onHand[drug.id] = drug.initialStock ?? 200;
     }
   }
 
@@ -59,11 +83,7 @@ function generateScenarioInstance(scenario) {
       }
       return { pharmacyId: ph.id, regionType: ph.regionType, drugDemand };
     });
-    dailyPlans.push({
-      day,
-      eventFactors,
-      pharmacyDemand,
-    });
+    dailyPlans.push({ day, eventFactors, pharmacyDemand });
   }
 
   return {
@@ -71,7 +91,6 @@ function generateScenarioInstance(scenario) {
       synthetic: true,
       scenarioId: scenario.id,
       randomSeed: scenario.randomSeed,
-      generatedAt: new Date().toISOString(),
     },
     scenario,
     warehouses,
@@ -82,23 +101,4 @@ function generateScenarioInstance(scenario) {
   };
 }
 
-function computeEventFactors(scenario, day) {
-  const demand = { urban: 1, suburban: 1, rural: 1 };
-  const supply = { urban: 1, suburban: 1, rural: 1 };
-  const transit = { urban: 1, suburban: 1, rural: 1 };
-  const lead = { urban: 1, suburban: 1, rural: 1 };
-
-  for (const ev of scenario.events || []) {
-    if (day < ev.startDay || day >= ev.startDay + ev.durationDays) continue;
-    const targets = ev.targetRegions || REGION_TYPES;
-    for (const rt of targets) {
-      if (ev.type === 'demandSurge') demand[rt] *= ev.magnitude;
-      if (ev.type === 'supplyDisruption') supply[rt] *= ev.magnitude;
-      if (ev.type === 'roadDisruption') transit[rt] *= ev.magnitude;
-      if (ev.type === 'leadTimeExtension') lead[rt] *= ev.magnitude;
-    }
-  }
-  return { demand, supply, transit, lead };
-}
-
-module.exports = { generateScenarioInstance, computeEventFactors };
+module.exports = { generateScenarioInstance, computeEventFactors, assignPharmacyRegions };
