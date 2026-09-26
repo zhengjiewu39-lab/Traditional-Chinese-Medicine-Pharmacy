@@ -67,11 +67,16 @@ describe('service inequality index', () => {
 });
 
 describe('policy behavior', () => {
-  it('fixed-allocation only orders on review days', () => {
+  it('fixed-allocation only orders on each pharmacy\'s staggered review day', () => {
     const scenario = { ...DEFAULT_SCENARIO, simulationDays: 6, pharmacyCount: 4, randomSeed: 1 };
     const r = runSimulation({ scenario, policyId: 'fixed-allocation' });
-    const decisionDays = r.runLog.daily.filter((d) => d.policyDecisions?.some((x) => x.requestQty > 0)).map((d) => d.day);
-    assert.ok(decisionDays.every((d) => d % 3 === 0));
+    const { generateScenarioInstance } = require('../scenarioGenerator');
+    const indexById = Object.fromEntries(generateScenarioInstance(scenario).pharmacies.map((p) => [p.id, p.index]));
+    const orders = r.runLog.daily.flatMap((d) => (d.policyDecisions || [])
+      .filter((x) => x.requestQty > 0)
+      .map((x) => ({ day: d.day, idx: indexById[x.pharmacyId] })));
+    assert.ok(orders.length > 0);
+    assert.ok(orders.every((o) => o.day % 3 === o.idx % 3));
   });
 
   it('cost-first produces scored decisions', () => {

@@ -18,10 +18,11 @@ describe('rng', () => {
 });
 
 describe('policies', () => {
-  it('includes four baseline strategies', () => {
-    const p = listPolicies();
-    assert.strictEqual(p.length, 4);
-    assert.ok(p.some((x) => x.id === 'equity-aware'));
+  it('includes four baseline strategies plus ERRRA', () => {
+    const ids = listPolicies().map((x) => x.id);
+    for (const id of ['fixed-allocation', 'reorder-point', 'cost-first', 'equity-aware']) assert.ok(ids.includes(id));
+    assert.ok(ids.includes('equity-constrained-rolling-horizon'));
+    assert.strictEqual(ids.length, 5);
   });
 
   it('resolves legacy -v1 policy aliases', () => {

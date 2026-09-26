@@ -2,6 +2,8 @@ const { createRng } = require('./seededRandom');
 const { REGION_TYPES } = require('./scenarioSchema');
 const { computeEventFactors } = require('./eventUtils');
 
+const PRIORITY_DEMAND_SCALE = { essential: 1.2, 'chronic-care': 1.0, routine: 0.75 };
+
 function assignPharmacyRegions(scenario) {
   const counts = scenario.regionPharmacyCounts || {
     urban: Math.ceil(scenario.pharmacyCount / 3),
@@ -16,25 +18,36 @@ function assignPharmacyRegions(scenario) {
   return list.slice(0, scenario.pharmacyCount);
 }
 
+/**
+ * Planning prior: expected undisturbed daily demand from configured parameters only
+ * (never from realized draws). Policies may use this as their day-0 forecast.
+ */
+function baselineDailyDemand(pharmacy, drug, scenario) {
+  const reg = scenario.regions[pharmacy.regionType];
+  return (pharmacy.population / 1000) * reg.baseDemand * (PRIORITY_DEMAND_SCALE[drug.priority] ?? 1);
+}
+
 function generateScenarioInstance(scenario) {
   const rng = createRng(scenario.randomSeed);
   const drugs = scenario.drugs.map((d) => ({ ...d }));
+  const logistics = scenario.logistics || {};
+  const capacityMultiplier = logistics.capacityMultiplier ?? 1;
 
   const warehouses = [];
   for (let w = 0; w < scenario.warehouseCount; w += 1) {
     warehouses.push({
       id: `WH${w + 1}`,
       capacityUnits: scenario.warehouses?.[w]?.capacityUnits ?? 50000 + rng.int(0, 20000),
-      dailyDispatchCapacity: scenario.warehouses?.[w]?.dailyDispatchCapacity ?? scenario.logistics?.dailyDispatchCapacityPerWarehouse ?? 2500,
-      truckCapacityUnits: scenario.warehouses?.[w]?.truckCapacityUnits ?? scenario.logistics?.truckCapacityUnits ?? 2000,
+      dailyDispatchCapacity: (scenario.warehouses?.[w]?.dailyDispatchCapacity
+        ?? logistics.dailyDispatchCapacityPerWarehouse ?? 2500) * capacityMultiplier,
+      truckCapacityUnits: (scenario.warehouses?.[w]?.truckCapacityUnits
+        ?? logistics.truckCapacityUnits ?? 2000) * capacityMultiplier,
       initialStock: {},
+      inboundBase: {},
     });
   }
 
   const regionTypes = assignPharmacyRegions(scenario);
-  const popByRegion = {};
-  for (const rt of REGION_TYPES) popByRegion[rt] = scenario.regions[rt].population;
-
   const pharmacies = [];
   const phCountByRegion = {};
   for (const rt of regionTypes) {
@@ -48,6 +61,7 @@ function generateScenarioInstance(scenario) {
     const popShare = reg.population / nInRegion;
     pharmacies.push({
       id: `PH${p + 1}`,
+      index: p,
       regionType,
       population: Math.round(popShare * (0.95 + rng.next() * 0.1)),
       warehouseId: warehouses[p % warehouses.length].id,
@@ -57,14 +71,34 @@ function generateScenarioInstance(scenario) {
     });
   }
 
+  const whStockMult = logistics.warehouseInitialStockMultiplier ?? 15;
+  const phStockMult = logistics.pharmacyInitialStockMultiplier ?? 1;
+  const inboundCoverage = logistics.upstreamInboundCoverage ?? 1.1;
+  const stockDaysMult = logistics.initialStockMultiplier ?? 1;
   for (const wh of warehouses) {
+    const served = pharmacies.filter((p) => p.warehouseId === wh.id);
+    let servedDailyDemand = 0;
     for (const drug of drugs) {
-      wh.initialStock[drug.id] = Math.round((drug.initialStock ?? 200) * 15 + rng.int(0, 500));
+      const jitter = rng.int(0, 500);
+      const baseline = served.reduce((s, ph) => s + baselineDailyDemand(ph, drug, scenario), 0);
+      servedDailyDemand += baseline;
+      wh.initialStock[drug.id] = logistics.warehouseInitialStockDays != null
+        ? Math.round(baseline * logistics.warehouseInitialStockDays * stockDaysMult)
+        : Math.round((drug.initialStock ?? 200) * whStockMult + jitter);
+      wh.inboundBase[drug.id] = baseline * inboundCoverage;
+    }
+    if (logistics.dispatchCapacityCoverage != null) {
+      wh.dailyDispatchCapacity = Math.round(servedDailyDemand * logistics.dispatchCapacityCoverage * capacityMultiplier);
+    }
+    if (logistics.truckCapacityCoverage != null) {
+      wh.truckCapacityUnits = Math.round(servedDailyDemand * logistics.truckCapacityCoverage * capacityMultiplier);
     }
   }
   for (const ph of pharmacies) {
     for (const drug of drugs) {
-      ph.onHand[drug.id] = drug.initialStock ?? 200;
+      ph.onHand[drug.id] = logistics.pharmacyInitialStockDays != null
+        ? Math.round(baselineDailyDemand(ph, drug, scenario) * logistics.pharmacyInitialStockDays * stockDaysMult)
+        : Math.round((drug.initialStock ?? 200) * phStockMult);
     }
   }
 
@@ -75,10 +109,9 @@ function generateScenarioInstance(scenario) {
       const reg = scenario.regions[ph.regionType];
       const drugDemand = {};
       for (const drug of drugs) {
-        const priorityScale = drug.priority === 'essential' ? 1.2 : drug.priority === 'chronic-care' ? 1.0 : 0.75;
         const noise = 1 + rng.normal(0, reg.demandVolatility);
-        let units = (ph.population / 1000) * reg.baseDemand * priorityScale * noise * eventFactors.demand[ph.regionType];
-        units = Math.max(0, Math.round(units));
+        let units = baselineDailyDemand(ph, drug, scenario) * noise * eventFactors.demand[ph.regionType];
+        units = Math.max(0, Math.round(units * (scenario.demandMultiplier ?? 1)));
         drugDemand[drug.id] = units;
       }
       return { pharmacyId: ph.id, regionType: ph.regionType, drugDemand };
@@ -97,8 +130,14 @@ function generateScenarioInstance(scenario) {
     pharmacies,
     drugs,
     dailyPlans,
-    rngStateNote: 'Demand draws consumed RNG stream in fixed pharmacy×drug×day order.',
+    rngStateNote: 'Demand draws consumed RNG stream in fixed pharmacy×drug×day order; independent of policy (common random numbers).',
   };
 }
 
-module.exports = { generateScenarioInstance, computeEventFactors, assignPharmacyRegions };
+module.exports = {
+  generateScenarioInstance,
+  computeEventFactors,
+  assignPharmacyRegions,
+  baselineDailyDemand,
+  PRIORITY_DEMAND_SCALE,
+};

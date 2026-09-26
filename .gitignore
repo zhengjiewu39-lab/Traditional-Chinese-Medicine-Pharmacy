@@ -18,6 +18,11 @@ temp.txt
 data/store.json
 data/simulation-experiments/*.json
 
+# Paper pipeline smoke-run outputs (full outputs under paper/results are committed)
+paper/results-quick/
+paper/tables-quick/
+paper/figures-quick/
+
 # Uploaded files
 uploads/*
 !uploads/.gitkeep

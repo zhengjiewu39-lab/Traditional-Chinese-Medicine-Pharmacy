@@ -32,11 +32,13 @@ describe('simulation routes', () => {
     assert.match(body.disclaimer, /synthetic/i);
   });
 
-  it('GET /policies returns four canonical strategies', async () => {
+  it('GET /policies returns four canonical baselines plus ERRRA', async () => {
     const res = await fetch(`${baseUrl}/policies`);
     const body = await res.json();
-    assert.strictEqual(body.policies.length, 4);
-    assert.ok(body.policies.some((p) => p.id === 'equity-aware'));
+    const ids = body.policies.map((p) => p.id);
+    for (const id of ['fixed-allocation', 'reorder-point', 'cost-first', 'equity-aware']) assert.ok(ids.includes(id));
+    assert.ok(ids.includes('equity-constrained-rolling-horizon'));
+    assert.strictEqual(ids.length, 5);
   });
 
   it('POST /scenario/validate clamps invalid days with 200', async () => {
