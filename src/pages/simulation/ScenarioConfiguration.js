@@ -23,7 +23,10 @@ export default function ScenarioConfiguration() {
 
   useEffect(() => {
     const draft = loadScenarioDraft();
-    Promise.all([simulationApi.getDefaultScenario(), simulationApi.listPresets()])
+    Promise.all([
+      simulationApi.getDefaultScenario(),
+      simulationApi.listPresets().catch(() => ({ data: { presets: [] } })),
+    ])
       .then(async ([defRes, presetRes]) => {
         setHelp(defRes.data.help || {});
         setPresets(presetRes.data.presets || []);

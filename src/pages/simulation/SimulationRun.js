@@ -85,6 +85,10 @@ export default function SimulationRun() {
       }, ...prev]);
       pollJob(data.jobId);
     } catch (e) {
+      if (e.response?.status === 404) {
+        setError(`${t('simulationRun.runFailed')} — ${t('apiBanner.message')} npm run restart:server`);
+        return;
+      }
       const errs = e.response?.data?.errors;
       const msg = Array.isArray(errs)
         ? errs.map((x) => x.message || x).join('; ')

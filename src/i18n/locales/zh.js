@@ -16,7 +16,7 @@ const zh = {
   },
   apiBanner: {
     retry: '重试',
-    message: '后端 API 未运行或版本过旧。请在项目目录执行',
+    message: '后端 API 未运行或仍为旧版（缺 presets/run-group 等路由会 404）。请在 chinese-medicine-pharmacy 目录执行',
     or: '或',
     ports: '（需同时启动 3002 与 3000）。',
   },

@@ -35,6 +35,7 @@ router.get('/meta', (_req, res) => {
     platformZh: '社区药房药品可及性与供应韧性仿真平台',
     dataClassification: 'synthetic-simulation-only',
     engineVersion: ENGINE_VERSION,
+    simulationRouteVersion: 2,
     gitCommitHash: getGitCommitHash(),
     disclaimer: 'Synthetic simulation research platform. No real patient, prescription, pharmacy transaction, or clinical outcome data.',
   });

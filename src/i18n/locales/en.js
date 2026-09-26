@@ -16,7 +16,7 @@ const en = {
   },
   apiBanner: {
     retry: 'Retry',
-    message: 'Backend API is not running or is outdated. Run',
+    message: 'Backend API is down or still an old build (missing presets/run-group → 404). In chinese-medicine-pharmacy run',
     or: 'or',
     ports: '(ports 3002 and 3000).',
   },

@@ -152,6 +152,8 @@ app.get('/api/health', (req, res) => {
     service: 'TCM Pharmacy API',
     version: '2.1',
     features: ['supply-simulation-v1', 'legacy-har-cdss', 'synthetic-data-only'],
+    /** Bump when simulation router adds breaking/new research endpoints (presets, run-group, …). */
+    simulationRouteVersion: 2,
   });
 });
 

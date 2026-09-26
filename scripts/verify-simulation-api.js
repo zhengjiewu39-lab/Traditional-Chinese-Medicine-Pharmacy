@@ -9,6 +9,10 @@ async function main() {
     console.error('FAIL: Old server — restart with: npm run restart:server');
     process.exit(1);
   }
+  if ((healthJson.simulationRouteVersion ?? 1) < 2) {
+    console.error('FAIL: Simulation API v1 only (missing presets/run-group). Run: npm run restart:server');
+    process.exit(1);
+  }
 
   const login = await fetch(`${base}/auth/login`, {
     method: 'POST',
@@ -22,7 +26,13 @@ async function main() {
   }
 
   const headers = { Authorization: `Bearer ${token}` };
-  for (const path of ['/simulation/meta', '/simulation/scenario/default', '/simulation/policies', '/simulation/experiments']) {
+  for (const path of [
+    '/simulation/meta',
+    '/simulation/scenario/default',
+    '/simulation/scenario/presets',
+    '/simulation/policies',
+    '/simulation/experiments',
+  ]) {
     const res = await fetch(`${base}${path}`, { headers });
     if (!res.ok) {
       console.error(`FAIL ${path} HTTP ${res.status}`);

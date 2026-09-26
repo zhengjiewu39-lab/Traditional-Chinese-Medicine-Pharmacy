@@ -14,7 +14,11 @@ export default function ApiStatusBanner() {
     axios
       .get(`${getApiBaseUrl().replace(/\/api$/, '')}/api/health`, { timeout: 5000 })
       .then((res) => {
-        setDown(!res.data?.features?.includes('supply-simulation-v1'));
+        const routeVer = res.data?.simulationRouteVersion ?? 1;
+        setDown(
+          !res.data?.features?.includes('supply-simulation-v1')
+          || routeVer < 2
+        );
       })
       .catch(() => setDown(true))
       .finally(() => setChecking(false));
