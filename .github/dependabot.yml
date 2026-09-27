@@ -5,11 +5,17 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 10
+    # Major upgrades (React 19, MUI 9, react-router 7, …) are incompatible with react-scripts and must be done by hand.
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     groups:
       production:
         dependency-type: production
+        update-types: ["minor", "patch"]
       development:
         dependency-type: development
+        update-types: ["minor", "patch"]
 
   - package-ecosystem: pip
     directory: "/experiments/tcm"
