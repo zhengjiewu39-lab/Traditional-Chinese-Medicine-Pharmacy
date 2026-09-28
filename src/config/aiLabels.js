@@ -82,4 +82,24 @@ export const SEMANTIC_STATUS_LABELS = {
   policy_violation: '输出违反安全策略（已丢弃）',
   skipped_injection: '疑似注入（未调用模型）',
   skipped_input_too_long: '输入过长（未调用模型）',
+  circuit_open: '模型熔断（已回退规则）',
 };
+
+export const DISPLAY_SOURCE_LABELS = {
+  rules: '规则结果',
+  live_model: '真实模型结果',
+  mock: '模拟模型结果（非真实AI）',
+  shadow_model: '影子模型结果（不驱动临床决定）',
+  degraded_rules: '降级结果（规则兜底）',
+};
+
+export const DISPOSITION_REASONS = [
+  { value: 'clinically_appropriate', label: '临床适当' },
+  { value: 'patient_specific', label: '患者具体情况' },
+  { value: 'evidence_insufficient', label: '证据不足' },
+  { value: 'wrong_context', label: '情境不符' },
+  { value: 'dose_adjusted_instead', label: '改为调整剂量' },
+  { value: 'already_addressed', label: '已处理' },
+  { value: 'disagrees_with_experience', label: '与经验不符' },
+  { value: 'other', label: '其他' },
+];

@@ -44,6 +44,51 @@ describe('openai-compatible provider', () => {
     assert.ok(!JSON.stringify(p).includes(FAKE_KEY));
   });
 
+  it('does not send json_schema to DeepSeek and strips fenced JSON', async () => {
+    const { impl, calls } = stubFetch({
+      ok: true,
+      json: async () => ({ choices: [{ message: { content: '```json\n{"ok":true}\n```' } }] }),
+    });
+    const p = createOpenAICompatibleProvider({
+      baseUrl: 'https://api.deepseek.com/v1', apiKey: FAKE_KEY, model: 'deepseek-chat', fetchImpl: impl,
+    });
+    const out = await p.complete({
+      messages: [{ role: 'user', content: 'x' }],
+      jsonSchema: { type: 'object', properties: { ok: { type: 'boolean' } } },
+    });
+    assert.strictEqual(out, '{"ok":true}');
+    const body = JSON.parse(calls[0].init.body);
+    assert.deepStrictEqual(body.response_format, { type: 'json_object' });
+  });
+
+  it('retries without response_format when the host rejects it', async () => {
+    const calls = [];
+    const impl = async (url, init) => {
+      calls.push(JSON.parse(init.body));
+      if (calls.length === 1) {
+        return { ok: false, status: 400, json: async () => ({ error: { message: 'invalid response_format' } }) };
+      }
+      return { ok: true, json: async () => ({ choices: [{ message: { content: '{"ok":true}' } }] }) };
+    };
+    const p = createOpenAICompatibleProvider({
+      baseUrl: 'https://api.deepseek.com/v1', apiKey: FAKE_KEY, model: 'deepseek-chat', fetchImpl: impl,
+    });
+    const out = await p.complete({ messages: [{ role: 'user', content: 'x' }] });
+    assert.strictEqual(out, '{"ok":true}');
+    assert.strictEqual(calls.length, 2);
+    assert.ok(calls[0].response_format);
+    assert.ok(!calls[1].response_format);
+  });
+
+  it('strips a pasted /chat/completions suffix from the base URL', async () => {
+    const { impl, calls } = stubFetch({ ok: true, json: async () => ({ choices: [{ message: { content: '{}' } }] }) });
+    const p = createOpenAICompatibleProvider({
+      baseUrl: 'https://api.deepseek.com/v1/chat/completions', model: 'deepseek-chat', fetchImpl: impl,
+    });
+    await p.complete({ messages: [] });
+    assert.strictEqual(calls[0].url, 'https://api.deepseek.com/v1/chat/completions');
+  });
+
   it('rejects responses without message content', async () => {
     const { impl } = stubFetch({ ok: true, json: async () => ({ choices: [] }) });
     const p = createOpenAICompatibleProvider({ baseUrl: 'https://llm.example.test/v1', model: 'm-1', fetchImpl: impl });

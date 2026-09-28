@@ -55,7 +55,8 @@ describe('auth helpers', () => {
   it('marks public paths correctly', () => {
     assert.equal(isPublicPath('/api/health'), true);
     assert.equal(isPublicPath('/api/auth/login'), true);
-    assert.equal(isPublicPath('/api/prescriptions/pickup/TCM128456'), true);
+    assert.equal(isPublicPath('/api/pickup/redeem'), true);
+    assert.equal(isPublicPath('/api/prescriptions/pickup/TCM128456'), false);
     assert.equal(isPublicPath('/api/prescriptions/pickup/queue'), false);
     assert.equal(isPublicPath('/api/inventory'), false);
   });

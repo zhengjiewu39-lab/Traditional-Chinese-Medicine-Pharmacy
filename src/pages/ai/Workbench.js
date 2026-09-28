@@ -10,6 +10,8 @@ import { RiskTierChip, StateChip } from '../../components/ai/Badges';
 const TILES = [
   { key: 'today', label: '今日接收', path: '/ai/cases' },
   { key: 'pendingReview', label: '待药师审核', path: '/ai/review-queue', color: '#1565C0' },
+  { key: 'priorityReview', label: '重点异常队列', path: '/ai/review-queue', color: '#C62828' },
+  { key: 'batchReview', label: '低风险待签署', path: '/ai/review-queue', color: '#EF6C00' },
   { key: 'a3', label: 'A3 强制阻断', path: '/ai/review-queue?tier=A3', color: '#C62828' },
   { key: 'informationIncomplete', label: '信息缺失', path: '/ai/cases?state=information_incomplete', color: '#EF6C00' },
   { key: 'awaitingPatient', label: '待患者确认', path: '/patient-service', color: '#6A1B9A' },
@@ -48,6 +50,7 @@ export default function Workbench() {
       <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }} flexWrap="wrap" useFlexGap>
         <Typography variant="h5" sx={{ fontWeight: 700, mr: 2 }}>智能中药药房工作台</Typography>
         <Chip size="small" color={ai.aiEnabled ? 'success' : 'default'} label={ai.aiEnabled ? 'AI已启用' : 'AI已关闭（仅规则）'} />
+        <Chip size="small" variant="outlined" label={`模式：${ai.aiMode || '—'}`} />
         <Chip size="small" variant="outlined" label={`模型：${ai.model || '无（仅规则）'}`} />
         {ai.isMock && <Chip size="small" color="warning" label="模拟模型（非真实AI）" />}
         {ai.degradedMode && <Chip size="small" color="warning" label="降级模式" />}

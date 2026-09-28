@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { hashObject } = require('../common/hash');
 const { check } = require('../common/schema');
+const { clinicalKnowledgeRequired } = require('../config/dataMode');
 
 const SOURCES_DIR = path.join(__dirname, 'approved-sources');
 
@@ -46,17 +47,30 @@ function loadRegistry({ dir = SOURCES_DIR, force = false } = {}) {
   const bases = [];
   for (const file of files) {
     const doc = JSON.parse(fs.readFileSync(path.join(dir, file), 'utf8'));
-    bases.push({ file, knowledgeBaseId: doc.knowledgeBaseId, version: doc.version, disclaimer: doc.disclaimer });
+    bases.push({
+      file,
+      knowledgeBaseId: doc.knowledgeBaseId,
+      version: doc.version,
+      disclaimer: doc.disclaimer,
+      synthetic: doc.synthetic !== false,
+      clinicalUse: doc.clinicalUse === true,
+    });
+    const clinicalOk = !clinicalKnowledgeRequired() || doc.clinicalUse === true;
     for (const raw of doc.entries || []) {
       const { valid, errors } = check(ENTRY_SCHEMA, raw);
       const integrityOk = valid && computeEntryHash(raw) === raw.hash;
+      const now = new Date().toISOString().slice(0, 10);
+      const inWindow = (!raw.validFrom || raw.validFrom <= now) && (!raw.validTo || raw.validTo >= now);
       entries.push({
         ...raw,
         file,
+        issuingAuthority: raw.issuingAuthority || raw.authority,
+        synthetic: doc.synthetic !== false,
+        clinicalUse: doc.clinicalUse === true,
         schemaValid: valid,
         schemaErrors: errors,
         integrityOk,
-        usable: integrityOk && raw.reviewStatus === 'approved',
+        usable: integrityOk && raw.reviewStatus === 'approved' && clinicalOk && inWindow,
       });
     }
   }
@@ -85,6 +99,11 @@ function listSources() {
     hash: e.hash,
     integrityOk: e.integrityOk,
     usable: e.usable,
+    synthetic: e.synthetic,
+    clinicalUse: e.clinicalUse,
+    issuingAuthority: e.issuingAuthority,
+    validFrom: e.validFrom || e.effectiveDate,
+    validTo: e.validTo || null,
   }));
 }
 

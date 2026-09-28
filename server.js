@@ -1,4 +1,6 @@
 require('dotenv').config();
+const dns = require('dns');
+dns.setDefaultResultOrder('ipv4first');
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -29,6 +31,7 @@ const traceabilityRoutes = require('./server/routes/traceability');
 const simulationRoutes = require('./server/routes/simulation');
 const aiRoutes = require('./server/routes/ai');
 const patientPortalRoutes = require('./server/routes/patientPortal');
+const pickupRoutes = require('./server/routes/pickup');
 const { roleApiGuard } = require('./server/security/rbac');
 const { assertProductionAIConfig, describeProvider } = require('./server/ai/providerAdapter');
 
@@ -94,6 +97,7 @@ app.use((req, res, next) => {
 // ── 智能药房（药师监管 · 患者参与 · AI编排） ──
 app.use('/api/ai', aiRoutes);
 app.use('/api/patient', patientPortalRoutes);
+app.use('/api/pickup', pickupRoutes);
 
 // ── 仪表盘 & 搜索 ──
 app.use('/api/dashboard', dashboardRoutes);
@@ -208,7 +212,7 @@ const server = app.listen(port, () => {
   getStore();
   console.log(`中药药房 API http://localhost:${port} [持久化 · 全业务 CRUD]`);
   if (ALLOW_DEMO) {
-    console.log('  演示账号: admin/admin123 · pharmacist/pharm123 · pharmacist2/pharm456 · technician/tech123 · researcher/research123 · patient/patient123 (仅 DEV / ALLOW_DEMO_AUTH)');
+    console.log('  演示账号: admin/admin123 · pharmacist/pharm123 · pharmacist2/pharm456 · prescriber/doc123 · technician/tech123 · researcher/research123 · patient/patient123 (仅 DEV / ALLOW_DEMO_AUTH)');
   }
 });
 

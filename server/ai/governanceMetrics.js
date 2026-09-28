@@ -5,6 +5,7 @@ const { listPrompts } = require('./promptRegistry');
 const { ruleSetVersion } = require('./ruleTrack');
 const { knowledgeBaseVersion } = require('../knowledge/sourceRegistry');
 const { integrityReport } = require('../knowledge/knowledgeRepository');
+const suggestionService = require('../workflow/suggestionService');
 
 const rate = (num, den) => (den ? num / den : null);
 
@@ -24,13 +25,20 @@ function computeGovernanceMetrics() {
   const latencies = attempted.map((a) => a.semanticTrackResult.latencyMs).filter((x) => typeof x === 'number');
   const rt = runtime.describeRuntime();
   const chain = audit.verify();
+  const suggestionMetrics = suggestionService.metrics();
+  const samples = repo.learning().samples();
+  const pharmacistAdded = cases.flatMap((c) => c.decisions.filter((d) => d.action === 'request_information' || (d.comment || '').includes('AI未提示')));
+  const lowRiskSigned = cases.filter((c) => c.analyses.at(-1)?.output?.riskTier === 'A1' && c.approval?.valid);
   return {
     generatedAt: new Date().toISOString(),
     runtime: rt,
-    label: rt.isMock ? '当前为模拟模型（mock），输出不是真实AI结果' : null,
+    label: rt.isMock ? '当前为模拟模型（mock），输出不是真实AI结果' : (rt.aiMode === 'shadow' ? '影子模式：真实模型结果已保存，不驱动临床界面' : null),
+    citationCompletenessThreshold: 1,
     versions: {
       model: rt.model,
       provider: rt.provider,
+      aiMode: rt.aiMode,
+      dataMode: rt.dataMode,
       prompts: listPrompts(),
       ruleSetVersion: ruleSetVersion(),
       knowledgeBaseVersion: knowledgeBaseVersion(),
@@ -42,6 +50,8 @@ function computeGovernanceMetrics() {
       modelAttempts: attempted.length,
       decisions: decisions.length,
       highRiskCases: cases.filter((c) => c.analyses.at(-1)?.output.riskTier === 'A3').length,
+      lowRiskSignedStillRequiringPharmacist: lowRiskSigned.length,
+      lowRiskSamples: samples.length,
     },
     semanticStatusCounts: statusCounts,
     rates: {
@@ -51,7 +61,10 @@ function computeGovernanceMetrics() {
       ruleModelConflictRate: rate(conflicts.length, ok.length),
       overrideRate: rate(overrides.length, decisions.length),
       citationCompleteness: rate(flagged.filter((f) => f.evidenceIds?.length).length, flagged.length),
+      citationCompletenessMeetsProductionGate: (rate(flagged.filter((f) => f.evidenceIds?.length).length, flagged.length) || 0) >= 1,
+      pharmacistAddedRisksNotInAi: pharmacistAdded.length,
     },
+    suggestions: suggestionMetrics,
     overrideReasons,
     averageLatencyMs: latencies.length ? latencies.reduce((a, b) => a + b, 0) / latencies.length : null,
     auditChain: chain,

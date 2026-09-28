@@ -81,7 +81,6 @@ const CREATE_CASE = {
     prescriber: PRESCRIBER,
     prescription: PRESCRIPTION,
     fromPrescriptionId: { type: 'integer', minimum: 1 },
-    synthetic: { type: 'boolean' },
   },
 };
 
@@ -181,7 +180,55 @@ const DISPENSING_ACTION = {
 };
 
 /** Fields a client must never send; their presence is itself an error. */
-const FORBIDDEN_CLIENT_FIELDS = ['state', 'riskTier', 'approval', 'approved', 'role', 'actor', 'actorType', 'analyses', 'decisions', 'hardStops', 'overrideHardStop'];
+const CREATE_DRAFT = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    patient: PATIENT,
+    diagnosisText: str(200),
+    diagnosis: str(200),
+    notes: str(500),
+    prescriptionText: str(4000),
+    prescription: PRESCRIPTION,
+  },
+};
+
+const PATCH_DRAFT = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    patient: PATIENT,
+    clinical: { type: 'object', additionalProperties: false, properties: { diagnosisText: str(200), notes: str(500) } },
+    diagnosisText: str(200),
+    diagnosis: str(200),
+    prescriptionText: str(4000),
+    prescription: PRESCRIPTION,
+  },
+};
+
+const SUGGESTION_DISPOSITION = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['status'],
+  properties: {
+    status: { type: 'string', enum: ['accepted', 'partially_accepted', 'rejected', 'ignored'] },
+    reasonCode: {
+      type: 'string',
+      enum: [
+        'clinically_appropriate', 'patient_specific', 'evidence_insufficient', 'wrong_context',
+        'dose_adjusted_instead', 'already_addressed', 'disagrees_with_experience', 'other',
+      ],
+    },
+    comment: str(500),
+    partialFields: { type: 'array', maxItems: 20, items: str(80) },
+  },
+};
+
+const FORBIDDEN_CLIENT_FIELDS = [
+  'state', 'riskTier', 'approval', 'approved', 'approvedBy', 'role', 'actor', 'actorType', 'actorId',
+  'analyses', 'decisions', 'hardStops', 'overrideHardStop', 'reviewer', 'reviewerId', 'pickupCode',
+  'synthetic', 'dataMode',
+];
 
 function forbiddenFieldsIn(body) {
   if (!body || typeof body !== 'object') return [];
@@ -191,6 +238,9 @@ function forbiddenFieldsIn(body) {
 module.exports = {
   CREATE_CASE,
   UPDATE_CONTENT,
+  CREATE_DRAFT,
+  PATCH_DRAFT,
+  SUGGESTION_DISPOSITION,
   PHARMACIST_DECISION,
   REQUEST_INFORMATION,
   PATIENT_CONFIRMATION,

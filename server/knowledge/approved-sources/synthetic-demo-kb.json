@@ -1,6 +1,8 @@
 {
   "knowledgeBaseId": "tcm-pharmacy-synthetic-kb",
   "version": "1.0.0",
+  "synthetic": true,
+  "clinicalUse": false,
   "disclaimer": "合成演示知识库：条目为工程测试用途的概括性表述，审核人为虚构的“演示药事委员会（合成）”，不代表任何真实机构的审定意见，不可用于临床。",
   "entries": [
     {

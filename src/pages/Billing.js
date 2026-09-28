@@ -15,7 +15,7 @@ import {
   CheckCircle,
   QrCode2,
 } from '@mui/icons-material';
-import { billingApi, herbsApi, customerApi, prescriptionApi } from '../services/api';
+import { billingApi, herbsApi, customerApi } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 
 const PAY_METHODS = ['微信支付', '支付宝', '现金', '银联', '医保'];
@@ -57,32 +57,29 @@ function Billing() {
     if (!code?.trim()) return;
     setError('');
     try {
-      const res = await prescriptionApi.getPickupByCode(code.trim().toUpperCase());
-      const { prescription, prefill, patient } = res.data;
-      if (prescription.status === '已完成') {
-        setError('该处方已完成取药');
-        return;
-      }
-      setLinkedRx(prescription);
-      setPrefillWarnings({ missing: prefill.missing, lowStock: prefill.lowStock });
-      if (prefill.items?.length) {
-        setCart(prefill.items.map(i => ({
-          herbId: i.herbId, name: i.name, price: i.price, unit: i.unit,
-          quantity: i.quantity, stock: i.stock, fromPrescription: true,
-        })));
-      }
-      if (patient?.customerId) {
-        const cust = customers.find(c => c.id === patient.customerId);
-        if (cust) setCustomer(cust);
-      } else if (prescription.patientName) {
-        const cust = customers.find(c => c.name === prescription.patientName);
-        if (cust) setCustomer(cust);
+      const { pickupApi } = await import('../services/aiApi');
+      const res = await pickupApi.redeem(code.trim());
+      setLinkedRx({
+        id: res.data.caseRef,
+        status: '待取药',
+        herbs: res.data.herbs,
+        pickupCode: null,
+      });
+      setPrefillWarnings(null);
+      if (res.data.herbs?.length) {
+        setCart(res.data.herbs.map((h) => {
+          const match = herbs.find((x) => x.name === h.name);
+          return {
+            herbId: match?.id, name: h.name, price: match?.price || 0, unit: h.unit || 'g',
+            quantity: h.dosage || 1, stock: match?.stock, fromPrescription: true,
+          };
+        }));
       }
     } catch {
-      setError('取药码无效');
+      setError('取药令牌无效或已过期。公开取药码不再返回患者信息。');
       setLinkedRx(null);
     }
-  }, [customers]);
+  }, [herbs]);
 
   useEffect(() => {
     const code = searchParams.get('code');

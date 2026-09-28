@@ -6,9 +6,14 @@
 export const WORKBENCH_HOME = '/workbench';
 export const RESEARCH_HOME = '/simulation/overview';
 export const PATIENT_HOME = '/patient/me';
+export const PRESCRIBER_HOME = '/doctor';
+export const PHARMACIST_HOME = '/ai/review-queue';
+export const TECHNICIAN_HOME = '/dispensing';
 
 const STAFF = ['admin', 'pharmacist', 'technician'];
 const CLINICAL = ['admin', 'pharmacist'];
+const PRESCRIBERS = ['admin', 'pharmacist', 'prescriber'];
+const REVIEWERS = ['admin', 'pharmacist'];
 const ALL_INTERNAL = ['admin', 'pharmacist', 'technician', 'researcher'];
 const GOVERNANCE = ['admin', 'pharmacist', 'researcher'];
 
@@ -34,26 +39,25 @@ export const NAV_STRUCTURE = [
     sectionKey: 'nav.sectionIntake',
     items: [
       { labelKey: 'nav.intake', path: '/intake', icon: 'intake', roles: STAFF },
-      { labelKey: 'nav.doctor', path: '/doctor', icon: 'doctor', roles: STAFF },
-      { labelKey: 'nav.patients', path: '/patients', icon: 'patients', roles: STAFF },
+      { labelKey: 'nav.doctor', path: '/doctor', icon: 'doctor', roles: PRESCRIBERS },
+      { labelKey: 'nav.patients', path: '/patients', icon: 'patients', roles: [...STAFF, 'prescriber'] },
       { labelKey: 'nav.customers', path: '/customers', icon: 'customers', roles: CLINICAL },
       { labelKey: 'nav.membership', path: '/membership', icon: 'customers', roles: CLINICAL },
-      { labelKey: 'nav.templates', path: '/prescriptions/templates', icon: 'templates', roles: STAFF },
+      { labelKey: 'nav.templates', path: '/prescriptions/templates', icon: 'templates', roles: [...STAFF, 'prescriber'] },
     ],
   },
   {
     sectionKey: 'nav.sectionAiSafety',
     items: [
-      { labelKey: 'nav.aiCases', path: '/ai/cases', icon: 'aiSafety', roles: STAFF },
-      { labelKey: 'nav.aiKnowledge', path: '/ai/knowledge', icon: 'knowledge', roles: GOVERNANCE },
+      { labelKey: 'nav.aiCases', path: '/ai/cases', icon: 'aiSafety', roles: [...STAFF, 'prescriber'] },
+      { labelKey: 'nav.aiKnowledge', path: '/ai/knowledge', icon: 'knowledge', roles: [...GOVERNANCE, 'prescriber'] },
       { labelKey: 'nav.herbKnowledge', path: '/knowledge', icon: 'knowledge', roles: STAFF },
     ],
   },
   {
     sectionKey: 'nav.sectionReview',
     items: [
-      { labelKey: 'nav.reviewQueue', path: '/ai/review-queue', icon: 'review', roles: STAFF },
-      { labelKey: 'nav.legacyReview', path: '/prescriptions/review', icon: 'review', roles: STAFF },
+      { labelKey: 'nav.reviewQueue', path: '/ai/review-queue', icon: 'review', roles: REVIEWERS },
     ],
   },
   {
@@ -117,7 +121,7 @@ export const NAV_STRUCTURE = [
 
 /** Routes that are reachable but not listed in the menu, with the roles allowed to open them. */
 export const HIDDEN_ROUTES = [
-  { prefix: '/ai/reviews/', roles: STAFF },
+  { prefix: '/ai/reviews/', roles: [...STAFF, 'prescriber'] },
   { prefix: '/legacy/organization/', roles: ['admin'] },
 ];
 

@@ -8,8 +8,8 @@ const en = {
     legacyPageTitle: 'Legacy demo',
   },
   roles: {
-    admin: 'Admin', pharmacist: 'Pharmacist', technician: 'Technician', researcher: 'Researcher', patient: 'Patient',
-    adminMode: 'Admin mode', pharmacistMode: 'Pharmacist mode', technicianMode: 'Technician mode', researcherMode: 'Researcher mode', patientMode: 'Patient mode',
+    admin: 'Admin', pharmacist: 'Pharmacist', prescriber: 'Prescriber', technician: 'Technician', researcher: 'Researcher', patient: 'Patient',
+    adminMode: 'Admin mode', pharmacistMode: 'Pharmacist mode', prescriberMode: 'Prescriber mode', technicianMode: 'Technician mode', researcherMode: 'Researcher mode', patientMode: 'Patient mode',
   },
   auth: { logout: 'Log out', login: 'Log in', loggingIn: 'Signing in…', loginFailed: 'Login failed. Check username and password.' },
   disclaimer: {

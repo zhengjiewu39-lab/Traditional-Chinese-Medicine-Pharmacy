@@ -164,7 +164,7 @@ describe('AI pharmacy: workflow and authority boundaries', () => {
     const { id, analysis } = await newCase();
     assert.strictEqual((await approve(id, analysis.analysisId)).status, 200);
     assert.strictEqual(repo.getCase(id).approval.valid, true);
-    const edit = await call('PATCH', `/api/ai/cases/${id}`, { as: 'technician', body: { prescription: { herbs: [{ name: '黄芪', dosage: 30 }, { name: '白术', dosage: 10 }] }, reason: '医师改量' } });
+    const edit = await call('PATCH', `/api/ai/cases/${id}`, { as: 'pharmacist', body: { prescription: { herbs: [{ name: '黄芪', dosage: 30 }, { name: '白术', dosage: 10 }] }, reason: '医师改量' } });
     assert.strictEqual(edit.status, 200, JSON.stringify(edit.body));
     const c = repo.getCase(id);
     assert.strictEqual(c.approval.valid, false);
@@ -214,7 +214,7 @@ describe('AI pharmacy: workflow and authority boundaries', () => {
     assert.strictEqual((await call('POST', `/api/ai/cases/${id}/dispensing`, { as: 'pharmacist2', body: { action: 'final_check_pass' } })).status, 200);
     assert.strictEqual((await call('POST', `/api/ai/cases/${id}/dispensing`, { as: 'technician', body: { action: 'handover' } })).status, 200);
     assert.strictEqual(repo.getCase(id).state, 'completed');
-    const locked = await call('PATCH', `/api/ai/cases/${id}`, { as: 'technician', body: { prescription: { doseCount: 3 }, reason: 'x' } });
+    const locked = await call('PATCH', `/api/ai/cases/${id}`, { as: 'pharmacist', body: { prescription: { doseCount: 3 }, reason: 'x' } });
     assert.strictEqual(locked.status, 409);
   });
 

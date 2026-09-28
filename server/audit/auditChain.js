@@ -2,7 +2,7 @@ const { hashObject } = require('../common/hash');
 
 const GENESIS_HASH = '0'.repeat(64);
 
-const ACTOR_TYPES = ['ai', 'pharmacist', 'patient', 'admin', 'system', 'technician', 'researcher'];
+const ACTOR_TYPES = ['ai', 'pharmacist', 'prescriber', 'patient', 'admin', 'system', 'technician', 'researcher', 'anonymous'];
 
 /** Event types a patient may see about their own case. */
 const PATIENT_VISIBLE_EVENTS = new Set([

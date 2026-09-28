@@ -9,7 +9,7 @@ import { formatApiError } from '../../config/httpClient';
 import { useAuth } from '../../contexts/AuthContext';
 import { RiskTierChip, StateChip, AiLabel } from '../../components/ai/Badges';
 import {
-  RECOMMENDATION_LABELS, OVERRIDE_REASONS, ABSTAIN_REASON_LABELS, SEMANTIC_STATUS_LABELS, STATE_LABELS,
+  RECOMMENDATION_LABELS, OVERRIDE_REASONS, ABSTAIN_REASON_LABELS, SEMANTIC_STATUS_LABELS, STATE_LABELS, DISPLAY_SOURCE_LABELS,
 } from '../../config/aiLabels';
 
 const TRI = { yes: '是', no: '否', unknown: '未确认' };
@@ -127,7 +127,8 @@ export default function ReviewDetail() {
 
   const analysis = useMemo(() => c?.analyses?.[c.analyses.length - 1] || null, [c]);
   const out = analysis?.output;
-  const isPharmacist = user?.role === 'pharmacist';
+  const isPharmacist = user?.role === 'pharmacist' || (Array.isArray(user?.credentials) && user.credentials.includes('pharmacist'));
+  const canEditContent = ['pharmacist', 'prescriber'].includes(user?.role);
   const inReview = c?.state === 'pharmacist_review_required';
 
   const run = async (fn, okText) => {
@@ -166,6 +167,7 @@ export default function ReviewDetail() {
         <StateChip state={c.state} size="medium" />
         {out && <RiskTierChip tier={out.riskTier} size="medium" />}
         {out && <Chip label={RECOMMENDATION_LABELS[out.recommendation]} variant="outlined" />}
+        {out?.displaySource && <Chip size="small" color={out.displaySource === 'degraded_rules' ? 'warning' : 'default'} label={DISPLAY_SOURCE_LABELS[out.displaySource] || out.displaySource} />}
         {c.approval && <Chip color={c.approval.valid ? 'success' : 'default'} label={c.approval.valid ? '药师批准有效' : '原批准已失效'} />}
         {c.synthetic && <Chip size="small" label="合成演示数据" />}
       </Stack>
@@ -180,7 +182,7 @@ export default function ReviewDetail() {
 
       <Grid container spacing={2}>
         <Grid item xs={12} md={5}>
-          <Section title="处方（原始与结构化）" action={!['completed', 'patient_declined'].includes(c.state) && user?.role !== 'researcher' && <Button size="small" onClick={() => setEditOpen(true)}>补充/修改</Button>}>
+          <Section title="处方（原始与结构化）" action={!['completed', 'patient_declined'].includes(c.state) && canEditContent && <Button size="small" onClick={() => setEditOpen(true)}>补充/修改</Button>}>
             {c.source?.rawText && (
               <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', bgcolor: 'grey.100', p: 1, mb: 1, borderRadius: 1 }}>
                 原始文字：{c.source.rawText}

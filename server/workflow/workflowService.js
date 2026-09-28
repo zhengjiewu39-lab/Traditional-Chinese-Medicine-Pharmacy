@@ -13,15 +13,10 @@ const { analyzeCase } = require('../ai/aiOrchestrator');
 const runtime = require('../ai/aiRuntime');
 const { parseHerbs } = require('../services/prescriptionAnalyzer');
 const { getStore } = require('../data/store');
-
-class ServiceError extends Error {
-  constructor(status, code, message, details) {
-    super(message);
-    this.status = status;
-    this.code = code;
-    this.details = details;
-  }
-}
+const { getDataMode, isSyntheticMode } = require('../config/dataMode');
+const { hasPharmacistCredential } = require('../security/rbac');
+const { ServiceError } = require('./errors');
+const suggestions = require('./suggestionService');
 
 const SYSTEM = { role: 'system', id: 'workflow' };
 const PATIENT_TOKEN_TTL_MS = () => (Number(process.env.PATIENT_TOKEN_TTL_MINUTES) || 48 * 60) * 60000;
@@ -107,11 +102,16 @@ function createCase(input, actor) {
     createdAt: now,
     updatedAt: now,
     createdBy: { role: actor.role, id: String(actor.id) },
-    synthetic: true,
-    legacyPrescriptionId: base.legacyPrescriptionId ?? null,
+    dataMode: getDataMode(),
+    synthetic: isSyntheticMode(),
+    legacyPrescriptionId: base.legacyPrescriptionId ?? input.legacyPrescriptionId ?? null,
     source,
     patient: { ...base.patient, ...input.patient },
-    prescriber: { ...base.prescriber, ...input.prescriber },
+    prescriber: {
+      ...base.prescriber,
+      ...input.prescriber,
+      ...(actor.role === 'prescriber' ? { userId: String(actor.id), name: input.prescriber?.name || actor.name } : {}),
+    },
     prescription,
     state: 'received',
     contentVersion: 1,
@@ -174,6 +174,8 @@ async function runAnalysis(c, trigger) {
     ruleSetVersion: output.ruleSetVersion,
     knowledgeBaseVersion: output.knowledgeBaseVersion,
   });
+  suggestions.supersedePending({ caseId: c.caseId });
+  suggestions.suggestionsFromAnalysis({ caseId: c.caseId, analysis, inputHash: c.contentHash });
   return analysis;
 }
 
@@ -226,6 +228,15 @@ function invalidateApproval(c, actor, reason) {
 async function updateContent(caseId, patch, actor) {
   const c = getCaseOr404(caseId);
   if (CONTENT_LOCKED_STATES.has(c.state)) throw new ServiceError(409, 'content_locked', `Content cannot change in state ${c.state}`);
+  if (actor.role === 'technician') {
+    throw new ServiceError(403, 'clinical_content_forbidden', 'Technicians cannot change diagnosis, herbs, dosage or usage');
+  }
+  if (actor.role === 'prescriber' && c.createdBy?.id !== String(actor.id) && c.prescriber?.userId !== String(actor.id)) {
+    throw new ServiceError(403, 'not_own_case', 'Prescribers may only edit their own prescriptions');
+  }
+  if (['pharmacist_approved', 'patient_confirmed', 'dispensing', 'pharmacist_final_check', 'ready_for_pickup'].includes(c.state) && actor.role === 'prescriber') {
+    throw new ServiceError(403, 'signed_content_locked', 'A prescriber cannot change a pharmacist-signed prescription');
+  }
   const before = { hash: c.contentHash, snapshot: structuredClone(contentOf(c)) };
   if (patch.patient) c.patient = { ...c.patient, ...patch.patient };
   if (patch.prescriber) c.prescriber = { ...c.prescriber, ...patch.prescriber };
@@ -243,6 +254,7 @@ async function updateContent(caseId, patch, actor) {
     version: c.contentVersion, contentHash: newHash, changedBy: { role: actor.role, id: String(actor.id) }, at: new Date().toISOString(), reason: patch.reason || null, changedFields: Object.keys(patch).filter((k) => k !== 'reason'),
   });
   record(c, 'content_changed', actor, { fromHash: before.hash, toHash: newHash, version: c.contentVersion, reason: patch.reason || null });
+  suggestions.supersedePending({ caseId: c.caseId });
 
   let analysis = null;
   if (POST_APPROVAL_STATES.has(c.state) || c.state === 'pharmacist_review_required') {
@@ -269,8 +281,16 @@ function requireLatest(c, analysisId) {
 }
 
 function pharmacistDecision(caseId, body, actor) {
-  if (actor.role !== 'pharmacist') throw new ServiceError(403, 'pharmacist_only', 'Only a pharmacist can record review decisions');
+  if (!hasPharmacistCredential(actor)) {
+    throw new ServiceError(403, 'pharmacist_credential_required', 'Only a pharmacist credential can record review decisions; admin role is not sufficient');
+  }
   const c = getCaseOr404(caseId);
+  if (c.createdBy?.id === String(actor.id) && c.createdBy?.role === 'prescriber') {
+    throw new ServiceError(403, 'cannot_review_own_prescription', 'A prescriber cannot review their own prescription');
+  }
+  if (c.prescriber?.userId && c.prescriber.userId === String(actor.id)) {
+    throw new ServiceError(403, 'cannot_review_own_prescription', 'A prescriber cannot review their own prescription');
+  }
   const latest = requireLatest(c, body.analysisId);
   const out = latest.output;
   const decision = {
@@ -527,7 +547,7 @@ function dispensingAction(caseId, body, actor) {
       break;
     }
     case 'final_check_pass': {
-      if (actor.role !== 'pharmacist') throw new ServiceError(403, 'pharmacist_only', 'Final check requires a pharmacist');
+      if (!hasPharmacistCredential(actor)) throw new ServiceError(403, 'pharmacist_only', 'Final check requires a pharmacist credential');
       const weighed = [...c.dispensingRecords].reverse().find((r) => r.type === 'weighed');
       if (weighed && weighed.by === String(actor.id)) throw new ServiceError(409, 'same_person_check', 'Final check must be done by someone other than the dispenser');
       if (weighed && (weighed.missing.length || weighed.items.some((i) => i.outOfTolerance)) && !body.note) {
@@ -538,7 +558,7 @@ function dispensingAction(caseId, body, actor) {
       break;
     }
     case 'final_check_fail':
-      if (actor.role !== 'pharmacist') throw new ServiceError(403, 'pharmacist_only', 'Final check requires a pharmacist');
+      if (!hasPharmacistCredential(actor)) throw new ServiceError(403, 'pharmacist_only', 'Final check requires a pharmacist credential');
       transition(c, 'dispensing', actor, body.note || '复核未通过，退回调剂');
       c.dispensingRecords.push({ type: 'final_check_fail', by: String(actor.id), role: actor.role, at, note: body.note || null });
       break;
@@ -551,7 +571,78 @@ function dispensingAction(caseId, body, actor) {
   }
   record(c, 'dispensing_action', actor, { action: body.action });
   repo.saveCase(c);
+  if (body.action === 'final_check_pass') {
+    c.__pickup = require('./pickupService').issuePickupToken(c.caseId, actor);
+  }
   return c;
+}
+
+function isPriorityReview(c) {
+  const a = c.analyses.at(-1)?.output;
+  if (!a) return true;
+  if (a.riskTier === 'A3' || a.riskTier === 'A2') return true;
+  if (a.abstain) return true;
+  if (a.disagreements?.length) return true;
+  if (a.missingInformation?.some((m) => m.critical)) return true;
+  if (a.evidenceStrength === 'none' || a.evidenceStrength === 'limited') return true;
+  if (a.displaySource === 'degraded_rules' || a.semanticTrackResult?.status === 'circuit_open') return true;
+  return false;
+}
+
+function priorityReason(c) {
+  const a = c.analyses.at(-1)?.output;
+  if (!a) return ['尚未完成筛查'];
+  const reasons = [];
+  if (a.riskTier === 'A3') reasons.push('高风险阻断');
+  if (a.riskTier === 'A2') reasons.push('需药师判断');
+  if (a.abstain) reasons.push(`不确定性/弃权：${(a.abstainReasons || []).join('、')}`);
+  if (a.disagreements?.length) reasons.push('规则与模型冲突');
+  if (a.missingInformation?.some((m) => m.critical)) reasons.push('关键信息不足');
+  if (a.evidenceStrength === 'none' || a.evidenceStrength === 'limited') reasons.push('超出知识范围或证据不足');
+  if (a.displaySource === 'degraded_rules') reasons.push('模型降级为规则结果');
+  return reasons;
+}
+
+function reviewQueue() {
+  const pending = repo.listCases({ state: 'pharmacist_review_required' });
+  const toItem = (c) => ({
+    caseId: c.caseId,
+    createdAt: c.createdAt,
+    patientLabel: c.patient?.name ? `${String(c.patient.name).slice(0, 1)}**` : (c.patient?.patientRef || '未登记'),
+    riskTier: c.analyses.at(-1)?.output?.riskTier || null,
+    abstain: Boolean(c.analyses.at(-1)?.output?.abstain),
+    displaySource: c.analyses.at(-1)?.output?.displaySource || null,
+    evidenceStrength: c.analyses.at(-1)?.output?.evidenceStrength || null,
+    escalateReasons: priorityReason(c),
+    synthetic: Boolean(c.synthetic),
+  });
+  return {
+    priority: pending.filter(isPriorityReview).map(toItem),
+    batch: pending.filter((c) => !isPriorityReview(c)).map(toItem),
+  };
+}
+
+function sampleLowRisk(actor, { rate = 0.1 } = {}) {
+  const eligible = repo.listCases().filter((c) => {
+    const a = c.analyses.at(-1)?.output;
+    return a?.riskTier === 'A1' && ['pharmacist_approved', 'patient_confirmed', 'dispensing', 'ready_for_pickup', 'completed'].includes(c.state);
+  });
+  const n = eligible.length ? Math.max(1, Math.ceil(eligible.length * rate)) : 0;
+  const shuffled = [...eligible].sort((a, b) => a.caseId.localeCompare(b.caseId));
+  const picked = shuffled.slice(0, n).map((c) => ({
+    caseId: c.caseId,
+    sampledAt: new Date().toISOString(),
+    sampledBy: String(actor.id),
+    riskTier: 'A1',
+    state: c.state,
+    purpose: 'low_risk_quality_audit',
+  }));
+  picked.forEach((row) => repo.learning().addSample(row));
+  audit.append({
+    eventType: 'low_risk_sample', actorType: actor.role, actorId: actor.id,
+    payload: { count: picked.length, eligible: eligible.length, rate },
+  });
+  return { eligible: eligible.length, sampled: picked.length, cases: picked };
 }
 
 module.exports = {
@@ -569,4 +660,7 @@ module.exports = {
   submitPatientFeedback,
   dispensingAction,
   patientView,
+  reviewQueue,
+  sampleLowRisk,
+  isPriorityReview,
 };

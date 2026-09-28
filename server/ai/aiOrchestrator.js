@@ -16,6 +16,7 @@ const { screenInput, screenOutput } = require('./safetyPolicy');
 const { detectDisagreements } = require('./disagreementDetector');
 const { minimiseCaseForModel } = require('./redaction');
 const { randomId } = require('../common/hash');
+const { getAiMode, displaySource } = require('./aiMode');
 
 const AI_LABEL = 'AI生成，需药师审核';
 
@@ -55,10 +56,11 @@ async function runSemanticTrack({ provider, caseRecord, ruleTrack, retrieval, ti
   const started = process.hrtime.bigint();
   let raw;
   try {
-    raw = await callWithTimeout(provider, { messages, context: { ruleSummary, evidence: retrieval.retrieved, minimisedCase } }, timeoutMs);
+    raw = await callWithTimeout(provider, { messages, context: { ruleSummary, evidence: retrieval.retrieved, minimisedCase }, jsonSchema: SEMANTIC_OUTPUT_SCHEMA }, timeoutMs);
   } catch (err) {
     const latencyMs = Number(process.hrtime.bigint() - started) / 1e6;
-    return { ...base, latencyMs, status: err.name === 'AbortError' ? 'timeout' : 'error', error: err.name === 'AbortError' ? 'timeout' : 'provider_error' };
+    const status = err.code === 'circuit_open' ? 'circuit_open' : err.name === 'AbortError' ? 'timeout' : 'error';
+    return { ...base, latencyMs, status, error: status, providerMeta: provider.lastMeta || null };
   }
   const latencyMs = Number(process.hrtime.bigint() - started) / 1e6;
   let parsed;
@@ -80,6 +82,8 @@ async function runSemanticTrack({ provider, caseRecord, ruleTrack, retrieval, ti
     output: { ...parsed, warnings: screened.acceptedWarnings },
     violations: screened.violations,
     rejectedWarnings: screened.rejectedWarnings,
+    providerMeta: provider.lastMeta || null,
+    providerRequestId: provider.lastMeta?.requestId || null,
   };
 }
 
@@ -95,17 +99,21 @@ const FALLBACK_PATIENT_TEXT = '药师正在核对您的处方信息，如需补�
  * @param {{provider?: object|null, aiEnabled?: boolean, timeoutMs?: number, now?: Date}} options
  */
 async function analyzeCase(caseRecord, {
-  provider = null, aiEnabled = true, timeoutMs = 8000, now = new Date(),
+  provider = null, aiEnabled = true, timeoutMs = 8000, now = new Date(), aiMode,
 } = {}) {
+  const mode = aiMode || getAiMode();
   const ruleTrack = runRuleTrack(caseRecord, { now });
   const herbNames = (caseRecord.prescription?.herbs || []).map((h) => h.name);
   const retrieval = retrieve({ ruleHits: ruleTrack.hits, herbNames });
   const inputScreen = screenInput(caseRecord);
-  const activeProvider = aiEnabled ? provider : null;
+  const modelWanted = aiEnabled && (mode === 'shadow' || mode === 'live') && provider;
+  const activeProvider = modelWanted ? provider : null;
   const semantic = await runSemanticTrack({
     provider: activeProvider, caseRecord, ruleTrack, retrieval, timeoutMs, inputScreen,
   });
   if (!aiEnabled && provider) semantic.status = 'disabled_by_kill_switch';
+
+  const showModel = mode === 'live' && semantic.status === 'ok' && (semantic.isMock ? process.env.NODE_ENV !== 'production' : true);
 
   const abstainReasons = [];
   const statusReason = {
@@ -126,7 +134,7 @@ async function analyzeCase(caseRecord, {
   if (ruleTrack.missingInformation.some((m) => m.critical)) abstainReasons.push('key_information_missing');
   if (retrieval.missingEvidenceFor.length) abstainReasons.push('no_evidence');
 
-  const semanticOk = semantic.status === 'ok';
+  const semanticOk = showModel;
   const disagreements = semanticOk ? detectDisagreements({ ruleTrack, semantic: semantic.output, canonicalHerbs: caseRecord.prescription?.herbs || [] }) : [];
   if (disagreements.some((d) => d.type === 'hard_rule_conflict')) abstainReasons.push('hard_rule_model_conflict');
 
@@ -170,7 +178,7 @@ async function analyzeCase(caseRecord, {
     counterfactuals.push({ code: 'ABSTAIN', tier: riskTier, text: `AI未给出结论（${abstainReasons.join('、')}），需药师独立审核${hardStops.length ? '并处理阻断项' : ''}` });
   }
 
-  const reasonText = semanticOk ? '' : { disabled: 'AI未启用，仅规则', disabled_by_kill_switch: 'AI总开关已关闭，仅规则', timeout: '模型超时，已回退规则', error: '模型不可用，已回退规则', schema_invalid: '模型输出不合规，已回退规则', skipped_injection: '疑似注入，已跳过模型', skipped_input_too_long: '输入过长，已跳过模型', policy_violation: '模型输出违反安全策略，已丢弃' }[semantic.status];
+  const reasonText = semanticOk ? '' : { disabled: 'AI未启用，仅规则', disabled_by_kill_switch: 'AI总开关已关闭，仅规则', timeout: '模型超时，已回退规则', error: '模型不可用，已回退规则', schema_invalid: '模型输出不合规，已回退规则', skipped_injection: '疑似注入，已跳过模型', skipped_input_too_long: '输入过长，已跳过模型', policy_violation: '模型输出违反安全策略，已丢弃', circuit_open: '模型熔断，已回退规则' }[semantic.status];
 
   const prompt = getPrompt('rx-screening');
   const result = {
@@ -205,6 +213,7 @@ async function analyzeCase(caseRecord, {
       suggestedActions: semanticOk ? semantic.output.suggestedActions || [] : [],
       ruleHitSummary: semanticOk ? semantic.output.ruleHitSummary : null,
       evidenceStrength: semanticOk ? semantic.output.evidenceStrength : null,
+      providerRequestId: semantic.providerRequestId || null,
     },
     inputScreen,
     disagreements,
@@ -213,7 +222,19 @@ async function analyzeCase(caseRecord, {
     evidenceStrength: retrieval.evidenceStrength,
     pharmacistExplanation: semanticOk ? semantic.output.pharmacistExplanation : fallbackPharmacistExplanation(ruleTrack, retrieval, reasonText),
     patientExplanation: semanticOk ? semantic.output.patientExplanation : FALLBACK_PATIENT_TEXT,
-    explanationSource: semanticOk ? (semantic.isMock ? 'mock_model' : 'model') : 'rules_template',
+    explanationSource: semanticOk ? (semantic.isMock ? 'mock_model' : 'live_model') : 'rules_template',
+    displaySource: displaySource({
+      semanticOk, isMock: semantic.isMock, degraded: ['timeout', 'error', 'circuit_open'].includes(semantic.status), mode,
+    }),
+    aiMode: mode,
+    shadowResult: mode === 'shadow' && semantic.status === 'ok' ? {
+      suggestedRiskTier: semantic.output.suggestedRiskTier,
+      warningCodes: (semantic.output.warnings || []).map((w) => w.code),
+      latencyMs: semantic.latencyMs,
+      modelVersion: semantic.modelVersion,
+      providerRequestId: semantic.providerRequestId || null,
+    } : null,
+    providerMeta: semantic.providerMeta || null,
     modelVersion: semantic.modelVersion,
     promptVersion: prompt.ref,
     ruleSetVersion: ruleTrack.version,

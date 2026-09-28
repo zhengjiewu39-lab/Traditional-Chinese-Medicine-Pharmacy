@@ -16,6 +16,18 @@ export const aiCasesApi = {
   audit: (id) => api.get(`/ai/cases/${id}/audit`),
   replay: (id, analysisId) => api.post(`/ai/cases/${id}/replay`, analysisId ? { analysisId } : {}),
   workbench: () => api.get('/ai/workbench/summary'),
+  reviewQueue: () => api.get('/ai/review-queue'),
+};
+
+export const aiDraftsApi = {
+  create: (body) => api.post('/ai/drafts', body),
+  list: () => api.get('/ai/drafts'),
+  get: (id) => api.get(`/ai/drafts/${id}`),
+  patch: (id, body) => api.patch(`/ai/drafts/${id}`, body),
+  analyze: (id) => api.post(`/ai/drafts/${id}/analyze`, {}),
+  suggestions: (id) => api.get(`/ai/drafts/${id}/suggestions`),
+  dispose: (id, suggestionId, body) => api.post(`/ai/drafts/${id}/suggestions/${suggestionId}/disposition`, body),
+  submit: (id) => api.post(`/ai/drafts/${id}/submit`, {}),
 };
 
 export const aiGovernanceApi = {
@@ -23,6 +35,12 @@ export const aiGovernanceApi = {
   knowledge: () => api.get('/ai/knowledge/sources'),
   metrics: () => api.get('/ai/governance/metrics'),
   killSwitch: (enabled, reason) => api.post('/ai/governance/kill-switch', { enabled, reason }),
+  sample: (rate) => api.post('/ai/governance/sampling', rate ? { rate } : {}),
+  learningExport: () => api.post('/ai/learning/export', {}),
+  learningModels: () => api.get('/ai/learning/models'),
+  runtime: () => api.get('/ai/runtime'),
+  saveProvider: (body) => api.post('/ai/runtime/provider', body, { timeout: 90000 }),
+  testProvider: () => api.post('/ai/runtime/test', {}, { timeout: 90000 }),
 };
 
 export const aiOperationsApi = {
@@ -39,4 +57,8 @@ export const patientPortalApi = {
   submitConfirmation: (token, body) => publicApi.post(`/patient/confirmation/${token}`, body),
   submitFeedback: (token, body) => publicApi.post(`/patient/feedback/${token}`, body),
   myCases: () => api.get('/patient/me/cases'),
+};
+
+export const pickupApi = {
+  redeem: (token) => publicApi.post('/pickup/redeem', { token }),
 };

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Container, Box, Typography, TextField, Button, Paper, Alert, Stack } from '@mui/material';
 import {
-  AdminPanelSettings, LocalPharmacy, Handyman, Science, Person,
+  AdminPanelSettings, LocalPharmacy, Handyman, Science, Person, MedicalServices,
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { getHomeForRole } from '../config/navigation';
@@ -10,10 +10,11 @@ import { useLanguage } from '../i18n/LanguageContext';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 
 const DEMO_ACCOUNTS = [
-  { username: 'admin', password: 'admin123', role: 'admin', Icon: AdminPanelSettings },
+  { username: 'prescriber', password: 'doc123', role: 'prescriber', Icon: MedicalServices },
   { username: 'pharmacist', password: 'pharm123', role: 'pharmacist', Icon: LocalPharmacy },
   { username: 'pharmacist2', password: 'pharm456', role: 'pharmacist', Icon: LocalPharmacy },
   { username: 'technician', password: 'tech123', role: 'technician', Icon: Handyman },
+  { username: 'admin', password: 'admin123', role: 'admin', Icon: AdminPanelSettings },
   { username: 'researcher', password: 'research123', role: 'researcher', Icon: Science },
   { username: 'patient', password: 'patient123', role: 'patient', Icon: Person },
 ];

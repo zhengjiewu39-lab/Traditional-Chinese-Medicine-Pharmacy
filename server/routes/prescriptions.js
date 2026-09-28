@@ -1,212 +1,220 @@
+/**
+ * Compatibility layer for historical /api/prescriptions clients.
+ * Authoritative state lives in workflowService / prescriptionStateMachine.
+ * Request bodies cannot set actor, reviewer, role, status, pickupCode or approval.
+ */
 const express = require('express');
-const { getStore, updateStore, nextId } = require('../data/store');
+const { getStore, updateStore } = require('../data/store');
 const { analyzePrescription } = require('../services/prescriptionAnalyzer');
 const cdssEngine = require('../services/cdssEngine');
-const {
-  generatePickupCode,
-  buildBillingPrefill,
-  appendTimeline,
-  canTransition,
-} = require('../services/prescriptionWorkflow');
-
-const { requirePermission } = require('../security/rbac');
+const { buildBillingPrefill } = require('../services/prescriptionWorkflow');
+const { requirePermission, sendError, requirePharmacistCredential } = require('../security/rbac');
+const service = require('../workflow/workflowService');
+const repo = require('../workflow/workflowRepository');
+const { ServiceError } = require('../workflow/errors');
 
 const router = express.Router();
 
-/** Workflow fields only the server sets; clients cannot submit them on create or update. */
-const SERVER_OWNED_FIELDS = ['id', 'status', 'pickupCode', 'reviewer', 'approvedAt', 'timeline', 'reviewScore'];
-const CONTENT_FIELDS = ['herbs', 'prescriptionText', 'patientId', 'patientAge', 'patientGender', 'diagnosis'];
+const FORBIDDEN_CLIENT_FIELDS = ['id', 'status', 'pickupCode', 'reviewer', 'reviewerId', 'approvedAt', 'timeline', 'reviewScore', 'actor', 'role', 'approval', 'state'];
 
-function stripServerOwned(body) {
+function stripClient(body) {
   const out = { ...(body || {}) };
-  for (const k of SERVER_OWNED_FIELDS) delete out[k];
+  for (const k of FORBIDDEN_CLIENT_FIELDS) delete out[k];
   return out;
 }
 
-router.get('/', (req, res) => {
+function actorOf(req) {
+  return { role: req.user.role, id: req.user.id, name: req.user.name };
+}
+
+function wrap(err, res) {
+  if (err instanceof ServiceError) return sendError(res, err.status, err.code, err.message, err.details);
+  throw err;
+}
+
+const STATE_TO_LEGACY = {
+  received: '待审核', information_incomplete: '待审核', ai_screening: '待审核', pharmacist_review_required: '待审核',
+  pharmacist_approved: '已审核', pharmacist_rejected: '已驳回', returned_to_prescriber: '待医师处理',
+  patient_confirmation_required: '已审核', patient_confirmed: '已审核', patient_declined: '已驳回',
+  dispensing: '配药中', pharmacist_final_check: '配药中', ready_for_pickup: '待取药', completed: '已完成',
+};
+
+function caseToLegacy(c) {
+  const a = c.analyses?.at(-1)?.output;
+  return {
+    id: c.legacyPrescriptionId || c.caseId,
+    caseId: c.caseId,
+    patientId: c.patient?.legacyPatientId || undefined,
+    patientName: c.patient?.name,
+    patientAge: c.patient?.ageYears,
+    patientGender: c.patient?.sex === 'male' ? '男' : c.patient?.sex === 'female' ? '女' : undefined,
+    doctor: c.prescriber?.name,
+    diagnosis: c.prescription?.diagnosisText,
+    herbs: c.prescription?.herbs || [],
+    prescriptionText: (c.prescription?.herbs || []).map((h) => `${h.name}${h.dosage ?? ''}${h.unit || 'g'}`).join('，'),
+    date: (c.createdAt || '').slice(0, 10),
+    status: STATE_TO_LEGACY[c.state] || c.state,
+    pickupCode: null,
+    readyForPickup: c.state === 'ready_for_pickup',
+    synthetic: Boolean(c.synthetic),
+    dataMode: c.dataMode,
+    riskTier: a?.riskTier || null,
+    workflow: 'case',
+  };
+}
+
+function findCase(id) {
+  const byId = repo.getCase(id);
+  if (byId) return byId;
+  const asNum = Number(id);
+  return repo.listCases().find((c) => c.legacyPrescriptionId === asNum) || null;
+}
+
+function unmigrated() {
+  return (getStore().prescriptions || []).filter((p) => !p.caseId && !p.migratedToCaseId);
+}
+
+router.get('/', requirePermission('legacy_rx:read'), (req, res) => {
   const { status, patientId } = req.query;
-  let list = getStore().prescriptions;
-  if (status) list = list.filter(p => p.status === status);
-  if (patientId) list = list.filter(p => p.patientId === +patientId);
+  let list = repo.listCases().map(caseToLegacy).concat(unmigrated());
+  if (req.user.role === 'prescriber') {
+    list = list.filter((p) => p.workflow === 'case' && findCase(p.caseId)?.createdBy?.id === String(req.user.id));
+  }
+  if (status) list = list.filter((p) => p.status === status);
+  if (patientId) list = list.filter((p) => p.patientId === +patientId);
   res.json(list);
 });
 
-router.get('/pickup/queue', (req, res) => {
-  const list = getStore().prescriptions.filter(p =>
-    ['已审核', '配药中', '待取药'].includes(p.status)
-  );
+router.get('/pickup/queue', requirePermission('legacy_rx:read'), (req, res) => {
+  const list = repo.listCases().filter((c) => ['ready_for_pickup', 'dispensing', 'pharmacist_final_check', 'patient_confirmed'].includes(c.state)).map(caseToLegacy);
   res.json(list);
 });
 
 router.get('/pickup/:code', (req, res) => {
-  const code = req.params.code.toUpperCase();
-  const prescription = getStore().prescriptions.find(p =>
-    p.pickupCode?.toUpperCase() === code
-  );
-  if (!prescription) return res.status(404).json({ message: '取药码无效或已过期' });
-  const store = getStore();
-  res.json({
-    prescription,
-    prefill: buildBillingPrefill(prescription, store),
-    patient: store.patients.find(p => p.id === prescription.patientId) || null,
-  });
+  return sendError(res, 410, 'pickup_retired', 'Public pickup-code lookup no longer returns patient or prescription records. Use a short-lived server pickup token via POST /api/pickup/redeem.');
 });
 
-router.post('/analyze', (req, res) => {
-  res.json(analyzePrescription(req.body));
+router.post('/analyze', requirePermission('legacy_rx:read'), (req, res) => {
+  res.json(analyzePrescription(stripClient(req.body)));
 });
 
-router.post('/cdss', (req, res) => {
-  res.json(cdssEngine.analyzePrescription(req.body));
+router.post('/cdss', requirePermission('legacy_rx:read'), (req, res) => {
+  res.json(cdssEngine.analyzePrescription(stripClient(req.body)));
 });
 
-router.get('/:id/billing-prefill', (req, res) => {
-  const prescription = getStore().prescriptions.find(x => x.id === +req.params.id);
+router.get('/:id/billing-prefill', requirePermission('legacy_rx:read'), (req, res) => {
+  const c = findCase(req.params.id);
+  if (c) {
+    return res.json({
+      caseId: c.caseId,
+      herbs: (c.prescription.herbs || []).map((h) => ({ name: h.name, dosage: h.dosage })),
+      note: 'Billing prefill from unified case; no patient identifiers included',
+    });
+  }
+  const prescription = getStore().prescriptions.find((x) => x.id === +req.params.id);
   if (!prescription) return res.status(404).json({ message: '未找到处方' });
   res.json(buildBillingPrefill(prescription, getStore()));
 });
 
-router.get('/:id', (req, res) => {
-  const p = getStore().prescriptions.find(x => x.id === +req.params.id);
+router.get('/:id', requirePermission('legacy_rx:read'), (req, res) => {
+  const c = findCase(req.params.id);
+  if (c) return res.json(caseToLegacy(c));
+  const p = getStore().prescriptions.find((x) => x.id === +req.params.id);
   if (!p) return res.status(404).json({ message: '未找到' });
   res.json(p);
 });
 
-router.post('/', (req, res) => {
-  let created;
-  const body = stripServerOwned(req.body);
-  updateStore(data => {
-    const analysis = body.prescriptionText
-      ? analyzePrescription({
-          prescription: body.prescriptionText,
-          patientAge: body.patientAge,
-          patientGender: body.patientGender,
-          diagnosis: body.diagnosis,
-        })
-      : null;
-
-    created = {
-      herbs: [],
-      ...body,
-      id: nextId(data, 'prescription'),
-      date: new Date().toISOString().slice(0, 10),
-      status: '待审核',
-      timeline: appendTimeline({}, '待审核', body.doctor || '医生', '处方已提交'),
-    };
-
-    if (analysis) {
-      created.reviewScore = analysis.score;
-      created.warnings = analysis.warnings;
-      created.analysisSummary = analysis.summary;
-      created.timeline = appendTimeline(created, '待审核', '规则预审', `预审${analysis.status} · 评分 ${analysis.score}（需药师审核）`);
-    }
-
-    data.prescriptions.unshift(created);
-    const patient = data.patients.find(p => p.id === created.patientId);
-    if (patient) patient.prescriptionCount = (patient.prescriptionCount || 0) + 1;
-  });
-  res.status(201).json(created);
-});
-
-router.post('/:id/approve', requirePermission('legacy_rx:approve'), (req, res) => {
-  let updated;
-  const reviewer = req.user.name || req.user.username;
+router.post('/', requirePermission('legacy_rx:create'), async (req, res) => {
   try {
-    updateStore(data => {
-      const idx = data.prescriptions.findIndex(p => p.id === +req.params.id);
-      if (idx === -1) return;
-      const rx = data.prescriptions[idx];
-      if (!['待审核', '已审核', '配药中'].includes(rx.status)) {
-        throw new Error(`状态「${rx.status}」不可审核发码`);
-      }
-      const pickupCode = rx.pickupCode || generatePickupCode(data.prescriptions);
-      updated = {
-        ...rx,
-        status: '待取药',
-        pickupCode,
-        reviewer,
-        reviewerId: req.user.id,
-        approvedAt: new Date().toISOString(),
-        timeline: appendTimeline(rx, '待取药', reviewer, '药师审方通过，已生成取药码'),
-      };
-      data.prescriptions[idx] = updated;
-    });
-  } catch (e) {
-    return res.status(400).json({ message: e.message });
+    const body = stripClient(req.body);
+    const herbs = (body.herbs || []).map((h) => ({
+      name: h.name, dosage: parseFloat(String(h.dosage)) || null, unit: 'g',
+    }));
+    const sex = { 男: 'male', 女: 'female' }[body.patientGender] || 'unknown';
+    const created = service.createCase({
+      source: { channel: 'legacy_api', rawText: body.prescriptionText || '' },
+      patient: {
+        name: body.patientName, ageYears: body.patientAge, sex, legacyPatientId: body.patientId,
+      },
+      prescriber: { name: req.user.name, userId: String(req.user.id) },
+      prescription: { herbs, diagnosisText: body.diagnosis, usage: body.usage },
+    }, actorOf(req));
+    const screened = await service.analyze(created.caseId);
+    res.status(201).json(caseToLegacy(screened.case));
+  } catch (err) {
+    wrap(err, res);
   }
-  if (!updated) return res.status(404).json({ message: '未找到处方' });
-  res.json(updated);
 });
 
-router.post('/:id/dispense', (req, res) => {
-  let updated;
+router.post('/:id/approve', requirePermission('legacy_rx:approve'), requirePharmacistCredential, (req, res) => {
   try {
-    updateStore(data => {
-      const idx = data.prescriptions.findIndex(p => p.id === +req.params.id);
-      if (idx === -1) return;
-      const rx = data.prescriptions[idx];
-      if (!canTransition(rx.status, '配药中') && rx.status !== '待取药') {
-        if (rx.status === '已审核') {
-          /* allow */
-        } else throw new Error(`状态 ${rx.status} 不可开始配药`);
-      }
-      updated = {
-        ...rx,
-        status: '配药中',
-        timeline: appendTimeline(rx, '配药中', req.body.actor || '药师', '开始配药'),
-      };
-      data.prescriptions[idx] = updated;
-    });
-  } catch (e) {
-    return res.status(400).json({ message: e.message });
+    const c = findCase(req.params.id);
+    if (!c) return sendError(res, 409, 'unmigrated', 'This historical prescription must be migrated into the unified case workflow before pharmacist sign-off');
+    const analysisId = c.analyses.at(-1)?.analysisId;
+    const out = service.pharmacistDecision(c.caseId, { action: 'approve', analysisId, comment: '兼容层提交药师审核签署' }, actorOf(req));
+    res.json(caseToLegacy(out.case));
+  } catch (err) {
+    wrap(err, res);
   }
-  if (!updated) return res.status(404).json({ message: '未找到' });
-  res.json(updated);
 });
 
-router.post('/:id/ready', (req, res) => {
-  let updated;
-  updateStore(data => {
-    const idx = data.prescriptions.findIndex(p => p.id === +req.params.id);
-    if (idx === -1) return;
-    const rx = data.prescriptions[idx];
-    updated = {
-      ...rx,
-      status: '待取药',
-      timeline: appendTimeline(rx, '待取药', req.body.actor || '药师', '配药完成，等待患者取药'),
-    };
-    data.prescriptions[idx] = updated;
-  });
-  if (!updated) return res.status(404).json({ message: '未找到' });
-  res.json(updated);
+router.post('/:id/dispense', requirePermission('legacy_rx:dispense'), (req, res) => {
+  try {
+    const c = findCase(req.params.id);
+    if (!c) return sendError(res, 409, 'unmigrated', 'Migrate this prescription before dispensing');
+    const out = service.dispensingAction(c.caseId, { action: 'start' }, actorOf(req));
+    res.json(caseToLegacy(out));
+  } catch (err) {
+    wrap(err, res);
+  }
 });
 
-router.put('/:id', (req, res) => {
-  let updated;
-  updateStore(data => {
-    const idx = data.prescriptions.findIndex(p => p.id === +req.params.id);
-    if (idx === -1) return;
-    const before = data.prescriptions[idx];
-    const patch = stripServerOwned(req.body);
-    const next = { ...before, ...patch, id: +req.params.id };
-    const contentChanged = CONTENT_FIELDS.some((k) => k in patch && JSON.stringify(patch[k]) !== JSON.stringify(before[k]));
-    if (contentChanged && before.approvedAt && before.status !== '已完成') {
-      next.status = '待审核';
-      next.pickupCode = null;
-      next.approvedAt = null;
-      next.approvalInvalidatedAt = new Date().toISOString();
-      next.timeline = appendTimeline(before, '待审核', req.user?.name || '系统', '处方内容已修改，原审核失效，需重新审核');
+router.post('/:id/ready', requirePermission('rx:final_check'), requirePharmacistCredential, (req, res) => {
+  try {
+    const c = findCase(req.params.id);
+    if (!c) return sendError(res, 409, 'unmigrated', 'Migrate this prescription before release');
+    const out = service.dispensingAction(c.caseId, { action: 'final_check_pass', note: '兼容层复核' }, actorOf(req));
+    res.json({ ...caseToLegacy(out), pickup: out.__pickup || null });
+  } catch (err) {
+    wrap(err, res);
+  }
+});
+
+router.put('/:id', requirePermission('legacy_rx:update'), async (req, res) => {
+  try {
+    if (req.user.role === 'technician') {
+      return sendError(res, 403, 'clinical_content_forbidden', 'Technicians cannot change diagnosis, herbs, dosage or usage');
     }
-    data.prescriptions[idx] = next;
-    updated = next;
-  });
-  if (!updated) return res.status(404).json({ message: '未找到' });
-  res.json(updated);
+    const body = stripClient(req.body);
+    const c = findCase(req.params.id);
+    if (!c) return sendError(res, 409, 'unmigrated', 'Migrate this prescription before editing');
+    const patch = { reason: 'legacy_api_update' };
+    if (body.diagnosis || body.herbs || body.prescriptionText || body.usage) {
+      patch.prescription = {
+        ...(body.diagnosis ? { diagnosisText: body.diagnosis } : {}),
+        ...(body.usage ? { usage: body.usage } : {}),
+        ...(body.herbs ? { herbs: body.herbs.map((h) => ({ name: h.name, dosage: parseFloat(String(h.dosage)) || null, unit: 'g' })) } : {}),
+      };
+    }
+    if (body.patientAge || body.patientGender || body.patientName) {
+      patch.patient = {
+        ...(body.patientName ? { name: body.patientName } : {}),
+        ...(body.patientAge ? { ageYears: body.patientAge } : {}),
+        ...(body.patientGender ? { sex: { 男: 'male', 女: 'female' }[body.patientGender] || 'unknown' } : {}),
+      };
+    }
+    const out = await service.updateContent(c.caseId, patch, actorOf(req));
+    res.json(caseToLegacy(out.case));
+  } catch (err) {
+    wrap(err, res);
+  }
 });
 
-router.delete('/:id', (req, res) => {
-  updateStore(data => {
-    data.prescriptions = data.prescriptions.filter(p => p.id !== +req.params.id);
+router.delete('/:id', requirePermission('legacy_rx:delete'), (req, res) => {
+  const c = findCase(req.params.id);
+  if (c) return sendError(res, 409, 'cannot_delete_case', 'Unified cases are not deleted; reject or return them in the workflow');
+  updateStore((data) => {
+    data.prescriptions = data.prescriptions.filter((p) => p.id !== +req.params.id);
   });
   res.json({ success: true });
 });

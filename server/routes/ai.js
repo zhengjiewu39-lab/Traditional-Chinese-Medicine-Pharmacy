@@ -1,5 +1,5 @@
 const express = require('express');
-const { requirePermission, sendError } = require('../security/rbac');
+const { requirePermission, sendError, requirePharmacistCredential } = require('../security/rbac');
 const {
   limitBody, validateBody, limiter, accessAudit, handle,
 } = require('./aiHttp');
@@ -16,6 +16,11 @@ const { computeGovernanceMetrics } = require('../ai/governanceMetrics');
 const { analyzeOperations, draftProposal, ACTIONS } = require('../ai/operationsAgent');
 const { evaluateProposal } = require('../ai/digitalTwinBridge');
 const { randomId } = require('../common/hash');
+const draftService = require('../workflow/draftService');
+const suggestionService = require('../workflow/suggestionService');
+const learning = require('../workflow/learningLoop');
+const { migrateLegacyPrescriptions } = require('../workflow/legacyMigrate');
+const { issuePickupToken } = require('../workflow/pickupService');
 
 const router = express.Router();
 
@@ -44,6 +49,8 @@ function summary(c) {
     approvalValid: Boolean(c.approval?.valid && c.approval.contentHash === c.contentHash),
     secondReviewPending: c.secondReview?.status === 'pending',
     patientDeclined: c.patientDeclined,
+    priority: service.isPriorityReview(c),
+    displaySource: a?.displaySource || null,
   };
 }
 
@@ -56,7 +63,11 @@ router.post('/cases', requirePermission('case:create'), validateBody(S.CREATE_CA
 
 router.get('/cases', requirePermission('case:read'), handle(async (req, res) => {
   const { state, riskTier } = req.query;
-  res.json({ cases: repo.listCases({ state, riskTier }).map(summary) });
+  let list = repo.listCases({ state, riskTier });
+  if (req.user.role === 'prescriber') {
+    list = list.filter((c) => c.createdBy?.id === String(req.user.id) || c.prescriber?.userId === String(req.user.id));
+  }
+  res.json({ cases: list.map(summary) });
 }));
 
 router.get('/workbench/summary', requirePermission('case:read'), handle(async (req, res) => {
@@ -74,6 +85,8 @@ router.get('/workbench/summary', requirePermission('case:read'), handle(async (r
     toDispense: by('patient_confirmed') + by('dispensing'),
     toCheck: by('pharmacist_final_check'),
     readyForPickup: by('ready_for_pickup'),
+    priorityReview: service.reviewQueue().priority.length,
+    batchReview: service.reviewQueue().batch.length,
     shortage: ops.summary.lowStock + ops.summary.nearMin,
     nearExpiry: ops.summary.nearExpiry,
     ai: runtime.describeRuntime(),
@@ -83,6 +96,9 @@ router.get('/workbench/summary', requirePermission('case:read'), handle(async (r
 
 router.get('/cases/:id', requirePermission('case:read'), handle(async (req, res) => {
   const c = service.getCaseOr404(req.params.id);
+  if (req.user.role === 'prescriber' && c.createdBy?.id !== String(req.user.id) && c.prescriber?.userId !== String(req.user.id)) {
+    return sendError(res, 403, 'not_own_case', 'Prescribers may only view their own cases');
+  }
   res.json({ case: c, summary: summary(c) });
 }));
 
@@ -96,7 +112,7 @@ router.post('/cases/:id/analyze', requirePermission('case:analyze'), validateBod
   res.json({ case: summary(out.case), analysis: out.analysis.output });
 }));
 
-router.post('/cases/:id/pharmacist-decision', requirePermission('rx:review_decision'), validateBody(S.PHARMACIST_DECISION), handle(async (req, res) => {
+router.post('/cases/:id/pharmacist-decision', requirePermission('rx:review_decision'), requirePharmacistCredential, validateBody(S.PHARMACIST_DECISION), handle(async (req, res) => {
   const out = service.pharmacistDecision(req.params.id, req.body, actorOf(req));
   res.json({ case: summary(out.case), decision: out.decision });
 }));
@@ -131,8 +147,94 @@ router.get('/models', requirePermission('ai:models_read'), handle(async (req, re
   res.json({ runtime: runtime.describeRuntime(), providers: PROVIDERS, prompts: listPrompts(), ruleSetVersion: ruleSetVersion(), knowledgeBaseVersion: knowledgeBaseVersion() });
 }));
 
+router.get('/runtime', requirePermission('case:read'), handle(async (req, res) => {
+  const { publicView } = require('../ai/runtimeConfig');
+  res.json({ runtime: runtime.describeRuntime(), local: publicView() });
+}));
+
+router.post('/runtime/provider', requirePermission('ai:runtime_configure'), validateBody({
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    preset: { type: 'string', enum: ['openai', 'deepseek', 'ollama', 'custom'] },
+    baseUrl: { type: 'string', maxLength: 300 },
+    model: { type: 'string', maxLength: 120 },
+    apiKey: { type: 'string', maxLength: 512 },
+    timeoutMs: { type: 'integer', minimum: 3000, maximum: 120000 },
+    dataResidency: { type: 'string', enum: ['on-prem', 'external'] },
+  },
+}), handle(async (req, res) => {
+  const cfg = require('../ai/runtimeConfig');
+  const view = cfg.saveRuntimeProvider(req.body);
+  runtime.reloadProvider();
+  audit.append({
+    eventType: 'ai_provider_configured',
+    actorType: req.user.role,
+    actorId: req.user.id,
+    payload: {
+      provider: 'openai-compatible',
+      model: view.model,
+      endpointHost: view.endpointHost,
+      apiKeyConfigured: view.apiKeyConfigured,
+      dataResidency: view.dataResidency,
+    },
+  });
+  res.json({ local: view, runtime: runtime.describeRuntime() });
+}));
+
+router.post('/runtime/test', requirePermission('ai:runtime_configure'), handle(async (req, res) => {
+  const provider = runtime.getProvider();
+  if (!provider) return res.json({ ok: false, isMock: false, message: '未配置模型' });
+  if (provider.isMock) return res.json({ ok: true, isMock: true, message: '当前仍是模拟模型，请填写兼容接口和密钥后保存' });
+  const started = Date.now();
+  const timeout = Math.max(runtime.timeoutMs() || 45000, 15000);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeout);
+  try {
+    const raw = await provider.complete({
+      messages: [{ role: 'user', content: 'Reply with JSON {"ok":true} and nothing else.' }],
+      signal: controller.signal,
+    });
+    let parsed = null;
+    try { parsed = JSON.parse(raw); } catch { parsed = null; }
+    res.json({
+      ok: true,
+      isMock: false,
+      model: provider.modelVersion,
+      latencyMs: Date.now() - started,
+      requestId: provider.lastMeta?.requestId || null,
+      json: Boolean(parsed),
+    });
+  } catch (err) {
+    const aborted = err.name === 'AbortError';
+    res.status(502).json({
+      error: {
+        code: aborted ? 'provider_test_timeout' : 'provider_test_failed',
+        message: aborted
+          ? `真实模型在 ${timeout}ms 内没有响应。请检查网络能否访问该接口，或换用 DeepSeek / 本地 Ollama。`
+          : (err.message || '真实模型调用失败，已保持规则引擎可用'),
+        detail: err.message,
+      },
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+}));
+
 router.get('/knowledge/sources', requirePermission('ai:knowledge_read'), handle(async (req, res) => {
-  res.json({ knowledgeBaseVersion: knowledgeBaseVersion(), sources: listSources() });
+  const reg = require('../knowledge/sourceRegistry').loadRegistry();
+  res.json({
+    knowledgeBaseVersion: knowledgeBaseVersion(),
+    sources: listSources(),
+    bases: reg.bases.map((b) => ({
+      knowledgeBaseId: b.knowledgeBaseId,
+      version: b.version,
+      disclaimer: b.disclaimer,
+      synthetic: b.synthetic,
+      clinicalUse: b.clinicalUse,
+      clinicalLabel: b.clinicalUse ? '已审核临床知识源' : '合成知识库，不得用于临床',
+    })),
+  });
 }));
 
 router.get('/governance/metrics', requirePermission('ai:governance_read'), handle(async (req, res) => {
@@ -214,6 +316,129 @@ router.post('/operations/proposals/:id/approve', requirePermission('ops:approve'
   repo.proposals().put(next);
   audit.append({ eventType: 'ops_proposal_decided', actorType: req.user.role, actorId: req.user.id, payload: { proposalId: p.proposalId, decision: req.body.decision, draftDocId: draft?.docId || null } });
   return res.json({ proposal: next, draft });
+}));
+
+router.get('/review-queue', requirePermission('rx:review_decision'), handle(async (req, res) => {
+  res.json(service.reviewQueue());
+}));
+
+router.post('/governance/sampling', requirePermission('ai:governance_read'), validateBody({
+  type: 'object', additionalProperties: false, properties: { rate: { type: 'number', minimum: 0.01, maximum: 1 } },
+}), handle(async (req, res) => {
+  res.json(service.sampleLowRisk(actorOf(req), { rate: req.body.rate || 0.1 }));
+}));
+
+router.post('/legacy/migrate', requirePermission('ai:kill_switch'), validateBody({
+  type: 'object', additionalProperties: false, properties: { analyzeAfter: { type: 'boolean' } },
+}), handle(async (req, res) => {
+  res.json(await migrateLegacyPrescriptions(actorOf(req), { analyzeAfter: Boolean(req.body.analyzeAfter) }));
+}));
+
+router.post('/cases/:id/pickup-token', requirePermission('rx:pickup_issue'), handle(async (req, res) => {
+  res.status(201).json(issuePickupToken(req.params.id, actorOf(req)));
+}));
+
+// ---------------------------------------------------------------- drafts (server-side prescription drafts; AI has no write access)
+
+router.post('/drafts', requirePermission('draft:create'), validateBody(S.CREATE_DRAFT), handle(async (req, res) => {
+  res.status(201).json({ draft: draftService.createDraft(req.body, actorOf(req)) });
+}));
+
+router.get('/drafts', requirePermission('draft:read'), handle(async (req, res) => {
+  const { listDrafts } = require('../workflow/workflowRepository');
+  const filter = req.user.role === 'prescriber' ? { createdById: req.user.id } : {};
+  res.json({ drafts: listDrafts(filter) });
+}));
+
+router.get('/drafts/:id', requirePermission('draft:read'), handle(async (req, res) => {
+  const d = draftService.getOr404(req.params.id);
+  draftService.assertOwner(d, actorOf(req));
+  res.json({ draft: d, suggestions: require('../workflow/workflowRepository').listSuggestions({ draftId: d.draftId }) });
+}));
+
+router.patch('/drafts/:id', requirePermission('draft:update'), validateBody(S.PATCH_DRAFT), handle(async (req, res) => {
+  res.json(draftService.patchDraft(req.params.id, req.body, actorOf(req)));
+}));
+
+router.post('/drafts/:id/analyze', requirePermission('draft:analyze'), validateBody({ type: 'object', additionalProperties: false, properties: {} }), handle(async (req, res) => {
+  const out = await draftService.analyzeDraft(req.params.id, actorOf(req));
+  res.json(out);
+}));
+
+router.get('/drafts/:id/suggestions', requirePermission('draft:read'), handle(async (req, res) => {
+  const d = draftService.getOr404(req.params.id);
+  draftService.assertOwner(d, actorOf(req));
+  res.json({ suggestions: require('../workflow/workflowRepository').listSuggestions({ draftId: d.draftId }) });
+}));
+
+router.post('/drafts/:id/suggestions/:suggestionId/disposition', requirePermission('draft:update'), validateBody(S.SUGGESTION_DISPOSITION), handle(async (req, res) => {
+  res.json(draftService.disposeSuggestion(req.params.id, req.params.suggestionId, req.body, actorOf(req)));
+}));
+
+router.post('/drafts/:id/submit', requirePermission('draft:submit'), validateBody({ type: 'object', additionalProperties: false, properties: {} }), handle(async (req, res) => {
+  const out = await draftService.submitDraft(req.params.id, actorOf(req));
+  res.status(201).json(out);
+}));
+
+router.get('/suggestions', requirePermission('ai:governance_read'), handle(async (req, res) => {
+  res.json({ suggestions: require('../workflow/workflowRepository').listSuggestions(), metrics: suggestionService.metrics() });
+}));
+
+router.post('/suggestions/:id/pharmacist-view', requirePermission('rx:review_decision'), requirePharmacistCredential, validateBody({
+  type: 'object', additionalProperties: false, required: ['agrees'], properties: { agrees: { type: 'boolean' } },
+}), handle(async (req, res) => {
+  res.json({ suggestion: suggestionService.markPharmacistView(req.params.id, actorOf(req), req.body.agrees) });
+}));
+
+// ---------------------------------------------------------------- learning loop (export / label / registry only — no training)
+
+router.post('/learning/export', requirePermission('ai:learning_export'), handle(async (req, res) => {
+  res.json(learning.exportCandidates(actorOf(req)));
+}));
+
+router.post('/learning/labels', requirePermission('ai:learning_review'), requirePharmacistCredential, validateBody({
+  type: 'object',
+  additionalProperties: false,
+  required: ['suggestionId', 'label'],
+  properties: {
+    suggestionId: { type: 'string', minLength: 1, maxLength: 80 },
+    datasetId: { type: 'string', maxLength: 80 },
+    label: { type: 'string', enum: ['true_positive', 'false_positive', 'true_negative', 'false_negative', 'uncertain'] },
+    risk: { type: 'string', enum: ['routine', 'high'] },
+    secondReviewerId: { type: 'string', maxLength: 40 },
+    comment: { type: 'string', maxLength: 500 },
+  },
+}), handle(async (req, res) => {
+  res.status(201).json(learning.reviewLabel(req.body, actorOf(req)));
+}));
+
+router.get('/learning/models', requirePermission('ai:models_read'), handle(async (req, res) => {
+  res.json({ models: require('../workflow/workflowRepository').learning().listModels(), note: 'Registry only. No weights are stored. Production must not claim the model has learned.' });
+}));
+
+router.post('/learning/models', requirePermission('ai:model_publish'), validateBody({
+  type: 'object',
+  additionalProperties: false,
+  required: ['version'],
+  properties: {
+    modelId: { type: 'string', maxLength: 80 },
+    version: { type: 'string', minLength: 1, maxLength: 80 },
+    status: { type: 'string', enum: ['candidate', 'shadow'] },
+    promptVersion: { type: 'string', maxLength: 80 },
+    knowledgeBaseVersion: { type: 'string', maxLength: 120 },
+    evaluationReportId: { type: 'string', maxLength: 80 },
+  },
+}), handle(async (req, res) => {
+  res.status(201).json(learning.registerModel(req.body, actorOf(req)));
+}));
+
+router.post('/learning/models/:id/status', requirePermission('ai:model_publish'), validateBody({
+  type: 'object', additionalProperties: false, required: ['status'], properties: {
+    status: { type: 'string', enum: ['shadow', 'live', 'rolled_back', 'candidate'] },
+    reason: { type: 'string', maxLength: 300 },
+  },
+}), handle(async (req, res) => {
+  res.json(learning.setModelStatus(req.params.id, req.body.status, actorOf(req), req.body.reason));
 }));
 
 module.exports = router;

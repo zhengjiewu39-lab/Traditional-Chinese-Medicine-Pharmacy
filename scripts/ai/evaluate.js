@@ -72,7 +72,6 @@ function buildInput(defaults, spec) {
     source: { ...defaults.source, ...(spec.source || {}) },
     patient: { ...defaults.patient, patientRef: `SYN-${spec.id}`, ...(spec.patient || {}) },
     prescription: { ...rxDefaults, issuedAt: isoDate(offset), ...rxSpec },
-    synthetic: true,
   };
   if (spec.prescriber !== null) input.prescriber = { ...defaults.prescriber, ...(spec.prescriber || {}) };
   if (Array.isArray(input.prescription.herbs)) {

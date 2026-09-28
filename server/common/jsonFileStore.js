@@ -1,9 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-
-function aiDataDir() {
-  return process.env.AI_DATA_DIR || path.join(__dirname, '../../data/ai');
-}
+const { aiDataDir } = require('./dataDir');
 
 function ensureDir(dir) {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });

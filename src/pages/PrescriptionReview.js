@@ -45,7 +45,7 @@ import {
 } from '@mui/icons-material';
 
 import { prescriptionApi, herbsApi } from '../services/api';
-import { useAuth } from '../contexts/AuthContext';
+import { aiDraftsApi } from '../services/aiApi';
 import { useNavigate } from 'react-router-dom';
 import CdssDualTrackPanel from '../components/CdssDualTrackPanel';
 
@@ -63,7 +63,6 @@ function statusChipColor(status) {
 
 // 主组件
 function PrescriptionReview() {
-  const { user } = useAuth();
   const navigate = useNavigate();
   const [herbsDatabase, setHerbsDatabase] = useState([]);
   const [prescription, setPrescription] = useState('');
@@ -83,7 +82,6 @@ function PrescriptionReview() {
   const [historySearch, setHistorySearch] = useState('');
   const [historyPage, setHistoryPage] = useState(0);
   const [historyRowsPerPage, setHistoryRowsPerPage] = useState(20);
-  const [selectedPatientId, setSelectedPatientId] = useState(null);
 
   const loadHistory = useCallback(async () => {
     setHistoryLoading(true);
@@ -109,32 +107,28 @@ function PrescriptionReview() {
       .catch(() => setHerbsDatabase([]));
   }, []);
 
-  const handleSavePrescription = async (approve = false) => {
+  const handleSavePrescription = async () => {
     try {
       setLoading(true);
-      const herbs = parsePrescription(prescription).map(h => ({
-        name: h.name,
-        dosage: h.dosage || h.commonDosage || '10g',
-      }));
-      const created = await prescriptionApi.createPrescription({
-        patientId: selectedPatientId || undefined,
-        patientName: patientName || '未登记',
-        doctor: user?.name || '医生',
-        diagnosis,
-        herbs,
+      const created = await aiDraftsApi.create({
+        diagnosisText: diagnosis,
         prescriptionText: prescription,
-        patientAge: patientAge ? Number(patientAge) : undefined,
-        patientGender,
-        reviewScore: reviewResult?.score ?? reviewResult?.apiAnalysis?.score,
+        patient: {
+          name: patientName || undefined,
+          ageYears: patientAge ? Number(patientAge) : undefined,
+          sex: patientGender === '男' ? 'male' : patientGender === '女' ? 'female' : 'unknown',
+        },
       });
-      let final = created.data;
-      if (approve) {
-        const approved = await prescriptionApi.approvePrescription(final.id, { reviewer: user?.name, reviewScore: final.reviewScore });
-        final = approved.data;
-      }
-      setSavedRx(final);
+      const submitted = await aiDraftsApi.submit(created.data.draft.draftId);
+      setSavedRx({
+        caseId: submitted.data.case.caseId,
+        status: submitted.data.case.state,
+        pickupCode: null,
+        patientName,
+        diagnosis,
+      });
     } catch (e) {
-      setError(e.response?.data?.message || '保存失败');
+      setError(e.response?.data?.error?.message || e.response?.data?.message || '提交药师审核失败');
     } finally {
       setLoading(false);
     }
@@ -362,7 +356,6 @@ function PrescriptionReview() {
     setPatientAge(item.patientAge != null ? String(item.patientAge) : '');
     setPatientGender(item.patientGender || '');
     setDiagnosis(item.diagnosis || '');
-    setSelectedPatientId(item.patientId || null);
     setReviewResult(null);
     setViewMode('input');
   };
@@ -705,15 +698,12 @@ function PrescriptionReview() {
 
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 3, flexWrap: 'wrap', gap: 1 }}>
           <Button variant="outlined" onClick={() => setViewMode('input')}>返回编辑</Button>
-          <Button variant="outlined" startIcon={<SaveIcon />} onClick={() => handleSavePrescription(false)}>保存待审</Button>
-          <Button variant="contained" startIcon={<CheckIcon />} color="success" onClick={() => handleSavePrescription(true)}>
-            审方通过并发码
-          </Button>
+          <Button variant="contained" startIcon={<SaveIcon />} onClick={() => handleSavePrescription()}>提交药师审核</Button>
         </Box>
-        {savedRx?.pickupCode && (
+        {savedRx?.caseId && (
           <Alert severity="success" sx={{ mt: 2 }}>
-            取药码：<strong>{savedRx.pickupCode}</strong>
-            <Button size="small" sx={{ ml: 2 }} onClick={() => navigate(`/billing?code=${savedRx.pickupCode}`)}>去收银</Button>
+            已提交药师审核（病例 {savedRx.caseId.slice(-8)}）。取药码仅在药师签署且患者确认完成后签发。
+            <Button size="small" sx={{ ml: 2 }} onClick={() => navigate(`/ai/reviews/${savedRx.caseId}`)}>查看病例</Button>
           </Alert>
         )}
       </Paper>

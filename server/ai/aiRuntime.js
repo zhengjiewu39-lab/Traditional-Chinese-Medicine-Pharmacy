@@ -28,22 +28,33 @@ function setAiEnabled(enabled) {
 }
 
 function timeoutMs() {
-  return Number(process.env.AI_TIMEOUT_MS) || 8000;
+  return describeProvider().timeoutMs || 8000;
+}
+
+function reloadProvider() {
+  cachedProvider = undefined;
 }
 
 function describeRuntime() {
   const p = getProvider();
   const d = describeProvider();
+  const { getAiMode } = require('./aiMode');
+  const { getDataMode, isSyntheticMode } = require('../config/dataMode');
   return {
     ...d,
     provider: p ? p.id : 'disabled',
     isMock: Boolean(p?.isMock),
     model: p ? p.modelVersion : null,
     aiEnabled: isAiEnabled(),
-    degradedMode: !p || !isAiEnabled(),
+    aiMode: getAiMode(),
+    dataMode: getDataMode(),
+    syntheticData: isSyntheticMode(),
+    dataResidency: p?.dataResidency || null,
+    degradedMode: !p || !isAiEnabled() || getAiMode() === 'rules',
+    circuit: typeof p?.circuit === 'function' ? p.circuit() : null,
   };
 }
 
 module.exports = {
-  setProviderOverride, clearProviderOverride, getProvider, isAiEnabled, setAiEnabled, timeoutMs, describeRuntime,
+  setProviderOverride, clearProviderOverride, getProvider, isAiEnabled, setAiEnabled, timeoutMs, describeRuntime, reloadProvider,
 };

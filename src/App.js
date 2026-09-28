@@ -49,7 +49,6 @@ const PatientRecords = lazy(() => import('./pages/PatientRecords'));
 const TraceabilitySystem = lazy(() => import('./pages/TraceabilitySystem'));
 const QualityManagement = lazy(() => import('./pages/QualityManagement'));
 const MembershipManagement = lazy(() => import('./pages/MembershipManagement'));
-const PrescriptionReview = lazy(() => import('./pages/PrescriptionReview'));
 const PrescriptionTemplates = lazy(() => import('./pages/PrescriptionTemplates'));
 const PrescriptionAnalytics = lazy(() => import('./pages/PrescriptionAnalytics'));
 const ResearchHub = lazy(() => import('./pages/ResearchHub'));
@@ -93,8 +92,7 @@ const BUSINESS_ROUTES = [
   ['/patients', PatientRecords],
   ['/customers', Customers],
   ['/membership', MembershipManagement],
-  ['/prescriptions/templates', PrescriptionTemplates],
-  ['/prescriptions/review', PrescriptionReview],
+          ['/prescriptions/templates', PrescriptionTemplates],
   ['/knowledge', HerbalKnowledgeBase],
   ['/pickup', PatientPickup],
   ['/billing', Billing],
@@ -135,7 +133,9 @@ function App() {
               <Route path="/patient-service" element={<PatientService />} />
               <Route path="/patient/me" element={<MyPrescriptions />} />
               {BUSINESS_ROUTES.map(([p, Page]) => <Route key={p} path={p} element={<Page />} />)}
+              <Route path="/prescriptions/review" element={<Navigate to="/ai/review-queue" replace />} />
               {BUSINESS_ROUTES.map(([p]) => <Route key={`legacy${p}`} path={`/legacy${p}`} element={<Navigate to={p} replace />} />)}
+              <Route path="/legacy/prescriptions/review" element={<Navigate to="/ai/review-queue" replace />} />
               <Route path="/simulation/overview" element={<SimulationOverview />} />
               <Route path="/simulation/scenario" element={<ScenarioConfiguration />} />
               <Route path="/simulation/strategies" element={<StrategyComparison />} />

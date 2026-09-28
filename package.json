@@ -54,6 +54,8 @@
     "simulation:demo": "node scripts/simulation-demo.js",
     "simulation:test": "npm run test:server",
     "ai:evaluate": "node scripts/ai/evaluate.js",
+    "ai:evaluate:live": "node scripts/ai/evaluate-live.js",
+    "ai:migrate-legacy": "node scripts/ai/migrate-legacy.js",
     "ai:seal-knowledge": "node scripts/ai/seal-knowledge.js",
     "simulation:export": "node scripts/simulation-export.js",
     "research:reproduce": "node scripts/research-reproduce.js",

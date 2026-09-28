@@ -8,8 +8,8 @@ const zh = {
     legacyPageTitle: 'Legacy演示功能',
   },
   roles: {
-    admin: '管理员', pharmacist: '药师', technician: '调剂员', researcher: '研究员', patient: '患者',
-    adminMode: '管理模式', pharmacistMode: '药师模式', technicianMode: '调剂模式', researcherMode: '研究模式', patientMode: '患者模式',
+    admin: '管理员', pharmacist: '药师', prescriber: '医师', technician: '调剂员', researcher: '研究员', patient: '患者',
+    adminMode: '管理模式', pharmacistMode: '药师模式', prescriberMode: '医师模式', technicianMode: '调剂模式', researcherMode: '研究模式', patientMode: '患者模式',
   },
   auth: { logout: '退出登录', login: '登录', loggingIn: '登录中…', loginFailed: '登录失败，请检查用户名和密码' },
   disclaimer: {
@@ -39,7 +39,7 @@ const zh = {
     sectionTwin: '药房数字孪生',
     workbench: '智能中药药房工作台',
     intake: '处方接收与录入',
-    doctor: '医师开方',
+    doctor: '医师开方（草稿与AI提示）',
     patients: '患者档案',
     customers: '客户管理',
     membership: '会员管理',
@@ -47,7 +47,7 @@ const zh = {
     aiCases: '三轨筛查记录',
     aiKnowledge: '证据知识库',
     herbKnowledge: '药材知识库',
-    reviewQueue: '药师审核队列',
+    reviewQueue: '异常优先审核队列',
     reviewDetail: '处方审核详情',
     legacyReview: '传统审方（规则）',
     dispensing: '调剂与复核',

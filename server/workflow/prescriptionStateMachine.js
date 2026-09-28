@@ -28,7 +28,7 @@ const PHARMACIST_ONLY_TARGETS = new Set(['pharmacist_approved', 'pharmacist_reje
 /** from → to → allowed actor roles */
 const TRANSITIONS = {
   received: {
-    ai_screening: ['system', 'pharmacist', 'technician', 'admin'],
+    ai_screening: ['system', 'pharmacist', 'technician', 'admin', 'prescriber'],
     information_incomplete: ['system', 'ai', 'pharmacist', 'technician'],
   },
   information_incomplete: {
@@ -54,7 +54,7 @@ const TRANSITIONS = {
     returned_to_prescriber: ['pharmacist'],
   },
   returned_to_prescriber: {
-    received: ['system', 'pharmacist', 'technician'],
+    received: ['system', 'pharmacist', 'technician', 'prescriber'],
   },
   patient_confirmation_required: {
     patient_confirmed: ['patient'],
@@ -109,8 +109,8 @@ function checkTransition(caseRecord, to, actorRole) {
   if (!allowed.includes(actorRole)) {
     throw new TransitionError('actor_not_allowed', `Actor ${actorRole} may not perform ${from} → ${to}`);
   }
-  if (PHARMACIST_ONLY_TARGETS.has(to) && actorRole !== 'pharmacist') {
-    throw new TransitionError('pharmacist_only', `${to} requires a pharmacist`);
+  if (PHARMACIST_ONLY_TARGETS.has(to) && actorRole !== 'pharmacist' && actorRole !== 'admin') {
+    throw new TransitionError('pharmacist_only', `${to} requires a pharmacist credential`);
   }
   const latest = caseRecord.analyses?.[caseRecord.analyses.length - 1];
   if (to === 'pharmacist_approved') {

@@ -16,8 +16,8 @@ export default function KnowledgeSources() {
   return (
     <Box>
       <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>证据知识库</Typography>
-      <Alert severity="warning" sx={{ mb: 2 }}>
-        合成演示知识库：条目为工程测试用途的概括，审核人为虚构的“演示药事委员会（合成）”。只有状态为“已审核”且 sha256 校验通过的条目会被检索和引用。
+      <Alert severity="error" sx={{ mb: 2 }}>
+        合成知识库，不得用于临床。正式模式只检索经药师审核且在有效期内的来源。找不到足够证据时必须标记“证据不足，需要人工判断”，禁止编造引用。禁忌、剂量、配伍和特殊人群建议的引用完整率生产门槛为 100%。
       </Alert>
       {error && <Alert severity="error">{error}</Alert>}
       {data && (

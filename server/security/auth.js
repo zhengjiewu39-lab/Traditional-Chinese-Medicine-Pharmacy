@@ -9,7 +9,7 @@ const TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
 const BCRYPT_COST = 10;
 const JWT_HEADER = { alg: 'HS256', typ: 'JWT' };
 const PROFILE_FIELDS = ['name', 'email', 'phone', 'title'];
-const VALID_ROLES = new Set(['admin', 'pharmacist', 'technician', 'patient', 'researcher']);
+const VALID_ROLES = new Set(['admin', 'pharmacist', 'prescriber', 'technician', 'patient', 'researcher']);
 
 function assertProductionAuthConfig() {
   if (!IS_PROD) return;
@@ -42,15 +42,19 @@ function loadUsers() {
     : (ALLOW_DEMO ? {
       admin: {
         password: process.env.TCM_ADMIN_PASSWORD || 'admin123',
-        user: { id: 1, username: 'admin', name: '管理员', role: 'admin' },
+        user: { id: 1, username: 'admin', name: '管理员', role: 'admin', credentials: [] },
       },
       pharmacist: {
         password: process.env.TCM_PHARMACIST_PASSWORD || 'pharm123',
-        user: { id: 2, username: 'pharmacist', name: '李药师', role: 'pharmacist' },
+        user: { id: 2, username: 'pharmacist', name: '李药师', role: 'pharmacist', credentials: ['pharmacist'] },
       },
       pharmacist2: {
         password: process.env.TCM_PHARMACIST2_PASSWORD || 'pharm456',
-        user: { id: 3, username: 'pharmacist2', name: '王药师', role: 'pharmacist' },
+        user: { id: 3, username: 'pharmacist2', name: '王药师', role: 'pharmacist', credentials: ['pharmacist'] },
+      },
+      prescriber: {
+        password: process.env.TCM_PRESCRIBER_PASSWORD || 'doc123',
+        user: { id: 7, username: 'prescriber', name: '周医师', role: 'prescriber' },
       },
       technician: {
         password: process.env.TCM_TECHNICIAN_PASSWORD || 'tech123',
@@ -125,16 +129,16 @@ function verifyToken(authHeader) {
 }
 
 function isPublicPath(path) {
-  if (path === '/api/health' || path === '/api/auth/login') return true;
-  if (/^\/api\/prescriptions\/pickup\/[^/]+$/i.test(path) && path !== '/api/prescriptions/pickup/queue') {
-    return true;
-  }
-  if (/^\/api\/patient\/(confirmation|feedback)\/[A-Za-z0-9_-]{20,100}$/.test(path)) return true;
+  const p = String(path || '').split('?')[0];
+  if (p === '/api/health' || p === '/api/auth/login') return true;
+  if (p === '/api/pickup/redeem' || /^\/api\/pickup\/redeem\/?$/.test(p)) return true;
+  if (/^\/api\/patient\/(confirmation|feedback)\/[A-Za-z0-9_-]{20,100}$/.test(p)) return true;
   return false;
 }
 
 function requireAuth(req, res, next) {
-  if (!req.path.startsWith('/api/') || isPublicPath(req.path)) return next();
+  const p = String(req.originalUrl || req.path || '').split('?')[0];
+  if (!p.startsWith('/api/') || isPublicPath(p)) return next();
   const user = verifyToken(req.headers.authorization);
   if (!user) return res.status(401).json({ success: false, message: '未授权，请先登录' });
   req.user = user;

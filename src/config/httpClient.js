@@ -20,7 +20,9 @@ export function attachAuthInterceptors(client) {
   client.interceptors.response.use(
     (response) => response,
     (error) => {
-      if (error.response?.status === 401) {
+      const url = String(error.config?.url || '');
+      const configuringAi = url.includes('/ai/runtime/');
+      if (error.response?.status === 401 && !configuringAi) {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         if (!window.location.pathname.startsWith('/login')) {
