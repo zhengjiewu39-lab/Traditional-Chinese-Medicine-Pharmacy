@@ -6,7 +6,7 @@
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
     "@mui/icons-material": "^5.15.12",
-    "@mui/lab": "^5.0.0-alpha.167",
+    "@mui/lab": "^5.0.0-alpha.177",
     "@mui/material": "^5.15.12",
     "axios": "^1.9.0",
     "bcryptjs": "^3.0.3",
