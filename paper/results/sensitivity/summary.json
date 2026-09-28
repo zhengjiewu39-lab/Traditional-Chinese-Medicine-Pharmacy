@@ -1,0 +1,65 @@
+{
+  "method": "Latin hypercube sampling + partial rank correlation coefficients (PRCC)",
+  "nSamples": 256,
+  "seeds": [
+    500001,
+    500002,
+    500003,
+    500004,
+    500005
+  ],
+  "tolerance": 0.01,
+  "betterCount": 132,
+  "worseCount": 0,
+  "tieCount": 124,
+  "factors": [
+    {
+      "key": "surge",
+      "label": "Demand surge magnitude",
+      "lo": 1,
+      "hi": 2.2
+    },
+    {
+      "key": "duration",
+      "label": "Disruption duration (days)",
+      "lo": 10,
+      "hi": 45
+    },
+    {
+      "key": "leadTime",
+      "label": "Primary supplier lead time (days)",
+      "lo": 1,
+      "hi": 6
+    },
+    {
+      "key": "whStock",
+      "label": "Warehouse initial stock (days)",
+      "lo": 4,
+      "hi": 20
+    },
+    {
+      "key": "transport",
+      "label": "Transport capacity (× baseline demand)",
+      "lo": 1,
+      "hi": 2
+    },
+    {
+      "key": "floor",
+      "label": "ERRRA minimum service floor φ",
+      "lo": 0.8,
+      "hi": 1
+    },
+    {
+      "key": "ruralVuln",
+      "label": "Rural vulnerability weight",
+      "lo": 1,
+      "hi": 3
+    },
+    {
+      "key": "transferCost",
+      "label": "Lateral transfer cost per unit",
+      "lo": 0,
+      "hi": 3
+    }
+  ]
+}

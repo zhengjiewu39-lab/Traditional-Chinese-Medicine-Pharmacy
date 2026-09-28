@@ -1,5 +1,5 @@
 {
-  "note": "Calibration seeds tune reorder-point (z, qScale) only. Test seeds are used only for reported results. Sets are disjoint.",
+  "note": "Calibration seeds tune the (s,Q) baseline only. Test seeds are used only for reported results. Sensitivity seeds only for LHS. Sets are disjoint.",
   "calibration": [
     900001,
     900002,

@@ -8,7 +8,10 @@ const multer = require('multer');
 const { getStore } = require('./server/data/store');
 const { computeSalesStats } = require('./server/services/stats');
 const { analyzePrescription } = require('./server/services/prescriptionAnalyzer');
-const { requireAuth, authenticate, verifyToken, ALLOW_DEMO } = require('./server/security/auth');
+const {
+  requireAuth, authenticate, verifyToken, sanitizeProfileUpdate, ALLOW_DEMO,
+} = require('./server/security/auth');
+const { validateUploadedText, MAX_BYTES } = require('./server/security/uploadValidation');
 
 const inventoryRoutes = require('./server/routes/inventory');
 const customerRoutes = require('./server/routes/customers');
@@ -32,7 +35,24 @@ const corsOrigins = process.env.CORS_ORIGIN
   ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim())
   : null;
 
-app.use(helmet({ contentSecurityPolicy: false }));
+app.use(helmet({
+  contentSecurityPolicy: {
+    useDefaults: true,
+    directives: {
+      'default-src': ["'self'"],
+      'script-src': ["'self'"],
+      'style-src': ["'self'", "'unsafe-inline'"],
+      'img-src': ["'self'", 'data:', 'blob:'],
+      'font-src': ["'self'", 'data:'],
+      'connect-src': ["'self'", ...(corsOrigins || [])],
+      'object-src': ["'none'"],
+      'frame-ancestors': ["'none'"],
+      'base-uri': ["'self'"],
+      'form-action': ["'self'"],
+      'upgrade-insecure-requests': process.env.NODE_ENV === 'production' ? [] : null,
+    },
+  },
+}));
 app.use(cors({
   origin: corsOrigins || (process.env.NODE_ENV === 'production' ? false : true),
   credentials: true,
@@ -48,15 +68,9 @@ app.use('/api/', rateLimit({
 app.use(requireAuth);
 
 const upload = multer({
-  dest: path.join(__dirname, 'uploads/'),
-  limits: { fileSize: 5 * 1024 * 1024, files: 1 },
-  fileFilter: (_req, file, cb) => {
-    const ok = /\.(txt|csv|json|xml)$/i.test(file.originalname);
-    cb(ok ? null : new Error('仅支持 .txt / .csv / .json / .xml 文件'), ok);
-  },
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_BYTES, files: 1, fields: 20 },
 });
-
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
@@ -106,9 +120,15 @@ app.use('/api/traceability', traceabilityRoutes);
 app.use('/api/simulation', simulationRoutes);
 
 // 处方文件上传分析
-app.post('/api/prescriptions/analyze/file', upload.single('file'), (req, res) => {
-  const text = req.body.prescription || req.file?.originalname || '';
-  res.json(analyzePrescription({ prescription: text, ...req.body }));
+app.post('/api/prescriptions/analyze/file', (req, res) => {
+  upload.single('file')(req, res, (err) => {
+    if (err) return res.status(400).json({ success: false, message: err.message });
+    if (!req.file) return res.status(400).json({ success: false, message: '缺少文件' });
+    const checked = validateUploadedText(req.file);
+    if (checked.error) return res.status(400).json({ success: false, message: `文件被拒绝：${checked.error}` });
+    const { prescription, ...rest } = req.body || {};
+    return res.json(analyzePrescription({ ...rest, prescription: prescription || checked.value }));
+  });
 });
 
 // ── 认证 ──
@@ -133,7 +153,9 @@ app.get('/api/auth/me', (req, res) => {
 
 app.put('/api/auth/profile', (req, res) => {
   if (!req.user) return res.status(401).json({ success: false, message: '未授权访问' });
-  res.json({ ...req.user, ...req.body });
+  const update = sanitizeProfileUpdate(req.body);
+  if (update.error) return res.status(400).json({ success: false, message: update.error });
+  return res.json({ ...req.user, ...update.value });
 });
 
 app.post('/api/auth/change-password', (req, res) => {
@@ -153,7 +175,7 @@ app.get('/api/health', (req, res) => {
     version: '2.1',
     features: ['supply-simulation-v1', 'legacy-har-cdss', 'synthetic-data-only'],
     /** Bump when simulation router adds breaking/new research endpoints (presets, run-group, …). */
-    simulationRouteVersion: 2,
+    simulationRouteVersion: 3,
   });
 });
 

@@ -9,24 +9,26 @@ function isEventActive(event, day) {
   return day >= event.startDay && day < getEventEndDay(event);
 }
 
+/**
+ * Region-scoped event multipliers on day `day`. supplyDisruption events are supplier-scoped and
+ * handled in supplyNetwork.js (the generator adds eventFactors.supplyByWarehouse).
+ */
 function computeEventFactors(scenario, day) {
   const demand = { urban: 1, suburban: 1, rural: 1 };
-  const supply = { urban: 1, suburban: 1, rural: 1 };
   const transit = { urban: 1, suburban: 1, rural: 1 };
   const lead = { urban: 1, suburban: 1, rural: 1 };
 
   for (const ev of scenario.events || []) {
-    if (!isEventActive(ev, day)) continue;
+    if (!isEventActive(ev, day) || ev.type === 'supplyDisruption') continue;
     const targets = ev.targetRegions || REGION_TYPES;
     for (const rt of targets) {
       if (!REGION_TYPES.includes(rt)) continue;
       if (ev.type === 'demandSurge') demand[rt] *= ev.magnitude;
-      if (ev.type === 'supplyDisruption') supply[rt] *= ev.magnitude;
       if (ev.type === 'roadDisruption') transit[rt] *= ev.magnitude;
       if (ev.type === 'leadTimeExtension') lead[rt] *= ev.magnitude;
     }
   }
-  return { demand, supply, transit, lead };
+  return { demand, transit, lead, supplyByWarehouse: {} };
 }
 
 function lastEventEndDay(scenario) {

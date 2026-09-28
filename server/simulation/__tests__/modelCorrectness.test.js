@@ -1,22 +1,15 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert');
-const path = require('path');
 const { decideReplenishment, lineEconomics, buildLines } = require('../policyEngine');
 const { markShipped } = require('../inventoryEngine');
 const { applyWarehouseSupplyCaps } = require('../dispatchEngine');
-const { allocateTruckCapacityByWarehouse, proportionalShares, NEUTRAL_FACTORS } = require('../distributionEngine');
-const { computeRegionalDeficits } = require('../equitySignals');
+const { allocateTruckCapacityByWarehouse, proportionalShares } = require('../distributionEngine');
+const { computeRegionalDeficits, computeRegionalNeed } = require('../equitySignals');
 const { waterFillStage1 } = require('../errra');
 const { runSimulation, checkConservation, ConservationError } = require('../simulationEngine');
 const { generateScenarioInstance } = require('../scenarioGenerator');
 const { DEFAULT_SCENARIO } = require('../scenarioSchema');
-const { ALL_POLICIES, ABLATIONS, smallScenario, makeCtx, orderQty } = require('./testHelpers');
-
-const MATRIX = require(path.join(__dirname, '../../../paper/config/scenario-matrix.json'));
-const matrixScenario = (prefix, seed, days) => {
-  const s = MATRIX.scenarios.find((x) => x.key.startsWith(prefix)).scenario;
-  return { ...s, randomSeed: seed, ...(days ? { simulationDays: days } : {}) };
-};
+const { ALL_POLICIES, ABLATIONS, smallScenario, makeCtx, orderQty, matrixScenario } = require('./testHelpers');
 
 const PH = 'PH1';
 const DRUG = 'D1';
@@ -79,19 +72,18 @@ describe('inventory position uses onHand + onOrder − backlog', () => {
 
 describe('policy ranking is preserved through supply and truck caps', () => {
   const warehouses = [{ id: 'W1', dailyDispatchCapacity: 150, truckCapacityUnits: 120 }];
-  const pharmacies = [{ id: 'P1', warehouseId: 'W1', regionType: 'rural' }, { id: 'P2', warehouseId: 'W1', regionType: 'urban' }];
   const mk = (rank, drugId, qty, pharmacyId = 'P1') => ({ pharmacyId, warehouseId: 'W1', drugId, qty, policyRank: rank });
 
-  it('supply cap serves orders in policyRank order, not list order', () => {
+  it('dispatch cap serves orders in policyRank order, not list order', () => {
     const orders = [mk(2, 'D1', 100), mk(0, 'D1', 100, 'P2'), mk(1, 'D1', 100)];
-    const { accepted, deferred } = applyWarehouseSupplyCaps(orders, warehouses, pharmacies, NEUTRAL_FACTORS, [{ id: 'W1', onHand: { D1: 1000 } }]);
+    const { accepted, deferred } = applyWarehouseSupplyCaps(orders, warehouses, [{ id: 'W1', onHand: { D1: 1000 } }]);
     assert.deepStrictEqual(accepted.map((o) => [o.policyRank, o.qty]), [[0, 100], [1, 50]]);
-    assert.deepStrictEqual(deferred.map((o) => [o.policyRank, o.qty, o.reason]), [[1, 50, 'supply_cap'], [2, 100, 'supply_cap']]);
+    assert.deepStrictEqual(deferred.map((o) => [o.policyRank, o.qty, o.reason]), [[1, 50, 'dispatch_cap'], [2, 100, 'dispatch_cap']]);
   });
 
   it('units the warehouse cannot issue do not consume dispatch capacity', () => {
     const orders = [mk(0, 'D2', 100), mk(1, 'D1', 100)];
-    const { accepted, deferred } = applyWarehouseSupplyCaps(orders, warehouses, pharmacies, NEUTRAL_FACTORS, [{ id: 'W1', onHand: { D1: 1000, D2: 0 } }]);
+    const { accepted, deferred } = applyWarehouseSupplyCaps(orders, warehouses, [{ id: 'W1', onHand: { D1: 1000, D2: 0 } }]);
     assert.deepStrictEqual(accepted.map((o) => [o.policyRank, o.qty]), [[1, 100]]);
     assert.deepStrictEqual(deferred.map((o) => o.reason), ['warehouse_stock']);
   });
@@ -109,19 +101,19 @@ describe('policy ranking is preserved through supply and truck caps', () => {
     assert.deepStrictEqual(proportionalShares([5, 7], 100), [5, 7]);
     const orders = [mk(0, 'D1', 100), mk(1, 'D1', 300)].map((o) => ({ ...o, rationing: 'proportional' }));
     const wh = [{ id: 'W1', dailyDispatchCapacity: 200, truckCapacityUnits: 1000 }];
-    const { accepted } = applyWarehouseSupplyCaps(orders, wh, pharmacies, NEUTRAL_FACTORS, [{ id: 'W1', onHand: { D1: 1000 } }]);
+    const { accepted } = applyWarehouseSupplyCaps(orders, wh, [{ id: 'W1', onHand: { D1: 1000 } }]);
     assert.deepStrictEqual(accepted.map((o) => o.qty), [50, 150]);
   });
 
-  it('ERRRA plans within dispatch capacity, so its orders are never cut by the supply cap', () => {
-    const r = runSimulation({ scenario: matrixScenario('S09', 3, 60), policyId: 'equity-constrained-rolling-horizon' });
-    const cut = r.runLog.daily.flatMap((d) => d.orderLog).filter((o) => o.unshippedReasons.some((u) => u.reason === 'supply_cap'));
+  it('ERRRA plans within dispatch capacity, so its orders are never cut by the dispatch cap', () => {
+    const r = runSimulation({ scenario: matrixScenario('M8-tight-transport', 3, 70), policyId: 'equity-constrained-rolling-horizon' });
+    const cut = r.runLog.daily.flatMap((d) => d.orderLog).filter((o) => o.unshippedReasons.some((u) => u.reason === 'dispatch_cap'));
     assert.strictEqual(cut.length, 0);
   });
 
   for (const policyId of ['cost-first', 'equity-aware']) {
-    it(`${policyId}: in a stressed run, once an order is cut by supply cap, every lower-ranked order in that warehouse gets no capacity`, () => {
-      const scenario = matrixScenario('S09', 3, 60);
+    it(`${policyId}: in a stressed run, once an order is cut by the dispatch cap, every lower-ranked order in that warehouse gets no capacity`, () => {
+      const scenario = matrixScenario('M8-tight-transport', 3, 70);
       const whOf = Object.fromEntries(generateScenarioInstance(scenario).pharmacies.map((p) => [p.id, p.warehouseId]));
       const r = runSimulation({ scenario, policyId });
       let checkedDays = 0;
@@ -130,7 +122,7 @@ describe('policy ranking is preserved through supply and truck caps', () => {
         for (const o of day.orderLog) (byWh[whOf[o.pharmacyId]] ||= []).push(o);
         for (const list of Object.values(byWh)) {
           list.sort((a, b) => a.requestRank - b.requestRank);
-          const cut = list.findIndex((o) => o.unshippedReasons.some((u) => u.reason === 'supply_cap'));
+          const cut = list.findIndex((o) => o.unshippedReasons.some((u) => u.reason === 'dispatch_cap'));
           if (cut < 0) continue;
           checkedDays += 1;
           for (const o of list.slice(cut + 1)) assert.strictEqual(o.afterSupplyQty, 0, `day ${day.day} rank ${o.requestRank}`);
@@ -138,7 +130,7 @@ describe('policy ranking is preserved through supply and truck caps', () => {
           assert.deepStrictEqual(shippedRanks, [...shippedRanks].sort((a, b) => a - b));
         }
       }
-      assert.ok(checkedDays > 0, 'scenario must bind the supply cap');
+      assert.ok(checkedDays > 0, 'scenario must bind the dispatch cap');
     });
   }
 });
@@ -177,16 +169,69 @@ describe('equity signal direction (deficit ≥ 0)', () => {
     return { res, ruralMeanRank: mean(ranks('rural')), urbanMeanRank: mean(ranks('urban')) };
   }
 
-  it('equity-aware: rural worse moves rural orders up; urban worse does not; equal gives no bonus', () => {
-    const equal = equityRun({ urban: row(0.9), suburban: row(0.9), rural: row(0.9) });
-    const ruralWorse = equityRun({ urban: row(0.98), suburban: row(0.98), rural: row(0.6, 0.2, 3) });
-    const urbanWorse = equityRun({ urban: row(0.6, 0.2, 3), suburban: row(0.98), rural: row(0.98) });
-    assert.ok(equal.res.decisions.every((d) => !d.equityBonus));
-    assert.ok(ruralWorse.ruralMeanRank < equal.ruralMeanRank);
-    assert.ok(urbanWorse.ruralMeanRank >= equal.ruralMeanRank);
-    assert.ok(urbanWorse.urbanMeanRank < equal.urbanMeanRank);
+  it('equity-aware: rural worse moves rural orders up; urban worse does not; full service gives no bonus', () => {
+    const full = equityRun({ urban: row(1), suburban: row(1), rural: row(1) });
+    const ruralWorse = equityRun({ urban: row(1), suburban: row(1), rural: row(0.6, 0.2, 3) });
+    const urbanWorse = equityRun({ urban: row(0.6, 0.2, 3), suburban: row(1), rural: row(1) });
+    assert.ok(full.res.decisions.every((d) => !d.equityBonus));
+    assert.ok(ruralWorse.ruralMeanRank < full.ruralMeanRank);
+    assert.ok(urbanWorse.ruralMeanRank >= full.ruralMeanRank);
+    assert.ok(urbanWorse.urbanMeanRank < full.urbanMeanRank);
     assert.ok(ruralWorse.res.decisions.filter((d) => d.regionType === 'urban').every((d) => !d.equityBonus));
     assert.ok(urbanWorse.res.decisions.filter((d) => d.regionType === 'rural').every((d) => !d.equityBonus));
+  });
+
+  it('needScore is monotone: more unmet essential demand, higher vulnerability or larger backlog never lowers priority', () => {
+    const v = { urban: 1, suburban: 1.2, rural: 1.6 };
+    const grid = [0, 0.1, 0.3, 0.6, 1];
+    for (const rt of ['urban', 'suburban', 'rural']) {
+      for (const br of grid) {
+        let prev = -Infinity;
+        for (const gap of grid) {
+          const n = computeRegionalNeed({ [rt]: row(1 - gap, br) }, v)[rt].needScore;
+          assert.ok(n >= prev - 1e-12, `${rt} gap ${gap} br ${br}`);
+          prev = n;
+        }
+        prev = -Infinity;
+        for (const b of grid) {
+          const n = computeRegionalNeed({ [rt]: row(0.7, b) }, v)[rt].needScore;
+          assert.ok(n >= prev - 1e-12);
+          prev = n;
+        }
+      }
+    }
+    for (const vr of [0.5, 1, 1.6, 3]) {
+      const lo = computeRegionalNeed({ urban: row(0.7, 0.2), rural: row(0.7, 0.2) }, { urban: 1, rural: vr });
+      const hi = computeRegionalNeed({ urban: row(0.7, 0.2), rural: row(0.7, 0.2) }, { urban: 1, rural: vr * 1.5 });
+      assert.ok(hi.rural.needScore >= lo.rural.needScore - 1e-12);
+    }
+    const two = computeRegionalNeed({ urban: row(0.9, 0.1), rural: row(0.6, 0.3) }, v);
+    assert.ok(two.rural.needScore > two.urban.needScore);
+  });
+
+  it('equity-aware: holding the line fixed, a more severe or more vulnerable region never gets a lower priorityScore', () => {
+    const scoresFor = (stats, ruralV = 1.6) => {
+      const scenario = smallScenario({ regions: { rural: { vulnerabilityWeight: ruralV } } });
+      const ctx = makeCtx({
+        scenario,
+        policyId: 'equity-aware',
+        regionalStats: stats,
+        mutate: (c) => { for (const p of c.pharmacyStates) for (const k of Object.keys(p.onHand)) p.onHand[k] = 0; },
+      });
+      return new Map(decideReplenishment(ctx).decisions
+        .filter((d) => d.regionType === 'rural')
+        .map((d) => [`${d.pharmacyId}|${d.drugId}`, d.priorityScore]));
+    };
+    const others = { urban: row(0.95, 0.05), suburban: row(0.9, 0.05) };
+    const mild = scoresFor({ ...others, rural: row(0.9, 0.05) });
+    const severe = scoresFor({ ...others, rural: row(0.6, 0.3) });
+    const vulnerable = scoresFor({ ...others, rural: row(0.9, 0.05) }, 3.2);
+    assert.ok(mild.size > 0);
+    for (const [k, s] of mild) {
+      assert.ok(severe.get(k) >= s - 1e-9, `severity lowered ${k}`);
+      assert.ok(vulnerable.get(k) >= s - 1e-9, `vulnerability lowered ${k}`);
+    }
+    assert.ok([...mild].some(([k, s]) => severe.get(k) > s));
   });
 
   const line = (key, regionType, avail, need) => ({ key, regionType, warehouseId: 'W1', drugId: 'D1', v: 1, avail, need, pharmacyIndex: Number(key.slice(1)) });
@@ -218,7 +263,7 @@ describe('cost-first net-benefit selection', () => {
     assert.strictEqual(res.orders.length, 0);
     const rejected = res.decisions.filter((d) => !d.selected);
     assert.ok(rejected.length > 0);
-    assert.ok(rejected.every((d) => d.notSelectedReason === 'negative_net_benefit' && d.netBenefit <= 0));
+    assert.ok(rejected.every((d) => d.notSelectedReason === 'no_expected_benefit' && d.netBenefit <= 0));
   });
 
   it('selected lines have positive net benefit', () => {
@@ -277,12 +322,18 @@ describe('extreme-condition tests (all policies and ablations, conservation chec
     }
   });
 
-  it('complete supply cut → no shipments and no inbound during the cut', () => {
-    const scenario = smallScenario({
-      events: [{ type: 'supplyDisruption', startDay: 0, durationDays: 40, magnitude: 0, targetRegions: ['urban', 'suburban', 'rural'] }],
-    });
+  it('complete supply cut → no upstream supply, and pharmacies receive at most the initial warehouse stock', () => {
+    const cut = [{ type: 'supplyDisruption', startDay: 0, durationDays: 40, magnitude: 0, supplierTier: 'all' }];
+    const scenario = smallScenario({ events: cut });
     for (const p of everyPolicy) {
       const r = run(scenario, p);
+      assert.strictEqual(sum(r.runLog.daily, (d) => d.upstreamShipped + d.upstreamReceived), 0, p);
+      const initialWh = r.runLog.inventoryAudit.rows.reduce((s, x) => s + x.warehouses.initialStock, 0);
+      assert.ok(sum(r.runLog.daily, (d) => d.shippedUnits) <= initialWh, p);
+    }
+    const empty = smallScenario({ events: cut, logistics: { warehouseInitialStockDays: 0 } });
+    for (const p of everyPolicy) {
+      const r = run(empty, p);
       assert.strictEqual(sum(r.runLog.daily, (d) => d.shippedUnits), 0, p);
       assert.ok(r.metrics.fillRate < 0.5, `${p} fill ${r.metrics.fillRate}`);
     }
@@ -291,7 +342,7 @@ describe('extreme-condition tests (all policies and ablations, conservation chec
 
 describe('conservation', () => {
   it('stock, pipeline and backlog identities hold every day in compound and extreme scenarios', () => {
-    for (const key of ['S10', 'S12', 'S14']) {
+    for (const key of ['M5-compound', 'M7-tight-warehouse', 'M9-extreme']) {
       for (const p of [...ALL_POLICIES, ...ABLATIONS]) {
         assert.doesNotThrow(() => runSimulation({ scenario: matrixScenario(key, 5), policyId: p, logLevel: 'summary', checkConservation: true }), `${key} ${p}`);
       }

@@ -26,6 +26,11 @@ function phaseForDay(day, events = []) {
   return 'recovery';
 }
 
+function diffRow(d) {
+  if (!d || d.meanDiff == null) return '—';
+  return `${d.meanDiff.toFixed(4)} [${d.ci95Low.toFixed(4)}, ${d.ci95High.toFixed(4)}]`;
+}
+
 function ciRow(stat) {
   if (!stat || stat.mean == null) return '—';
   if (stat.ci95Low != null) {
@@ -66,14 +71,14 @@ export default function Results() {
 
   useEffect(() => {
     const gid = detail?.experimentGroupId;
-    const embedded = detail?.groupSummary?.pairedComparisons;
+    const embedded = detail?.groupSummary?.pairedComparisons?.pairs;
     if (embedded?.length) {
       setGroupPaired(embedded);
       return;
     }
     if (!gid) return;
     simulationApi.getGroupAnalysis(gid)
-      .then((res) => setGroupPaired(res.data.groupSummary?.pairedComparisons || []))
+      .then((res) => setGroupPaired(res.data.groupSummary?.pairedComparisons?.pairs || []))
       .catch(() => setGroupPaired([]));
   }, [detail]);
 
@@ -312,7 +317,9 @@ export default function Results() {
                   <TableRow>
                     <TableCell>{t('results.policyA')}</TableCell>
                     <TableCell>{t('results.policyB')}</TableCell>
-                    <TableCell>{t('results.stockoutRateDiff')}</TableCell>
+                    <TableCell>{t('results.worstRegionDiff')}</TableCell>
+                    <TableCell>{t('results.unmetDiff')}</TableCell>
+                    <TableCell>{t('results.costDiff')}</TableCell>
                     <TableCell>{t('results.pairedN')}</TableCell>
                   </TableRow>
                 </TableHead>
@@ -321,7 +328,9 @@ export default function Results() {
                     <TableRow key={`${p.policyA}-${p.policyB}`}>
                       <TableCell>{p.policyA}</TableCell>
                       <TableCell>{p.policyB}</TableCell>
-                      <TableCell>{ciRow(p.stockoutRateDiff)}</TableCell>
+                      <TableCell>{diffRow(p.metrics?.worstRegionEssentialFillRate)}</TableCell>
+                      <TableCell>{diffRow(p.metrics?.cumulativeUnmetDemand)}</TableCell>
+                      <TableCell>{diffRow(p.metrics?.totalCost)}</TableCell>
                       <TableCell>{p.pairedReplicates}</TableCell>
                     </TableRow>
                   ))}

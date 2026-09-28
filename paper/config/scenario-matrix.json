@@ -1,16 +1,21 @@
 {
-  "matrixVersion": "1.1.0",
-  "frozenAt": "2026-09-26T22:57:00.991Z",
-  "note": "Pre-registered synthetic scenario matrix. Do not edit after results are generated; add a new matrixVersion instead.",
+  "matrixVersion": "2.0.0",
+  "frozenAt": "2026-09-28T00:12:07.994Z",
+  "note": "Pre-registered synthetic scenario matrix (合成场景假设). Do not edit after results are generated; add a new matrixVersion instead.",
   "revisions": [
     {
       "version": "1.0.0",
-      "change": "initial matrix (upstreamInboundCoverage 1.05)"
+      "change": "initial matrix, engine v3 (upstreamInboundCoverage 1.05)"
     },
     {
       "version": "1.1.0",
-      "change": "upstreamInboundCoverage 1.05 → 1.2 (all scenarios except S12, which keeps its own 1.0)",
-      "reason": "Mechanics check on non-reporting seeds 1–3 showed backlog accumulated during disruption could not be cleared within the 60-day recovery phase under any policy, so every recovery-time metric was right-censored. Applied before any calibration- or test-seed run; affects all policies identically."
+      "change": "upstreamInboundCoverage 1.05 → 1.2",
+      "reason": "backlog could not clear within the recovery phase under any policy (engine v3)."
+    },
+    {
+      "version": "2.0.0",
+      "change": "engine v4: supplier network (primary + backup per warehouse), supplier-scoped supply disruptions, lateral transfers, warehouse capacity; nine scenarios M1–M9 built from SCENARIO_PRESETS; base warehouse stock 20 → 10 days; M3 = primary suppliers down; M7 warehouse stock 4 days",
+      "reason": "Supply disruptions in v1 throttled whole-warehouse dispatch; in v4 they act on suppliers and reach pharmacies through warehouse stock. With 20 days of warehouse stock a single-mechanism shock of 30 days was absorbed completely (no shortage under any policy, checked on non-reporting seeds 1–3), so the base buffer was set below the deficit of a primary-supplier outage (0.6 × 30 = 18 demand-days). Applied before any calibration- or test-seed run and identically to every policy."
     }
   ],
   "horizonDays": 120,
@@ -41,35 +46,50 @@
     "errra-no-vulnerability",
     "errra-no-rolling",
     "errra-no-essential-priority",
-    "errra-no-compound-awareness"
+    "errra-no-compound-awareness",
+    "errra-no-transfers",
+    "errra-no-supplier-redundancy"
   ],
   "ablationScenarios": [
-    "S04-surge-high",
-    "S07-supply-high",
-    "S08-rural-road",
-    "S09-surge-supply",
-    "S10-surge-supply-road",
-    "S14-extreme"
+    "M2-demand-surge",
+    "M3-supply-disruption",
+    "M4-transport-disruption",
+    "M5-compound",
+    "M8-tight-transport",
+    "M9-extreme"
   ],
-  "sensitivityBaseScenario": "S10-surge-supply-road",
+  "sensitivityBaseScenario": "M5-compound",
   "scenarios": [
     {
-      "key": "S01-baseline",
-      "label": "No disturbance",
+      "key": "M1-normal",
+      "label": "Normal baseline (no events)",
+      "scenarioHash": "23e6c4963f22bd5991dff9fefff7be1cc00bab991837a0f4d340742f356fb5e7",
       "scenario": {
-        "schemaVersion": "2.1.0",
-        "id": "S01-baseline",
-        "name": "No disturbance",
-        "description": "12 pharmacies (4 urban / 4 suburban / 4 rural), 2 warehouses, 8 SKUs; 30-day warm-up, 30-day disruption window, 60-day recovery.",
+        "schemaVersion": "3.0.0",
+        "id": "M1-normal",
+        "name": "Normal baseline (no events)",
+        "description": "Synthetic: 30-day warm-up, 30-day demand surge ×1.6 + primary supplier capacity 50 % + rural transit ×2, 60-day recovery.",
+        "synthetic": true,
         "parameterMeta": {
-          "population": "illustrative",
-          "baseDemand": "illustrative",
-          "costs": "illustrative",
-          "events": "illustrative"
+          "all": "合成场景假设 (synthetic scenario assumption); not estimated from real data"
         },
         "randomSeed": 20240901,
         "defaultReplicates": 100,
         "simulationDays": 120,
+        "phases": {
+          "warmup": [
+            0,
+            30
+          ],
+          "disruption": [
+            30,
+            60
+          ],
+          "recovery": [
+            60,
+            120
+          ]
+        },
         "warehouseCount": 2,
         "pharmacyCount": 12,
         "drugCount": 8,
@@ -81,15 +101,40 @@
         "logistics": {
           "orderCost": 25,
           "transportCostPerUnit": 0.15,
-          "truckCapacityUnits": 2000,
-          "dailyDispatchCapacityPerWarehouse": 2500,
+          "maxCycleDays": 30,
           "pharmacyInitialStockDays": 10,
-          "warehouseInitialStockDays": 20,
-          "upstreamInboundCoverage": 1.2,
+          "warehouseInitialStockDays": 10,
+          "warehouseTargetStockDays": 10,
+          "warehouseCapacityDays": 45,
           "dispatchCapacityCoverage": 1.5,
           "truckCapacityCoverage": 1.5,
           "capacityMultiplier": 1,
-          "initialStockMultiplier": 1
+          "initialStockMultiplier": 1,
+          "lateralTransfers": {
+            "enabled": true,
+            "essentialOnly": true,
+            "transitDays": 1,
+            "costPerUnit": 0.4,
+            "fixedCost": 10,
+            "capacityCoverage": 0.25,
+            "cooldownDays": 7,
+            "donorSafetyZ": 1.65
+          }
+        },
+        "supplyNetwork": {
+          "redundancyEnabled": true,
+          "primary": {
+            "replenishmentLeadTime": 2,
+            "capacityCoverage": 1.2,
+            "reliability": 0.98,
+            "unitCost": 0.5
+          },
+          "backup": {
+            "replenishmentLeadTime": 5,
+            "capacityCoverage": 0.4,
+            "reliability": 0.9,
+            "unitCost": 1.2
+          }
         },
         "regions": {
           "urban": {
@@ -222,10 +267,28 @@
           "equityAware": {
             "stockout": 1,
             "wait": 0.5,
-            "inequity": 1,
+            "inequity": 2,
             "cost": 0.01
           }
+        }
+      }
+    },
+    {
+      "key": "M2-demand-surge",
+      "label": "Demand surge ×1.6 (all regions)",
+      "scenarioHash": "d1e26a138f0d9a5a1f05def1784a67fdcdb7b3341512b69b6fa3546f6ac235e6",
+      "scenario": {
+        "schemaVersion": "3.0.0",
+        "id": "M2-demand-surge",
+        "name": "Demand surge ×1.6 (all regions)",
+        "description": "Synthetic: 30-day warm-up, 30-day demand surge ×1.6 + primary supplier capacity 50 % + rural transit ×2, 60-day recovery.",
+        "synthetic": true,
+        "parameterMeta": {
+          "all": "合成场景假设 (synthetic scenario assumption); not estimated from real data"
         },
+        "randomSeed": 20240901,
+        "defaultReplicates": 100,
+        "simulationDays": 120,
         "phases": {
           "warmup": [
             0,
@@ -239,26 +302,7 @@
             60,
             120
           ]
-        }
-      }
-    },
-    {
-      "key": "S02-surge-low",
-      "label": "Demand surge ×1.3",
-      "scenario": {
-        "schemaVersion": "2.1.0",
-        "id": "S02-surge-low",
-        "name": "Demand surge ×1.3",
-        "description": "12 pharmacies (4 urban / 4 suburban / 4 rural), 2 warehouses, 8 SKUs; 30-day warm-up, 30-day disruption window, 60-day recovery.",
-        "parameterMeta": {
-          "population": "illustrative",
-          "baseDemand": "illustrative",
-          "costs": "illustrative",
-          "events": "illustrative"
         },
-        "randomSeed": 20240901,
-        "defaultReplicates": 100,
-        "simulationDays": 120,
         "warehouseCount": 2,
         "pharmacyCount": 12,
         "drugCount": 8,
@@ -270,216 +314,40 @@
         "logistics": {
           "orderCost": 25,
           "transportCostPerUnit": 0.15,
-          "truckCapacityUnits": 2000,
-          "dailyDispatchCapacityPerWarehouse": 2500,
+          "maxCycleDays": 30,
           "pharmacyInitialStockDays": 10,
-          "warehouseInitialStockDays": 20,
-          "upstreamInboundCoverage": 1.2,
+          "warehouseInitialStockDays": 10,
+          "warehouseTargetStockDays": 10,
+          "warehouseCapacityDays": 45,
           "dispatchCapacityCoverage": 1.5,
           "truckCapacityCoverage": 1.5,
           "capacityMultiplier": 1,
-          "initialStockMultiplier": 1
-        },
-        "regions": {
-          "urban": {
-            "population": 50000,
-            "baseDemand": 1,
-            "demandVolatility": 0.15,
-            "distanceKm": 8,
-            "roadAccessibility": 1,
-            "transitDays": 0.5,
-            "vulnerabilityWeight": 1
-          },
-          "suburban": {
-            "population": 20000,
-            "baseDemand": 0.85,
-            "demandVolatility": 0.2,
-            "distanceKm": 25,
-            "roadAccessibility": 0.85,
+          "initialStockMultiplier": 1,
+          "lateralTransfers": {
+            "enabled": true,
+            "essentialOnly": true,
             "transitDays": 1,
-            "vulnerabilityWeight": 1.2
-          },
-          "rural": {
-            "population": 8000,
-            "baseDemand": 0.7,
-            "demandVolatility": 0.25,
-            "distanceKm": 60,
-            "roadAccessibility": 0.6,
-            "transitDays": 2.5,
-            "vulnerabilityWeight": 1.6
+            "costPerUnit": 0.4,
+            "fixedCost": 10,
+            "capacityCoverage": 0.25,
+            "cooldownDays": 7,
+            "donorSafetyZ": 1.65
           }
         },
-        "drugs": [
-          {
-            "id": "D1",
-            "name": "Synthetic essential A",
-            "priority": "essential",
-            "initialStock": 220,
-            "unitProcurementCost": 4,
-            "holdingCostPerUnitDay": 0.03,
-            "stockoutPenalty": 50,
-            "leadTimeDays": 2
+        "supplyNetwork": {
+          "redundancyEnabled": true,
+          "primary": {
+            "replenishmentLeadTime": 2,
+            "capacityCoverage": 1.2,
+            "reliability": 0.98,
+            "unitCost": 0.5
           },
-          {
-            "id": "D2",
-            "name": "Synthetic essential B",
-            "priority": "essential",
-            "initialStock": 220,
-            "unitProcurementCost": 4.2,
-            "holdingCostPerUnitDay": 0.03,
-            "stockoutPenalty": 50,
-            "leadTimeDays": 2
-          },
-          {
-            "id": "D3",
-            "name": "Synthetic chronic C",
-            "priority": "chronic-care",
-            "initialStock": 180,
-            "unitProcurementCost": 3,
-            "holdingCostPerUnitDay": 0.025,
-            "stockoutPenalty": 35,
-            "leadTimeDays": 3
-          },
-          {
-            "id": "D4",
-            "name": "Synthetic chronic D",
-            "priority": "chronic-care",
-            "initialStock": 180,
-            "unitProcurementCost": 3.1,
-            "holdingCostPerUnitDay": 0.025,
-            "stockoutPenalty": 35,
-            "leadTimeDays": 3
-          },
-          {
-            "id": "D5",
-            "name": "Synthetic routine E",
-            "priority": "routine",
-            "initialStock": 150,
-            "unitProcurementCost": 2,
-            "holdingCostPerUnitDay": 0.02,
-            "stockoutPenalty": 15,
-            "leadTimeDays": 4
-          },
-          {
-            "id": "D6",
-            "name": "Synthetic routine F",
-            "priority": "routine",
-            "initialStock": 150,
-            "unitProcurementCost": 2,
-            "holdingCostPerUnitDay": 0.02,
-            "stockoutPenalty": 15,
-            "leadTimeDays": 4
-          },
-          {
-            "id": "D7",
-            "name": "Synthetic routine G",
-            "priority": "routine",
-            "initialStock": 140,
-            "unitProcurementCost": 1.8,
-            "holdingCostPerUnitDay": 0.02,
-            "stockoutPenalty": 15,
-            "leadTimeDays": 4
-          },
-          {
-            "id": "D8",
-            "name": "Synthetic routine H",
-            "priority": "routine",
-            "initialStock": 140,
-            "unitProcurementCost": 1.8,
-            "holdingCostPerUnitDay": 0.02,
-            "stockoutPenalty": 15,
-            "leadTimeDays": 4
+          "backup": {
+            "replenishmentLeadTime": 5,
+            "capacityCoverage": 0.4,
+            "reliability": 0.9,
+            "unitCost": 1.2
           }
-        ],
-        "events": [
-          {
-            "type": "demandSurge",
-            "startDay": 30,
-            "durationDays": 30,
-            "magnitude": 1.3,
-            "targetRegions": [
-              "urban",
-              "suburban",
-              "rural"
-            ]
-          }
-        ],
-        "metricsWeights": {
-          "stockoutPenaltyByPriority": {
-            "essential": 50,
-            "chronic-care": 35,
-            "routine": 15
-          },
-          "waitingTimePenaltyPerDay": 8,
-          "inequityPenaltyPerGap": 120,
-          "maxRelevantWaitDays": 30,
-          "serviceInequalityWeights": {
-            "stockout": 0.3333333333333333,
-            "wait": 0.3333333333333333,
-            "gini": 0.3333333333333333
-          }
-        },
-        "policyWeights": {
-          "equityAware": {
-            "stockout": 1,
-            "wait": 0.5,
-            "inequity": 1,
-            "cost": 0.01
-          }
-        },
-        "phases": {
-          "warmup": [
-            0,
-            30
-          ],
-          "disruption": [
-            30,
-            60
-          ],
-          "recovery": [
-            60,
-            120
-          ]
-        }
-      }
-    },
-    {
-      "key": "S03-surge-mid",
-      "label": "Demand surge ×1.6",
-      "scenario": {
-        "schemaVersion": "2.1.0",
-        "id": "S03-surge-mid",
-        "name": "Demand surge ×1.6",
-        "description": "12 pharmacies (4 urban / 4 suburban / 4 rural), 2 warehouses, 8 SKUs; 30-day warm-up, 30-day disruption window, 60-day recovery.",
-        "parameterMeta": {
-          "population": "illustrative",
-          "baseDemand": "illustrative",
-          "costs": "illustrative",
-          "events": "illustrative"
-        },
-        "randomSeed": 20240901,
-        "defaultReplicates": 100,
-        "simulationDays": 120,
-        "warehouseCount": 2,
-        "pharmacyCount": 12,
-        "drugCount": 8,
-        "regionPharmacyCounts": {
-          "urban": 4,
-          "suburban": 4,
-          "rural": 4
-        },
-        "logistics": {
-          "orderCost": 25,
-          "transportCostPerUnit": 0.15,
-          "truckCapacityUnits": 2000,
-          "dailyDispatchCapacityPerWarehouse": 2500,
-          "pharmacyInitialStockDays": 10,
-          "warehouseInitialStockDays": 20,
-          "upstreamInboundCoverage": 1.2,
-          "dispatchCapacityCoverage": 1.5,
-          "truckCapacityCoverage": 1.5,
-          "capacityMultiplier": 1,
-          "initialStockMultiplier": 1
         },
         "regions": {
           "urban": {
@@ -624,10 +492,28 @@
           "equityAware": {
             "stockout": 1,
             "wait": 0.5,
-            "inequity": 1,
+            "inequity": 2,
             "cost": 0.01
           }
+        }
+      }
+    },
+    {
+      "key": "M3-supply-disruption",
+      "label": "Upstream disruption: primary suppliers down (backup available)",
+      "scenarioHash": "92a303dd934df330f51068996c0a8c57f5a68a12500150f41f56a16464b72ba9",
+      "scenario": {
+        "schemaVersion": "3.0.0",
+        "id": "M3-supply-disruption",
+        "name": "Upstream disruption: primary suppliers down (backup available)",
+        "description": "Synthetic: 30-day warm-up, 30-day demand surge ×1.6 + primary supplier capacity 50 % + rural transit ×2, 60-day recovery.",
+        "synthetic": true,
+        "parameterMeta": {
+          "all": "合成场景假设 (synthetic scenario assumption); not estimated from real data"
         },
+        "randomSeed": 20240901,
+        "defaultReplicates": 100,
+        "simulationDays": 120,
         "phases": {
           "warmup": [
             0,
@@ -641,26 +527,7 @@
             60,
             120
           ]
-        }
-      }
-    },
-    {
-      "key": "S04-surge-high",
-      "label": "Demand surge ×2.0",
-      "scenario": {
-        "schemaVersion": "2.1.0",
-        "id": "S04-surge-high",
-        "name": "Demand surge ×2.0",
-        "description": "12 pharmacies (4 urban / 4 suburban / 4 rural), 2 warehouses, 8 SKUs; 30-day warm-up, 30-day disruption window, 60-day recovery.",
-        "parameterMeta": {
-          "population": "illustrative",
-          "baseDemand": "illustrative",
-          "costs": "illustrative",
-          "events": "illustrative"
         },
-        "randomSeed": 20240901,
-        "defaultReplicates": 100,
-        "simulationDays": 120,
         "warehouseCount": 2,
         "pharmacyCount": 12,
         "drugCount": 8,
@@ -672,216 +539,40 @@
         "logistics": {
           "orderCost": 25,
           "transportCostPerUnit": 0.15,
-          "truckCapacityUnits": 2000,
-          "dailyDispatchCapacityPerWarehouse": 2500,
+          "maxCycleDays": 30,
           "pharmacyInitialStockDays": 10,
-          "warehouseInitialStockDays": 20,
-          "upstreamInboundCoverage": 1.2,
+          "warehouseInitialStockDays": 10,
+          "warehouseTargetStockDays": 10,
+          "warehouseCapacityDays": 45,
           "dispatchCapacityCoverage": 1.5,
           "truckCapacityCoverage": 1.5,
           "capacityMultiplier": 1,
-          "initialStockMultiplier": 1
-        },
-        "regions": {
-          "urban": {
-            "population": 50000,
-            "baseDemand": 1,
-            "demandVolatility": 0.15,
-            "distanceKm": 8,
-            "roadAccessibility": 1,
-            "transitDays": 0.5,
-            "vulnerabilityWeight": 1
-          },
-          "suburban": {
-            "population": 20000,
-            "baseDemand": 0.85,
-            "demandVolatility": 0.2,
-            "distanceKm": 25,
-            "roadAccessibility": 0.85,
+          "initialStockMultiplier": 1,
+          "lateralTransfers": {
+            "enabled": true,
+            "essentialOnly": true,
             "transitDays": 1,
-            "vulnerabilityWeight": 1.2
-          },
-          "rural": {
-            "population": 8000,
-            "baseDemand": 0.7,
-            "demandVolatility": 0.25,
-            "distanceKm": 60,
-            "roadAccessibility": 0.6,
-            "transitDays": 2.5,
-            "vulnerabilityWeight": 1.6
+            "costPerUnit": 0.4,
+            "fixedCost": 10,
+            "capacityCoverage": 0.25,
+            "cooldownDays": 7,
+            "donorSafetyZ": 1.65
           }
         },
-        "drugs": [
-          {
-            "id": "D1",
-            "name": "Synthetic essential A",
-            "priority": "essential",
-            "initialStock": 220,
-            "unitProcurementCost": 4,
-            "holdingCostPerUnitDay": 0.03,
-            "stockoutPenalty": 50,
-            "leadTimeDays": 2
+        "supplyNetwork": {
+          "redundancyEnabled": true,
+          "primary": {
+            "replenishmentLeadTime": 2,
+            "capacityCoverage": 1.2,
+            "reliability": 0.98,
+            "unitCost": 0.5
           },
-          {
-            "id": "D2",
-            "name": "Synthetic essential B",
-            "priority": "essential",
-            "initialStock": 220,
-            "unitProcurementCost": 4.2,
-            "holdingCostPerUnitDay": 0.03,
-            "stockoutPenalty": 50,
-            "leadTimeDays": 2
-          },
-          {
-            "id": "D3",
-            "name": "Synthetic chronic C",
-            "priority": "chronic-care",
-            "initialStock": 180,
-            "unitProcurementCost": 3,
-            "holdingCostPerUnitDay": 0.025,
-            "stockoutPenalty": 35,
-            "leadTimeDays": 3
-          },
-          {
-            "id": "D4",
-            "name": "Synthetic chronic D",
-            "priority": "chronic-care",
-            "initialStock": 180,
-            "unitProcurementCost": 3.1,
-            "holdingCostPerUnitDay": 0.025,
-            "stockoutPenalty": 35,
-            "leadTimeDays": 3
-          },
-          {
-            "id": "D5",
-            "name": "Synthetic routine E",
-            "priority": "routine",
-            "initialStock": 150,
-            "unitProcurementCost": 2,
-            "holdingCostPerUnitDay": 0.02,
-            "stockoutPenalty": 15,
-            "leadTimeDays": 4
-          },
-          {
-            "id": "D6",
-            "name": "Synthetic routine F",
-            "priority": "routine",
-            "initialStock": 150,
-            "unitProcurementCost": 2,
-            "holdingCostPerUnitDay": 0.02,
-            "stockoutPenalty": 15,
-            "leadTimeDays": 4
-          },
-          {
-            "id": "D7",
-            "name": "Synthetic routine G",
-            "priority": "routine",
-            "initialStock": 140,
-            "unitProcurementCost": 1.8,
-            "holdingCostPerUnitDay": 0.02,
-            "stockoutPenalty": 15,
-            "leadTimeDays": 4
-          },
-          {
-            "id": "D8",
-            "name": "Synthetic routine H",
-            "priority": "routine",
-            "initialStock": 140,
-            "unitProcurementCost": 1.8,
-            "holdingCostPerUnitDay": 0.02,
-            "stockoutPenalty": 15,
-            "leadTimeDays": 4
+          "backup": {
+            "replenishmentLeadTime": 5,
+            "capacityCoverage": 0.4,
+            "reliability": 0.9,
+            "unitCost": 1.2
           }
-        ],
-        "events": [
-          {
-            "type": "demandSurge",
-            "startDay": 30,
-            "durationDays": 30,
-            "magnitude": 2,
-            "targetRegions": [
-              "urban",
-              "suburban",
-              "rural"
-            ]
-          }
-        ],
-        "metricsWeights": {
-          "stockoutPenaltyByPriority": {
-            "essential": 50,
-            "chronic-care": 35,
-            "routine": 15
-          },
-          "waitingTimePenaltyPerDay": 8,
-          "inequityPenaltyPerGap": 120,
-          "maxRelevantWaitDays": 30,
-          "serviceInequalityWeights": {
-            "stockout": 0.3333333333333333,
-            "wait": 0.3333333333333333,
-            "gini": 0.3333333333333333
-          }
-        },
-        "policyWeights": {
-          "equityAware": {
-            "stockout": 1,
-            "wait": 0.5,
-            "inequity": 1,
-            "cost": 0.01
-          }
-        },
-        "phases": {
-          "warmup": [
-            0,
-            30
-          ],
-          "disruption": [
-            30,
-            60
-          ],
-          "recovery": [
-            60,
-            120
-          ]
-        }
-      }
-    },
-    {
-      "key": "S05-supply-low",
-      "label": "Supply at 75%",
-      "scenario": {
-        "schemaVersion": "2.1.0",
-        "id": "S05-supply-low",
-        "name": "Supply at 75%",
-        "description": "12 pharmacies (4 urban / 4 suburban / 4 rural), 2 warehouses, 8 SKUs; 30-day warm-up, 30-day disruption window, 60-day recovery.",
-        "parameterMeta": {
-          "population": "illustrative",
-          "baseDemand": "illustrative",
-          "costs": "illustrative",
-          "events": "illustrative"
-        },
-        "randomSeed": 20240901,
-        "defaultReplicates": 100,
-        "simulationDays": 120,
-        "warehouseCount": 2,
-        "pharmacyCount": 12,
-        "drugCount": 8,
-        "regionPharmacyCounts": {
-          "urban": 4,
-          "suburban": 4,
-          "rural": 4
-        },
-        "logistics": {
-          "orderCost": 25,
-          "transportCostPerUnit": 0.15,
-          "truckCapacityUnits": 2000,
-          "dailyDispatchCapacityPerWarehouse": 2500,
-          "pharmacyInitialStockDays": 10,
-          "warehouseInitialStockDays": 20,
-          "upstreamInboundCoverage": 1.2,
-          "dispatchCapacityCoverage": 1.5,
-          "truckCapacityCoverage": 1.5,
-          "capacityMultiplier": 1,
-          "initialStockMultiplier": 1
         },
         "regions": {
           "urban": {
@@ -999,12 +690,8 @@
             "type": "supplyDisruption",
             "startDay": 30,
             "durationDays": 30,
-            "magnitude": 0.75,
-            "targetRegions": [
-              "urban",
-              "suburban",
-              "rural"
-            ]
+            "magnitude": 0,
+            "supplierTier": "primary"
           }
         ],
         "metricsWeights": {
@@ -1026,10 +713,28 @@
           "equityAware": {
             "stockout": 1,
             "wait": 0.5,
-            "inequity": 1,
+            "inequity": 2,
             "cost": 0.01
           }
+        }
+      }
+    },
+    {
+      "key": "M4-transport-disruption",
+      "label": "Road disruption: rural transit ×2.5, suburban ×1.5",
+      "scenarioHash": "93fdb943702cc8db2dcf481d73921a14195ad849aab5bb5a024a3fb241d8e68d",
+      "scenario": {
+        "schemaVersion": "3.0.0",
+        "id": "M4-transport-disruption",
+        "name": "Road disruption: rural transit ×2.5, suburban ×1.5",
+        "description": "Synthetic: 30-day warm-up, 30-day demand surge ×1.6 + primary supplier capacity 50 % + rural transit ×2, 60-day recovery.",
+        "synthetic": true,
+        "parameterMeta": {
+          "all": "合成场景假设 (synthetic scenario assumption); not estimated from real data"
         },
+        "randomSeed": 20240901,
+        "defaultReplicates": 100,
+        "simulationDays": 120,
         "phases": {
           "warmup": [
             0,
@@ -1043,26 +748,7 @@
             60,
             120
           ]
-        }
-      }
-    },
-    {
-      "key": "S06-supply-mid",
-      "label": "Supply at 50%",
-      "scenario": {
-        "schemaVersion": "2.1.0",
-        "id": "S06-supply-mid",
-        "name": "Supply at 50%",
-        "description": "12 pharmacies (4 urban / 4 suburban / 4 rural), 2 warehouses, 8 SKUs; 30-day warm-up, 30-day disruption window, 60-day recovery.",
-        "parameterMeta": {
-          "population": "illustrative",
-          "baseDemand": "illustrative",
-          "costs": "illustrative",
-          "events": "illustrative"
         },
-        "randomSeed": 20240901,
-        "defaultReplicates": 100,
-        "simulationDays": 120,
         "warehouseCount": 2,
         "pharmacyCount": 12,
         "drugCount": 8,
@@ -1074,417 +760,40 @@
         "logistics": {
           "orderCost": 25,
           "transportCostPerUnit": 0.15,
-          "truckCapacityUnits": 2000,
-          "dailyDispatchCapacityPerWarehouse": 2500,
+          "maxCycleDays": 30,
           "pharmacyInitialStockDays": 10,
-          "warehouseInitialStockDays": 20,
-          "upstreamInboundCoverage": 1.2,
+          "warehouseInitialStockDays": 10,
+          "warehouseTargetStockDays": 10,
+          "warehouseCapacityDays": 45,
           "dispatchCapacityCoverage": 1.5,
           "truckCapacityCoverage": 1.5,
           "capacityMultiplier": 1,
-          "initialStockMultiplier": 1
-        },
-        "regions": {
-          "urban": {
-            "population": 50000,
-            "baseDemand": 1,
-            "demandVolatility": 0.15,
-            "distanceKm": 8,
-            "roadAccessibility": 1,
-            "transitDays": 0.5,
-            "vulnerabilityWeight": 1
-          },
-          "suburban": {
-            "population": 20000,
-            "baseDemand": 0.85,
-            "demandVolatility": 0.2,
-            "distanceKm": 25,
-            "roadAccessibility": 0.85,
+          "initialStockMultiplier": 1,
+          "lateralTransfers": {
+            "enabled": true,
+            "essentialOnly": true,
             "transitDays": 1,
-            "vulnerabilityWeight": 1.2
-          },
-          "rural": {
-            "population": 8000,
-            "baseDemand": 0.7,
-            "demandVolatility": 0.25,
-            "distanceKm": 60,
-            "roadAccessibility": 0.6,
-            "transitDays": 2.5,
-            "vulnerabilityWeight": 1.6
+            "costPerUnit": 0.4,
+            "fixedCost": 10,
+            "capacityCoverage": 0.25,
+            "cooldownDays": 7,
+            "donorSafetyZ": 1.65
           }
         },
-        "drugs": [
-          {
-            "id": "D1",
-            "name": "Synthetic essential A",
-            "priority": "essential",
-            "initialStock": 220,
-            "unitProcurementCost": 4,
-            "holdingCostPerUnitDay": 0.03,
-            "stockoutPenalty": 50,
-            "leadTimeDays": 2
+        "supplyNetwork": {
+          "redundancyEnabled": true,
+          "primary": {
+            "replenishmentLeadTime": 2,
+            "capacityCoverage": 1.2,
+            "reliability": 0.98,
+            "unitCost": 0.5
           },
-          {
-            "id": "D2",
-            "name": "Synthetic essential B",
-            "priority": "essential",
-            "initialStock": 220,
-            "unitProcurementCost": 4.2,
-            "holdingCostPerUnitDay": 0.03,
-            "stockoutPenalty": 50,
-            "leadTimeDays": 2
-          },
-          {
-            "id": "D3",
-            "name": "Synthetic chronic C",
-            "priority": "chronic-care",
-            "initialStock": 180,
-            "unitProcurementCost": 3,
-            "holdingCostPerUnitDay": 0.025,
-            "stockoutPenalty": 35,
-            "leadTimeDays": 3
-          },
-          {
-            "id": "D4",
-            "name": "Synthetic chronic D",
-            "priority": "chronic-care",
-            "initialStock": 180,
-            "unitProcurementCost": 3.1,
-            "holdingCostPerUnitDay": 0.025,
-            "stockoutPenalty": 35,
-            "leadTimeDays": 3
-          },
-          {
-            "id": "D5",
-            "name": "Synthetic routine E",
-            "priority": "routine",
-            "initialStock": 150,
-            "unitProcurementCost": 2,
-            "holdingCostPerUnitDay": 0.02,
-            "stockoutPenalty": 15,
-            "leadTimeDays": 4
-          },
-          {
-            "id": "D6",
-            "name": "Synthetic routine F",
-            "priority": "routine",
-            "initialStock": 150,
-            "unitProcurementCost": 2,
-            "holdingCostPerUnitDay": 0.02,
-            "stockoutPenalty": 15,
-            "leadTimeDays": 4
-          },
-          {
-            "id": "D7",
-            "name": "Synthetic routine G",
-            "priority": "routine",
-            "initialStock": 140,
-            "unitProcurementCost": 1.8,
-            "holdingCostPerUnitDay": 0.02,
-            "stockoutPenalty": 15,
-            "leadTimeDays": 4
-          },
-          {
-            "id": "D8",
-            "name": "Synthetic routine H",
-            "priority": "routine",
-            "initialStock": 140,
-            "unitProcurementCost": 1.8,
-            "holdingCostPerUnitDay": 0.02,
-            "stockoutPenalty": 15,
-            "leadTimeDays": 4
+          "backup": {
+            "replenishmentLeadTime": 5,
+            "capacityCoverage": 0.4,
+            "reliability": 0.9,
+            "unitCost": 1.2
           }
-        ],
-        "events": [
-          {
-            "type": "supplyDisruption",
-            "startDay": 30,
-            "durationDays": 30,
-            "magnitude": 0.5,
-            "targetRegions": [
-              "urban",
-              "suburban",
-              "rural"
-            ]
-          }
-        ],
-        "metricsWeights": {
-          "stockoutPenaltyByPriority": {
-            "essential": 50,
-            "chronic-care": 35,
-            "routine": 15
-          },
-          "waitingTimePenaltyPerDay": 8,
-          "inequityPenaltyPerGap": 120,
-          "maxRelevantWaitDays": 30,
-          "serviceInequalityWeights": {
-            "stockout": 0.3333333333333333,
-            "wait": 0.3333333333333333,
-            "gini": 0.3333333333333333
-          }
-        },
-        "policyWeights": {
-          "equityAware": {
-            "stockout": 1,
-            "wait": 0.5,
-            "inequity": 1,
-            "cost": 0.01
-          }
-        },
-        "phases": {
-          "warmup": [
-            0,
-            30
-          ],
-          "disruption": [
-            30,
-            60
-          ],
-          "recovery": [
-            60,
-            120
-          ]
-        }
-      }
-    },
-    {
-      "key": "S07-supply-high",
-      "label": "Supply at 25%",
-      "scenario": {
-        "schemaVersion": "2.1.0",
-        "id": "S07-supply-high",
-        "name": "Supply at 25%",
-        "description": "12 pharmacies (4 urban / 4 suburban / 4 rural), 2 warehouses, 8 SKUs; 30-day warm-up, 30-day disruption window, 60-day recovery.",
-        "parameterMeta": {
-          "population": "illustrative",
-          "baseDemand": "illustrative",
-          "costs": "illustrative",
-          "events": "illustrative"
-        },
-        "randomSeed": 20240901,
-        "defaultReplicates": 100,
-        "simulationDays": 120,
-        "warehouseCount": 2,
-        "pharmacyCount": 12,
-        "drugCount": 8,
-        "regionPharmacyCounts": {
-          "urban": 4,
-          "suburban": 4,
-          "rural": 4
-        },
-        "logistics": {
-          "orderCost": 25,
-          "transportCostPerUnit": 0.15,
-          "truckCapacityUnits": 2000,
-          "dailyDispatchCapacityPerWarehouse": 2500,
-          "pharmacyInitialStockDays": 10,
-          "warehouseInitialStockDays": 20,
-          "upstreamInboundCoverage": 1.2,
-          "dispatchCapacityCoverage": 1.5,
-          "truckCapacityCoverage": 1.5,
-          "capacityMultiplier": 1,
-          "initialStockMultiplier": 1
-        },
-        "regions": {
-          "urban": {
-            "population": 50000,
-            "baseDemand": 1,
-            "demandVolatility": 0.15,
-            "distanceKm": 8,
-            "roadAccessibility": 1,
-            "transitDays": 0.5,
-            "vulnerabilityWeight": 1
-          },
-          "suburban": {
-            "population": 20000,
-            "baseDemand": 0.85,
-            "demandVolatility": 0.2,
-            "distanceKm": 25,
-            "roadAccessibility": 0.85,
-            "transitDays": 1,
-            "vulnerabilityWeight": 1.2
-          },
-          "rural": {
-            "population": 8000,
-            "baseDemand": 0.7,
-            "demandVolatility": 0.25,
-            "distanceKm": 60,
-            "roadAccessibility": 0.6,
-            "transitDays": 2.5,
-            "vulnerabilityWeight": 1.6
-          }
-        },
-        "drugs": [
-          {
-            "id": "D1",
-            "name": "Synthetic essential A",
-            "priority": "essential",
-            "initialStock": 220,
-            "unitProcurementCost": 4,
-            "holdingCostPerUnitDay": 0.03,
-            "stockoutPenalty": 50,
-            "leadTimeDays": 2
-          },
-          {
-            "id": "D2",
-            "name": "Synthetic essential B",
-            "priority": "essential",
-            "initialStock": 220,
-            "unitProcurementCost": 4.2,
-            "holdingCostPerUnitDay": 0.03,
-            "stockoutPenalty": 50,
-            "leadTimeDays": 2
-          },
-          {
-            "id": "D3",
-            "name": "Synthetic chronic C",
-            "priority": "chronic-care",
-            "initialStock": 180,
-            "unitProcurementCost": 3,
-            "holdingCostPerUnitDay": 0.025,
-            "stockoutPenalty": 35,
-            "leadTimeDays": 3
-          },
-          {
-            "id": "D4",
-            "name": "Synthetic chronic D",
-            "priority": "chronic-care",
-            "initialStock": 180,
-            "unitProcurementCost": 3.1,
-            "holdingCostPerUnitDay": 0.025,
-            "stockoutPenalty": 35,
-            "leadTimeDays": 3
-          },
-          {
-            "id": "D5",
-            "name": "Synthetic routine E",
-            "priority": "routine",
-            "initialStock": 150,
-            "unitProcurementCost": 2,
-            "holdingCostPerUnitDay": 0.02,
-            "stockoutPenalty": 15,
-            "leadTimeDays": 4
-          },
-          {
-            "id": "D6",
-            "name": "Synthetic routine F",
-            "priority": "routine",
-            "initialStock": 150,
-            "unitProcurementCost": 2,
-            "holdingCostPerUnitDay": 0.02,
-            "stockoutPenalty": 15,
-            "leadTimeDays": 4
-          },
-          {
-            "id": "D7",
-            "name": "Synthetic routine G",
-            "priority": "routine",
-            "initialStock": 140,
-            "unitProcurementCost": 1.8,
-            "holdingCostPerUnitDay": 0.02,
-            "stockoutPenalty": 15,
-            "leadTimeDays": 4
-          },
-          {
-            "id": "D8",
-            "name": "Synthetic routine H",
-            "priority": "routine",
-            "initialStock": 140,
-            "unitProcurementCost": 1.8,
-            "holdingCostPerUnitDay": 0.02,
-            "stockoutPenalty": 15,
-            "leadTimeDays": 4
-          }
-        ],
-        "events": [
-          {
-            "type": "supplyDisruption",
-            "startDay": 30,
-            "durationDays": 30,
-            "magnitude": 0.25,
-            "targetRegions": [
-              "urban",
-              "suburban",
-              "rural"
-            ]
-          }
-        ],
-        "metricsWeights": {
-          "stockoutPenaltyByPriority": {
-            "essential": 50,
-            "chronic-care": 35,
-            "routine": 15
-          },
-          "waitingTimePenaltyPerDay": 8,
-          "inequityPenaltyPerGap": 120,
-          "maxRelevantWaitDays": 30,
-          "serviceInequalityWeights": {
-            "stockout": 0.3333333333333333,
-            "wait": 0.3333333333333333,
-            "gini": 0.3333333333333333
-          }
-        },
-        "policyWeights": {
-          "equityAware": {
-            "stockout": 1,
-            "wait": 0.5,
-            "inequity": 1,
-            "cost": 0.01
-          }
-        },
-        "phases": {
-          "warmup": [
-            0,
-            30
-          ],
-          "disruption": [
-            30,
-            60
-          ],
-          "recovery": [
-            60,
-            120
-          ]
-        }
-      }
-    },
-    {
-      "key": "S08-rural-road",
-      "label": "Rural road disruption (transit ×2)",
-      "scenario": {
-        "schemaVersion": "2.1.0",
-        "id": "S08-rural-road",
-        "name": "Rural road disruption (transit ×2)",
-        "description": "12 pharmacies (4 urban / 4 suburban / 4 rural), 2 warehouses, 8 SKUs; 30-day warm-up, 30-day disruption window, 60-day recovery.",
-        "parameterMeta": {
-          "population": "illustrative",
-          "baseDemand": "illustrative",
-          "costs": "illustrative",
-          "events": "illustrative"
-        },
-        "randomSeed": 20240901,
-        "defaultReplicates": 100,
-        "simulationDays": 120,
-        "warehouseCount": 2,
-        "pharmacyCount": 12,
-        "drugCount": 8,
-        "regionPharmacyCounts": {
-          "urban": 4,
-          "suburban": 4,
-          "rural": 4
-        },
-        "logistics": {
-          "orderCost": 25,
-          "transportCostPerUnit": 0.15,
-          "truckCapacityUnits": 2000,
-          "dailyDispatchCapacityPerWarehouse": 2500,
-          "pharmacyInitialStockDays": 10,
-          "warehouseInitialStockDays": 20,
-          "upstreamInboundCoverage": 1.2,
-          "dispatchCapacityCoverage": 1.5,
-          "truckCapacityCoverage": 1.5,
-          "capacityMultiplier": 1,
-          "initialStockMultiplier": 1
         },
         "regions": {
           "urban": {
@@ -1602,9 +911,18 @@
             "type": "roadDisruption",
             "startDay": 30,
             "durationDays": 30,
-            "magnitude": 2,
+            "magnitude": 2.5,
             "targetRegions": [
               "rural"
+            ]
+          },
+          {
+            "type": "roadDisruption",
+            "startDay": 30,
+            "durationDays": 30,
+            "magnitude": 1.5,
+            "targetRegions": [
+              "suburban"
             ]
           }
         ],
@@ -1627,10 +945,28 @@
           "equityAware": {
             "stockout": 1,
             "wait": 0.5,
-            "inequity": 1,
+            "inequity": 2,
             "cost": 0.01
           }
+        }
+      }
+    },
+    {
+      "key": "M5-compound",
+      "label": "Compound: surge ×1.6 + primary supply 50 % + rural transit ×2",
+      "scenarioHash": "27b56d3394d25812ae8704f4f674e63c886024eae2b6ebb0cbf49417f39045df",
+      "scenario": {
+        "schemaVersion": "3.0.0",
+        "id": "M5-compound",
+        "name": "Compound: surge ×1.6 + primary supply 50 % + rural transit ×2",
+        "description": "Synthetic: 30-day warm-up, 30-day demand surge ×1.6 + primary supplier capacity 50 % + rural transit ×2, 60-day recovery.",
+        "synthetic": true,
+        "parameterMeta": {
+          "all": "合成场景假设 (synthetic scenario assumption); not estimated from real data"
         },
+        "randomSeed": 20240901,
+        "defaultReplicates": 100,
+        "simulationDays": 120,
         "phases": {
           "warmup": [
             0,
@@ -1644,26 +980,7 @@
             60,
             120
           ]
-        }
-      }
-    },
-    {
-      "key": "S09-surge-supply",
-      "label": "Surge ×1.6 + supply 50%",
-      "scenario": {
-        "schemaVersion": "2.1.0",
-        "id": "S09-surge-supply",
-        "name": "Surge ×1.6 + supply 50%",
-        "description": "12 pharmacies (4 urban / 4 suburban / 4 rural), 2 warehouses, 8 SKUs; 30-day warm-up, 30-day disruption window, 60-day recovery.",
-        "parameterMeta": {
-          "population": "illustrative",
-          "baseDemand": "illustrative",
-          "costs": "illustrative",
-          "events": "illustrative"
         },
-        "randomSeed": 20240901,
-        "defaultReplicates": 100,
-        "simulationDays": 120,
         "warehouseCount": 2,
         "pharmacyCount": 12,
         "drugCount": 8,
@@ -1675,15 +992,40 @@
         "logistics": {
           "orderCost": 25,
           "transportCostPerUnit": 0.15,
-          "truckCapacityUnits": 2000,
-          "dailyDispatchCapacityPerWarehouse": 2500,
+          "maxCycleDays": 30,
           "pharmacyInitialStockDays": 10,
-          "warehouseInitialStockDays": 20,
-          "upstreamInboundCoverage": 1.2,
+          "warehouseInitialStockDays": 10,
+          "warehouseTargetStockDays": 10,
+          "warehouseCapacityDays": 45,
           "dispatchCapacityCoverage": 1.5,
           "truckCapacityCoverage": 1.5,
           "capacityMultiplier": 1,
-          "initialStockMultiplier": 1
+          "initialStockMultiplier": 1,
+          "lateralTransfers": {
+            "enabled": true,
+            "essentialOnly": true,
+            "transitDays": 1,
+            "costPerUnit": 0.4,
+            "fixedCost": 10,
+            "capacityCoverage": 0.25,
+            "cooldownDays": 7,
+            "donorSafetyZ": 1.65
+          }
+        },
+        "supplyNetwork": {
+          "redundancyEnabled": true,
+          "primary": {
+            "replenishmentLeadTime": 2,
+            "capacityCoverage": 1.2,
+            "reliability": 0.98,
+            "unitCost": 0.5
+          },
+          "backup": {
+            "replenishmentLeadTime": 5,
+            "capacityCoverage": 0.4,
+            "reliability": 0.9,
+            "unitCost": 1.2
+          }
         },
         "regions": {
           "urban": {
@@ -1813,223 +1155,7 @@
             "startDay": 30,
             "durationDays": 30,
             "magnitude": 0.5,
-            "targetRegions": [
-              "urban",
-              "suburban",
-              "rural"
-            ]
-          }
-        ],
-        "metricsWeights": {
-          "stockoutPenaltyByPriority": {
-            "essential": 50,
-            "chronic-care": 35,
-            "routine": 15
-          },
-          "waitingTimePenaltyPerDay": 8,
-          "inequityPenaltyPerGap": 120,
-          "maxRelevantWaitDays": 30,
-          "serviceInequalityWeights": {
-            "stockout": 0.3333333333333333,
-            "wait": 0.3333333333333333,
-            "gini": 0.3333333333333333
-          }
-        },
-        "policyWeights": {
-          "equityAware": {
-            "stockout": 1,
-            "wait": 0.5,
-            "inequity": 1,
-            "cost": 0.01
-          }
-        },
-        "phases": {
-          "warmup": [
-            0,
-            30
-          ],
-          "disruption": [
-            30,
-            60
-          ],
-          "recovery": [
-            60,
-            120
-          ]
-        }
-      }
-    },
-    {
-      "key": "S10-surge-supply-road",
-      "label": "Surge ×1.6 + supply 50% + rural road ×2",
-      "scenario": {
-        "schemaVersion": "2.1.0",
-        "id": "S10-surge-supply-road",
-        "name": "Surge ×1.6 + supply 50% + rural road ×2",
-        "description": "12 pharmacies (4 urban / 4 suburban / 4 rural), 2 warehouses, 8 SKUs; 30-day warm-up, 30-day disruption window, 60-day recovery.",
-        "parameterMeta": {
-          "population": "illustrative",
-          "baseDemand": "illustrative",
-          "costs": "illustrative",
-          "events": "illustrative"
-        },
-        "randomSeed": 20240901,
-        "defaultReplicates": 100,
-        "simulationDays": 120,
-        "warehouseCount": 2,
-        "pharmacyCount": 12,
-        "drugCount": 8,
-        "regionPharmacyCounts": {
-          "urban": 4,
-          "suburban": 4,
-          "rural": 4
-        },
-        "logistics": {
-          "orderCost": 25,
-          "transportCostPerUnit": 0.15,
-          "truckCapacityUnits": 2000,
-          "dailyDispatchCapacityPerWarehouse": 2500,
-          "pharmacyInitialStockDays": 10,
-          "warehouseInitialStockDays": 20,
-          "upstreamInboundCoverage": 1.2,
-          "dispatchCapacityCoverage": 1.5,
-          "truckCapacityCoverage": 1.5,
-          "capacityMultiplier": 1,
-          "initialStockMultiplier": 1
-        },
-        "regions": {
-          "urban": {
-            "population": 50000,
-            "baseDemand": 1,
-            "demandVolatility": 0.15,
-            "distanceKm": 8,
-            "roadAccessibility": 1,
-            "transitDays": 0.5,
-            "vulnerabilityWeight": 1
-          },
-          "suburban": {
-            "population": 20000,
-            "baseDemand": 0.85,
-            "demandVolatility": 0.2,
-            "distanceKm": 25,
-            "roadAccessibility": 0.85,
-            "transitDays": 1,
-            "vulnerabilityWeight": 1.2
-          },
-          "rural": {
-            "population": 8000,
-            "baseDemand": 0.7,
-            "demandVolatility": 0.25,
-            "distanceKm": 60,
-            "roadAccessibility": 0.6,
-            "transitDays": 2.5,
-            "vulnerabilityWeight": 1.6
-          }
-        },
-        "drugs": [
-          {
-            "id": "D1",
-            "name": "Synthetic essential A",
-            "priority": "essential",
-            "initialStock": 220,
-            "unitProcurementCost": 4,
-            "holdingCostPerUnitDay": 0.03,
-            "stockoutPenalty": 50,
-            "leadTimeDays": 2
-          },
-          {
-            "id": "D2",
-            "name": "Synthetic essential B",
-            "priority": "essential",
-            "initialStock": 220,
-            "unitProcurementCost": 4.2,
-            "holdingCostPerUnitDay": 0.03,
-            "stockoutPenalty": 50,
-            "leadTimeDays": 2
-          },
-          {
-            "id": "D3",
-            "name": "Synthetic chronic C",
-            "priority": "chronic-care",
-            "initialStock": 180,
-            "unitProcurementCost": 3,
-            "holdingCostPerUnitDay": 0.025,
-            "stockoutPenalty": 35,
-            "leadTimeDays": 3
-          },
-          {
-            "id": "D4",
-            "name": "Synthetic chronic D",
-            "priority": "chronic-care",
-            "initialStock": 180,
-            "unitProcurementCost": 3.1,
-            "holdingCostPerUnitDay": 0.025,
-            "stockoutPenalty": 35,
-            "leadTimeDays": 3
-          },
-          {
-            "id": "D5",
-            "name": "Synthetic routine E",
-            "priority": "routine",
-            "initialStock": 150,
-            "unitProcurementCost": 2,
-            "holdingCostPerUnitDay": 0.02,
-            "stockoutPenalty": 15,
-            "leadTimeDays": 4
-          },
-          {
-            "id": "D6",
-            "name": "Synthetic routine F",
-            "priority": "routine",
-            "initialStock": 150,
-            "unitProcurementCost": 2,
-            "holdingCostPerUnitDay": 0.02,
-            "stockoutPenalty": 15,
-            "leadTimeDays": 4
-          },
-          {
-            "id": "D7",
-            "name": "Synthetic routine G",
-            "priority": "routine",
-            "initialStock": 140,
-            "unitProcurementCost": 1.8,
-            "holdingCostPerUnitDay": 0.02,
-            "stockoutPenalty": 15,
-            "leadTimeDays": 4
-          },
-          {
-            "id": "D8",
-            "name": "Synthetic routine H",
-            "priority": "routine",
-            "initialStock": 140,
-            "unitProcurementCost": 1.8,
-            "holdingCostPerUnitDay": 0.02,
-            "stockoutPenalty": 15,
-            "leadTimeDays": 4
-          }
-        ],
-        "events": [
-          {
-            "type": "demandSurge",
-            "startDay": 30,
-            "durationDays": 30,
-            "magnitude": 1.6,
-            "targetRegions": [
-              "urban",
-              "suburban",
-              "rural"
-            ]
-          },
-          {
-            "type": "supplyDisruption",
-            "startDay": 30,
-            "durationDays": 30,
-            "magnitude": 0.5,
-            "targetRegions": [
-              "urban",
-              "suburban",
-              "rural"
-            ]
+            "supplierTier": "primary"
           },
           {
             "type": "roadDisruption",
@@ -2060,10 +1186,28 @@
           "equityAware": {
             "stockout": 1,
             "wait": 0.5,
-            "inequity": 1,
+            "inequity": 2,
             "cost": 0.01
           }
+        }
+      }
+    },
+    {
+      "key": "M6-long-lead",
+      "label": "M5 + structural supplier and SKU lead times ×2.5",
+      "scenarioHash": "4c5c9bde775118df105e2b911efcaa0569e9b6c17cfc90e9eed981d534e65ece",
+      "scenario": {
+        "schemaVersion": "3.0.0",
+        "id": "M6-long-lead",
+        "name": "M5 + structural supplier and SKU lead times ×2.5",
+        "description": "Synthetic: 30-day warm-up, 30-day demand surge ×1.6 + primary supplier capacity 50 % + rural transit ×2, 60-day recovery.",
+        "synthetic": true,
+        "parameterMeta": {
+          "all": "合成场景假设 (synthetic scenario assumption); not estimated from real data"
         },
+        "randomSeed": 20240901,
+        "defaultReplicates": 100,
+        "simulationDays": 120,
         "phases": {
           "warmup": [
             0,
@@ -2077,26 +1221,7 @@
             60,
             120
           ]
-        }
-      }
-    },
-    {
-      "key": "S11-long-lead",
-      "label": "S09 + structural lead times ×2.5",
-      "scenario": {
-        "schemaVersion": "2.1.0",
-        "id": "S11-long-lead",
-        "name": "S09 + structural lead times ×2.5",
-        "description": "12 pharmacies (4 urban / 4 suburban / 4 rural), 2 warehouses, 8 SKUs; 30-day warm-up, 30-day disruption window, 60-day recovery.",
-        "parameterMeta": {
-          "population": "illustrative",
-          "baseDemand": "illustrative",
-          "costs": "illustrative",
-          "events": "illustrative"
         },
-        "randomSeed": 20240901,
-        "defaultReplicates": 100,
-        "simulationDays": 120,
         "warehouseCount": 2,
         "pharmacyCount": 12,
         "drugCount": 8,
@@ -2108,15 +1233,40 @@
         "logistics": {
           "orderCost": 25,
           "transportCostPerUnit": 0.15,
-          "truckCapacityUnits": 2000,
-          "dailyDispatchCapacityPerWarehouse": 2500,
+          "maxCycleDays": 30,
           "pharmacyInitialStockDays": 10,
-          "warehouseInitialStockDays": 20,
-          "upstreamInboundCoverage": 1.2,
+          "warehouseInitialStockDays": 10,
+          "warehouseTargetStockDays": 10,
+          "warehouseCapacityDays": 45,
           "dispatchCapacityCoverage": 1.5,
           "truckCapacityCoverage": 1.5,
           "capacityMultiplier": 1,
-          "initialStockMultiplier": 1
+          "initialStockMultiplier": 1,
+          "lateralTransfers": {
+            "enabled": true,
+            "essentialOnly": true,
+            "transitDays": 1,
+            "costPerUnit": 0.4,
+            "fixedCost": 10,
+            "capacityCoverage": 0.25,
+            "cooldownDays": 7,
+            "donorSafetyZ": 1.65
+          }
+        },
+        "supplyNetwork": {
+          "redundancyEnabled": true,
+          "primary": {
+            "replenishmentLeadTime": 5,
+            "capacityCoverage": 1.2,
+            "reliability": 0.98,
+            "unitCost": 0.5
+          },
+          "backup": {
+            "replenishmentLeadTime": 12,
+            "capacityCoverage": 0.4,
+            "reliability": 0.9,
+            "unitCost": 1.2
+          }
         },
         "regions": {
           "urban": {
@@ -2246,9 +1396,14 @@
             "startDay": 30,
             "durationDays": 30,
             "magnitude": 0.5,
+            "supplierTier": "primary"
+          },
+          {
+            "type": "roadDisruption",
+            "startDay": 30,
+            "durationDays": 30,
+            "magnitude": 2,
             "targetRegions": [
-              "urban",
-              "suburban",
               "rural"
             ]
           }
@@ -2272,10 +1427,28 @@
           "equityAware": {
             "stockout": 1,
             "wait": 0.5,
-            "inequity": 1,
+            "inequity": 2,
             "cost": 0.01
           }
+        }
+      }
+    },
+    {
+      "key": "M7-tight-warehouse",
+      "label": "M5 + warehouse stock and target 4 days",
+      "scenarioHash": "db3076596463a590f718daf550b26eabefd370dd9ad223a7dc1aab635f1788b2",
+      "scenario": {
+        "schemaVersion": "3.0.0",
+        "id": "M7-tight-warehouse",
+        "name": "M5 + warehouse stock and target 4 days",
+        "description": "Synthetic: 30-day warm-up, 30-day demand surge ×1.6 + primary supplier capacity 50 % + rural transit ×2, 60-day recovery.",
+        "synthetic": true,
+        "parameterMeta": {
+          "all": "合成场景假设 (synthetic scenario assumption); not estimated from real data"
         },
+        "randomSeed": 20240901,
+        "defaultReplicates": 100,
+        "simulationDays": 120,
         "phases": {
           "warmup": [
             0,
@@ -2289,26 +1462,7 @@
             60,
             120
           ]
-        }
-      }
-    },
-    {
-      "key": "S12-limited-warehouse",
-      "label": "S09 + warehouse stock 5 days, inbound 1.0×",
-      "scenario": {
-        "schemaVersion": "2.1.0",
-        "id": "S12-limited-warehouse",
-        "name": "S09 + warehouse stock 5 days, inbound 1.0×",
-        "description": "12 pharmacies (4 urban / 4 suburban / 4 rural), 2 warehouses, 8 SKUs; 30-day warm-up, 30-day disruption window, 60-day recovery.",
-        "parameterMeta": {
-          "population": "illustrative",
-          "baseDemand": "illustrative",
-          "costs": "illustrative",
-          "events": "illustrative"
         },
-        "randomSeed": 20240901,
-        "defaultReplicates": 100,
-        "simulationDays": 120,
         "warehouseCount": 2,
         "pharmacyCount": 12,
         "drugCount": 8,
@@ -2320,15 +1474,40 @@
         "logistics": {
           "orderCost": 25,
           "transportCostPerUnit": 0.15,
-          "truckCapacityUnits": 2000,
-          "dailyDispatchCapacityPerWarehouse": 2500,
+          "maxCycleDays": 30,
           "pharmacyInitialStockDays": 10,
-          "warehouseInitialStockDays": 5,
-          "upstreamInboundCoverage": 1,
+          "warehouseInitialStockDays": 4,
+          "warehouseTargetStockDays": 4,
+          "warehouseCapacityDays": 45,
           "dispatchCapacityCoverage": 1.5,
           "truckCapacityCoverage": 1.5,
           "capacityMultiplier": 1,
-          "initialStockMultiplier": 1
+          "initialStockMultiplier": 1,
+          "lateralTransfers": {
+            "enabled": true,
+            "essentialOnly": true,
+            "transitDays": 1,
+            "costPerUnit": 0.4,
+            "fixedCost": 10,
+            "capacityCoverage": 0.25,
+            "cooldownDays": 7,
+            "donorSafetyZ": 1.65
+          }
+        },
+        "supplyNetwork": {
+          "redundancyEnabled": true,
+          "primary": {
+            "replenishmentLeadTime": 2,
+            "capacityCoverage": 1.2,
+            "reliability": 0.98,
+            "unitCost": 0.5
+          },
+          "backup": {
+            "replenishmentLeadTime": 5,
+            "capacityCoverage": 0.4,
+            "reliability": 0.9,
+            "unitCost": 1.2
+          }
         },
         "regions": {
           "urban": {
@@ -2458,9 +1637,14 @@
             "startDay": 30,
             "durationDays": 30,
             "magnitude": 0.5,
+            "supplierTier": "primary"
+          },
+          {
+            "type": "roadDisruption",
+            "startDay": 30,
+            "durationDays": 30,
+            "magnitude": 2,
             "targetRegions": [
-              "urban",
-              "suburban",
               "rural"
             ]
           }
@@ -2484,10 +1668,28 @@
           "equityAware": {
             "stockout": 1,
             "wait": 0.5,
-            "inequity": 1,
+            "inequity": 2,
             "cost": 0.01
           }
+        }
+      }
+    },
+    {
+      "key": "M8-tight-transport",
+      "label": "M5 + dispatch and truck capacity 1.1 × baseline demand",
+      "scenarioHash": "f27654c8aee535c45d2694d3d735c348580df9239d9221e894b36119bf9e0d34",
+      "scenario": {
+        "schemaVersion": "3.0.0",
+        "id": "M8-tight-transport",
+        "name": "M5 + dispatch and truck capacity 1.1 × baseline demand",
+        "description": "Synthetic: 30-day warm-up, 30-day demand surge ×1.6 + primary supplier capacity 50 % + rural transit ×2, 60-day recovery.",
+        "synthetic": true,
+        "parameterMeta": {
+          "all": "合成场景假设 (synthetic scenario assumption); not estimated from real data"
         },
+        "randomSeed": 20240901,
+        "defaultReplicates": 100,
+        "simulationDays": 120,
         "phases": {
           "warmup": [
             0,
@@ -2501,26 +1703,7 @@
             60,
             120
           ]
-        }
-      }
-    },
-    {
-      "key": "S13-limited-capacity",
-      "label": "S09 + dispatch/truck capacity ×0.7",
-      "scenario": {
-        "schemaVersion": "2.1.0",
-        "id": "S13-limited-capacity",
-        "name": "S09 + dispatch/truck capacity ×0.7",
-        "description": "12 pharmacies (4 urban / 4 suburban / 4 rural), 2 warehouses, 8 SKUs; 30-day warm-up, 30-day disruption window, 60-day recovery.",
-        "parameterMeta": {
-          "population": "illustrative",
-          "baseDemand": "illustrative",
-          "costs": "illustrative",
-          "events": "illustrative"
         },
-        "randomSeed": 20240901,
-        "defaultReplicates": 100,
-        "simulationDays": 120,
         "warehouseCount": 2,
         "pharmacyCount": 12,
         "drugCount": 8,
@@ -2532,15 +1715,40 @@
         "logistics": {
           "orderCost": 25,
           "transportCostPerUnit": 0.15,
-          "truckCapacityUnits": 2000,
-          "dailyDispatchCapacityPerWarehouse": 2500,
+          "maxCycleDays": 30,
           "pharmacyInitialStockDays": 10,
-          "warehouseInitialStockDays": 20,
-          "upstreamInboundCoverage": 1.2,
-          "dispatchCapacityCoverage": 1.5,
-          "truckCapacityCoverage": 1.5,
-          "capacityMultiplier": 0.7,
-          "initialStockMultiplier": 1
+          "warehouseInitialStockDays": 10,
+          "warehouseTargetStockDays": 10,
+          "warehouseCapacityDays": 45,
+          "dispatchCapacityCoverage": 1.1,
+          "truckCapacityCoverage": 1.1,
+          "capacityMultiplier": 1,
+          "initialStockMultiplier": 1,
+          "lateralTransfers": {
+            "enabled": true,
+            "essentialOnly": true,
+            "transitDays": 1,
+            "costPerUnit": 0.4,
+            "fixedCost": 10,
+            "capacityCoverage": 0.25,
+            "cooldownDays": 7,
+            "donorSafetyZ": 1.65
+          }
+        },
+        "supplyNetwork": {
+          "redundancyEnabled": true,
+          "primary": {
+            "replenishmentLeadTime": 2,
+            "capacityCoverage": 1.2,
+            "reliability": 0.98,
+            "unitCost": 0.5
+          },
+          "backup": {
+            "replenishmentLeadTime": 5,
+            "capacityCoverage": 0.4,
+            "reliability": 0.9,
+            "unitCost": 1.2
+          }
         },
         "regions": {
           "urban": {
@@ -2670,9 +1878,14 @@
             "startDay": 30,
             "durationDays": 30,
             "magnitude": 0.5,
+            "supplierTier": "primary"
+          },
+          {
+            "type": "roadDisruption",
+            "startDay": 30,
+            "durationDays": 30,
+            "magnitude": 2,
             "targetRegions": [
-              "urban",
-              "suburban",
               "rural"
             ]
           }
@@ -2696,10 +1909,28 @@
           "equityAware": {
             "stockout": 1,
             "wait": 0.5,
-            "inequity": 1,
+            "inequity": 2,
             "cost": 0.01
           }
+        }
+      }
+    },
+    {
+      "key": "M9-extreme",
+      "label": "Extreme: surge ×2.2 + all suppliers at 40 % + rural transit ×2.5 + lead ×2 + capacity ×0.8",
+      "scenarioHash": "a1eaa3dbc93b78c0fabab29c2cd250c5a3b8cf8881fa9684ece13796291d7929",
+      "scenario": {
+        "schemaVersion": "3.0.0",
+        "id": "M9-extreme",
+        "name": "Extreme: surge ×2.2 + all suppliers at 40 % + rural transit ×2.5 + lead ×2 + capacity ×0.8",
+        "description": "Synthetic: 30-day warm-up, 30-day demand surge ×1.6 + primary supplier capacity 50 % + rural transit ×2, 60-day recovery.",
+        "synthetic": true,
+        "parameterMeta": {
+          "all": "合成场景假设 (synthetic scenario assumption); not estimated from real data"
         },
+        "randomSeed": 20240901,
+        "defaultReplicates": 100,
+        "simulationDays": 120,
         "phases": {
           "warmup": [
             0,
@@ -2713,26 +1944,7 @@
             60,
             120
           ]
-        }
-      }
-    },
-    {
-      "key": "S14-extreme",
-      "label": "Extreme: surge ×2.2 + supply 20% + rural road ×2.5 + lead ×2 + capacity ×0.8",
-      "scenario": {
-        "schemaVersion": "2.1.0",
-        "id": "S14-extreme",
-        "name": "Extreme: surge ×2.2 + supply 20% + rural road ×2.5 + lead ×2 + capacity ×0.8",
-        "description": "12 pharmacies (4 urban / 4 suburban / 4 rural), 2 warehouses, 8 SKUs; 30-day warm-up, 30-day disruption window, 60-day recovery.",
-        "parameterMeta": {
-          "population": "illustrative",
-          "baseDemand": "illustrative",
-          "costs": "illustrative",
-          "events": "illustrative"
         },
-        "randomSeed": 20240901,
-        "defaultReplicates": 100,
-        "simulationDays": 120,
         "warehouseCount": 2,
         "pharmacyCount": 12,
         "drugCount": 8,
@@ -2744,15 +1956,40 @@
         "logistics": {
           "orderCost": 25,
           "transportCostPerUnit": 0.15,
-          "truckCapacityUnits": 2000,
-          "dailyDispatchCapacityPerWarehouse": 2500,
+          "maxCycleDays": 30,
           "pharmacyInitialStockDays": 10,
-          "warehouseInitialStockDays": 20,
-          "upstreamInboundCoverage": 1.2,
+          "warehouseInitialStockDays": 10,
+          "warehouseTargetStockDays": 10,
+          "warehouseCapacityDays": 45,
           "dispatchCapacityCoverage": 1.5,
           "truckCapacityCoverage": 1.5,
           "capacityMultiplier": 0.8,
-          "initialStockMultiplier": 1
+          "initialStockMultiplier": 1,
+          "lateralTransfers": {
+            "enabled": true,
+            "essentialOnly": true,
+            "transitDays": 1,
+            "costPerUnit": 0.4,
+            "fixedCost": 10,
+            "capacityCoverage": 0.25,
+            "cooldownDays": 7,
+            "donorSafetyZ": 1.65
+          }
+        },
+        "supplyNetwork": {
+          "redundancyEnabled": true,
+          "primary": {
+            "replenishmentLeadTime": 2,
+            "capacityCoverage": 1.2,
+            "reliability": 0.98,
+            "unitCost": 0.5
+          },
+          "backup": {
+            "replenishmentLeadTime": 5,
+            "capacityCoverage": 0.4,
+            "reliability": 0.9,
+            "unitCost": 1.2
+          }
         },
         "regions": {
           "urban": {
@@ -2881,12 +2118,8 @@
             "type": "supplyDisruption",
             "startDay": 30,
             "durationDays": 30,
-            "magnitude": 0.2,
-            "targetRegions": [
-              "urban",
-              "suburban",
-              "rural"
-            ]
+            "magnitude": 0.4,
+            "supplierTier": "all"
           },
           {
             "type": "roadDisruption",
@@ -2927,23 +2160,9 @@
           "equityAware": {
             "stockout": 1,
             "wait": 0.5,
-            "inequity": 1,
+            "inequity": 2,
             "cost": 0.01
           }
-        },
-        "phases": {
-          "warmup": [
-            0,
-            30
-          ],
-          "disruption": [
-            30,
-            60
-          ],
-          "recovery": [
-            60,
-            120
-          ]
         }
       }
     }

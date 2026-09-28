@@ -94,11 +94,10 @@ describe('experiment reproducibility', () => {
 });
 
 describe('scenarioSchema', () => {
-  it('clamps out-of-range simulationDays', () => {
+  it('rejects out-of-range simulationDays instead of clamping', () => {
     const r = validateScenario({ ...DEFAULT_SCENARIO, simulationDays: 9999 });
-    assert.strictEqual(r.valid, true);
-    assert.strictEqual(r.scenario.simulationDays, 365);
-    if (r.warnings?.length) assert.ok(r.warnings.length);
+    assert.strictEqual(r.valid, false);
+    assert.ok(r.errors.some((e) => e.path === 'simulationDays' && e.code === 'out_of_range'));
   });
 
   it('includes schemaVersion on normalized scenario', () => {

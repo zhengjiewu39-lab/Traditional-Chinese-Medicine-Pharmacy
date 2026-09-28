@@ -1,4 +1,4 @@
-const { normalizeScenario, deepMerge } = require('../scenarioSchema');
+const { normalizeScenario, deepMerge, buildPreset } = require('../scenarioSchema');
 const { generateScenarioInstance } = require('../scenarioGenerator');
 const { initPharmacyState, initWarehouseState } = require('../inventoryEngine');
 const { initForecasts } = require('../forecastEngine');
@@ -18,7 +18,16 @@ const ABLATIONS = [
   'errra-no-rolling',
   'errra-no-essential-priority',
   'errra-no-compound-awareness',
+  'errra-no-transfers',
+  'errra-no-supplier-redundancy',
 ];
+
+/** A scenario-matrix preset with a given seed and optional shorter horizon. */
+function matrixScenario(key, seed, days) {
+  const s = buildPreset(key);
+  if (!s) throw new Error(`unknown preset ${key}`);
+  return { ...s, randomSeed: seed, ...(days ? { simulationDays: days } : {}) };
+}
 
 /** Small synthetic network with demand-relative logistics and no events. */
 function smallScenario(patch = {}) {
@@ -57,4 +66,4 @@ function orderQty(result, pharmacyId, drugId) {
     .reduce((s, o) => s + o.qty, 0);
 }
 
-module.exports = { ALL_POLICIES, ABLATIONS, smallScenario, makeCtx, orderQty };
+module.exports = { ALL_POLICIES, ABLATIONS, smallScenario, makeCtx, orderQty, matrixScenario };

@@ -6,9 +6,9 @@ const { receiveShipment, serveBacklog } = require('./inventoryEngine');
 
 const NEUTRAL_FACTORS = {
   demand: { urban: 1, suburban: 1, rural: 1 },
-  supply: { urban: 1, suburban: 1, rural: 1 },
   transit: { urban: 1, suburban: 1, rural: 1 },
   lead: { urban: 1, suburban: 1, rural: 1 },
+  supplyByWarehouse: {},
 };
 
 function computeTransitDays(pharmacy, region, drug, plan, scenario) {
@@ -46,14 +46,20 @@ function scheduleShipment({ pharmacy, drugId, qty, currentDay, transitDays, inTr
   });
 }
 
-function processArrivals(currentDay, inTransit, pharmacyStates) {
+/**
+ * Deliver shipments due on `currentDay` (warehouse shipments and lateral transfers), then serve
+ * each receiving pharmacy's backlog FIFO. Returns the remaining in-transit list; `arrived`, when
+ * given, collects the delivered entries.
+ */
+function processArrivals(currentDay, inTransit, pharmacyStates, arrived) {
   const arriving = inTransit.filter((s) => s.arriveDay <= currentDay);
   const remaining = inTransit.filter((s) => s.arriveDay > currentDay);
   for (const s of arriving) {
     const ph = pharmacyStates.find((p) => p.id === s.pharmacyId);
     if (ph) {
       receiveShipment(ph, s.drugId, s.qty);
-      serveBacklog(ph, s.drugId);
+      serveBacklog(ph, s.drugId, currentDay);
+      if (Array.isArray(arrived)) arrived.push(s);
     }
   }
   return remaining;
@@ -62,6 +68,20 @@ function processArrivals(currentDay, inTransit, pharmacyStates) {
 /** Orders are processed in the policy's own rank order (policyRank ascending, 0 = first). */
 function sortByPolicyRank(orders) {
   return [...orders].sort((a, b) => (a.policyRank ?? Infinity) - (b.policyRank ?? Infinity));
+}
+
+/** Deterministic tie-breaker used only when priority scores are exactly equal: region, pharmacy, SKU. */
+function tieBreak(a, b) {
+  return String(a.regionType).localeCompare(String(b.regionType))
+    || naturalId(a.pharmacyId) - naturalId(b.pharmacyId)
+    || String(a.pharmacyId).localeCompare(String(b.pharmacyId))
+    || naturalId(a.drugId) - naturalId(b.drugId)
+    || String(a.drugId).localeCompare(String(b.drugId));
+}
+
+function naturalId(id) {
+  const m = /(\d+)$/.exec(String(id ?? ''));
+  return m ? Number(m[1]) : 0;
 }
 
 /**
@@ -145,6 +165,7 @@ module.exports = {
   arrivalLagDays,
   transportCostPerUnit,
   sortByPolicyRank,
+  tieBreak,
   proportionalShares,
   isProportional,
 };

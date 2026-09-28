@@ -1,219 +1,145 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="890" viewBox="0 0 1080 890" font-family="Helvetica, Arial, sans-serif" font-size="11">
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="690" viewBox="0 0 1080 690" font-family="Helvetica, Arial, sans-serif" font-size="11">
 <rect width="100%" height="100%" fill="white"/>
 <text x="20" y="22" font-size="14" font-weight="bold">Cost vs worst-region essential fill (Pareto frontier per scenario)</text>
-<text x="65" y="52" font-weight="bold">S01-baseline</text>
+<text x="65" y="52" font-weight="bold">M1-normal</text>
 <rect x="65" y="60" width="200" height="140" fill="none" stroke="#ccc"/>
 <text x="61" y="203" text-anchor="end" font-size="9">0.99</text>
-<text x="61" y="156.33333333333422" text-anchor="end" font-size="9">1.00</text>
-<text x="61" y="109.66666666666578" text-anchor="end" font-size="9">1.00</text>
+<text x="61" y="156.33333333333417" text-anchor="end" font-size="9">1.00</text>
+<text x="61" y="109.66666666666582" text-anchor="end" font-size="9">1.00</text>
 <text x="61" y="63" text-anchor="end" font-size="9">1.00</text>
-<text x="65" y="212" text-anchor="middle" font-size="9">268k</text>
-<text x="165.00000000000006" y="212" text-anchor="middle" font-size="9">312k</text>
-<text x="265" y="212" text-anchor="middle" font-size="9">356k</text>
-<circle cx="248.33333333333337" cy="188.33333333333357" r="10.0" fill="#9e9e9e" fill-opacity="0.8" stroke="none" stroke-width="1.5"><title>fixed-allocation: cost 348233, worst fill 0.994, unmet 9</title></circle>
-<circle cx="87.11975124037735" cy="77.94526189836569" r="4.3" fill="#8d6e63" fill-opacity="0.8" stroke="none" stroke-width="1.5"><title>reorder-point: cost 277431, worst fill 0.999, unmet 2</title></circle>
-<circle cx="81.66666666666663" cy="71.66666666666643" r="4.0" fill="#1f77b4" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>cost-first: cost 275036, worst fill 0.999, unmet 2</title></circle>
-<circle cx="83.0080551227549" cy="97.56877963086141" r="9.7" fill="#ff7f0e" fill-opacity="0.8" stroke="none" stroke-width="1.5"><title>equity-aware: cost 275625, worst fill 0.998, unmet 9</title></circle>
-<circle cx="81.96045741411987" cy="72.65722913678893" r="4.0" fill="#2ca02c" fill-opacity="0.8" stroke="none" stroke-width="1.5"><title>equity-constrained-rolling-horizon: cost 275165, worst fill 0.999, unmet 2</title></circle>
-<text x="325" y="52" font-weight="bold">S02-surge-low</text>
+<text x="65" y="212" text-anchor="middle" font-size="9">272k</text>
+<text x="165" y="212" text-anchor="middle" font-size="9">310k</text>
+<text x="265" y="212" text-anchor="middle" font-size="9">347k</text>
+<polyline fill="none" stroke="#555" stroke-dasharray="3,2" points="81.66666666666666,118.78188235222949 86.09477519326042,72.37752995631669 87.8500069194002,71.6666666666658 88.25685020398421,86.75431879867357"/>
+<circle cx="248.33333333333331" cy="188.33333333333417" r="4.2" fill="#9e9e9e" fill-opacity="0.8" stroke="none" stroke-width="1.5"><title>fixed-allocation: cost 341154, worst fill 0.994, unmet 36</title></circle>
+<circle cx="81.66666666666666" cy="118.78188235222949" r="4.0" fill="#8d6e63" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>reorder-point: cost 278337, worst fill 0.997, unmet 14</title></circle>
+<circle cx="86.09477519326042" cy="72.37752995631669" r="10.0" fill="#1f77b4" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>cost-first: cost 280006, worst fill 0.999, unmet 837</title></circle>
+<circle cx="88.25685020398421" cy="86.75431879867357" r="8.5" fill="#ff7f0e" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>equity-aware: cost 280821, worst fill 0.999, unmet 636</title></circle>
+<circle cx="87.8500069194002" cy="71.6666666666658" r="9.6" fill="#2ca02c" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>equity-constrained-rolling-horizon: cost 280668, worst fill 0.999, unmet 777</title></circle>
+<text x="325" y="52" font-weight="bold">M2-demand-surge</text>
 <rect x="325" y="60" width="200" height="140" fill="none" stroke="#ccc"/>
-<text x="321" y="203" text-anchor="end" font-size="9">0.90</text>
-<text x="321" y="156.33333333333337" text-anchor="end" font-size="9">0.93</text>
-<text x="321" y="109.66666666666663" text-anchor="end" font-size="9">0.97</text>
-<text x="321" y="63" text-anchor="end" font-size="9">1.01</text>
-<text x="325" y="212" text-anchor="middle" font-size="9">274k</text>
-<text x="425" y="212" text-anchor="middle" font-size="9">317k</text>
-<text x="525" y="212" text-anchor="middle" font-size="9">360k</text>
-<polyline fill="none" stroke="#555" stroke-dasharray="3,2" points="341.6666666666667,72.39997654164729 342.12396301735436,72.26457548322495 350.3846806883732,71.66666666666663"/>
-<circle cx="508.3333333333333" cy="188.33333333333337" r="10.0" fill="#9e9e9e" fill-opacity="0.8" stroke="none" stroke-width="1.5"><title>fixed-allocation: cost 352473, worst fill 0.905, unmet 1898</title></circle>
-<circle cx="350.3846806883732" cy="71.66666666666663" r="4.0" fill="#8d6e63" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>reorder-point: cost 285204, worst fill 0.999, unmet 2</title></circle>
-<circle cx="341.6666666666667" cy="72.39997654164729" r="4.0" fill="#1f77b4" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>cost-first: cost 281492, worst fill 0.998, unmet 3</title></circle>
-<circle cx="342.1221323737543" cy="77.07105807312148" r="4.0" fill="#ff7f0e" fill-opacity="0.8" stroke="none" stroke-width="1.5"><title>equity-aware: cost 281686, worst fill 0.995, unmet 16</title></circle>
-<circle cx="342.12396301735436" cy="72.26457548322495" r="4.0" fill="#2ca02c" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>equity-constrained-rolling-horizon: cost 281686, worst fill 0.999, unmet 3</title></circle>
-<text x="585" y="52" font-weight="bold">S03-surge-mid</text>
+<text x="321" y="203" text-anchor="end" font-size="9">0.56</text>
+<text x="321" y="156.33333333333331" text-anchor="end" font-size="9">0.72</text>
+<text x="321" y="109.66666666666667" text-anchor="end" font-size="9">0.88</text>
+<text x="321" y="63" text-anchor="end" font-size="9">1.04</text>
+<text x="325" y="212" text-anchor="middle" font-size="9">312k</text>
+<text x="425" y="212" text-anchor="middle" font-size="9">344k</text>
+<text x="525" y="212" text-anchor="middle" font-size="9">377k</text>
+<polyline fill="none" stroke="#555" stroke-dasharray="3,2" points="341.6666666666667,78.73203085319894 343.7329029386156,72.88413887398401 347.2327850603547,72.47967716700553 367.4341724917913,71.66666666666669"/>
+<circle cx="508.3333333333333" cy="188.33333333333334" r="10.0" fill="#9e9e9e" fill-opacity="0.8" stroke="none" stroke-width="1.5"><title>fixed-allocation: cost 371493, worst fill 0.597, unmet 29010</title></circle>
+<circle cx="367.4341724917913" cy="71.66666666666669" r="4.0" fill="#8d6e63" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>reorder-point: cost 325813, worst fill 0.998, unmet 19</title></circle>
+<circle cx="343.7329029386156" cy="72.88413887398401" r="5.5" fill="#1f77b4" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>cost-first: cost 318129, worst fill 0.994, unmet 7092</title></circle>
+<circle cx="341.6666666666667" cy="78.73203085319894" r="5.0" fill="#ff7f0e" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>equity-aware: cost 317459, worst fill 0.974, unmet 5086</title></circle>
+<circle cx="347.2327850603547" cy="72.47967716700553" r="5.7" fill="#2ca02c" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>equity-constrained-rolling-horizon: cost 319263, worst fill 0.995, unmet 8234</title></circle>
+<text x="585" y="52" font-weight="bold">M3-supply-disruption</text>
 <rect x="585" y="60" width="200" height="140" fill="none" stroke="#ccc"/>
-<text x="581" y="203" text-anchor="end" font-size="9">0.50</text>
-<text x="581" y="156.33333333333331" text-anchor="end" font-size="9">0.68</text>
-<text x="581" y="109.66666666666664" text-anchor="end" font-size="9">0.86</text>
+<text x="581" y="203" text-anchor="end" font-size="9">0.55</text>
+<text x="581" y="156.33333333333331" text-anchor="end" font-size="9">0.71</text>
+<text x="581" y="109.66666666666667" text-anchor="end" font-size="9">0.88</text>
 <text x="581" y="63" text-anchor="end" font-size="9">1.04</text>
-<text x="585" y="212" text-anchor="middle" font-size="9">280k</text>
-<text x="685" y="212" text-anchor="middle" font-size="9">321k</text>
-<text x="785" y="212" text-anchor="middle" font-size="9">362k</text>
-<polyline fill="none" stroke="#555" stroke-dasharray="3,2" points="601.6666666666666,83.1234341655588 604.388981343698,72.58063386023862 605.0381508560088,72.23279556871226 625.1565912927399,71.66666666666669"/>
-<circle cx="768.3333333333334" cy="188.33333333333334" r="10.0" fill="#9e9e9e" fill-opacity="0.8" stroke="none" stroke-width="1.5"><title>fixed-allocation: cost 355166, worst fill 0.547, unmet 9825</title></circle>
-<circle cx="625.1565912927399" cy="71.66666666666669" r="4.0" fill="#8d6e63" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>reorder-point: cost 296615, worst fill 0.997, unmet 6</title></circle>
-<circle cx="604.388981343698" cy="72.58063386023862" r="4.0" fill="#1f77b4" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>cost-first: cost 288122, worst fill 0.994, unmet 16</title></circle>
-<circle cx="601.6666666666666" cy="83.1234341655588" r="4.1" fill="#ff7f0e" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>equity-aware: cost 287009, worst fill 0.953, unmet 118</title></circle>
-<circle cx="605.0381508560088" cy="72.23279556871226" r="4.0" fill="#2ca02c" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>equity-constrained-rolling-horizon: cost 288388, worst fill 0.995, unmet 11</title></circle>
-<text x="845" y="52" font-weight="bold">S04-surge-high</text>
+<text x="585" y="212" text-anchor="middle" font-size="9">283k</text>
+<text x="685" y="212" text-anchor="middle" font-size="9">311k</text>
+<text x="785" y="212" text-anchor="middle" font-size="9">340k</text>
+<polyline fill="none" stroke="#555" stroke-dasharray="3,2" points="601.6666666666667,98.33326066666925 624.7722840193468,90.41836401357739 737.6774703231373,71.66666666666669"/>
+<circle cx="768.3333333333333" cy="188.33333333333334" r="10.0" fill="#9e9e9e" fill-opacity="0.8" stroke="none" stroke-width="1.5"><title>fixed-allocation: cost 335051, worst fill 0.593, unmet 23588</title></circle>
+<circle cx="737.6774703231373" cy="71.66666666666669" r="4.0" fill="#8d6e63" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>reorder-point: cost 326305, worst fill 0.997, unmet 494</title></circle>
+<circle cx="603.0713252568675" cy="113.50450860385487" r="6.0" fill="#1f77b4" fill-opacity="0.8" stroke="none" stroke-width="1.5"><title>cost-first: cost 287898, worst fill 0.852, unmet 8238</title></circle>
+<circle cx="601.6666666666667" cy="98.33326066666925" r="5.5" fill="#ff7f0e" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>equity-aware: cost 287497, worst fill 0.905, unmet 6126</title></circle>
+<circle cx="624.7722840193468" cy="90.41836401357739" r="5.8" fill="#2ca02c" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>equity-constrained-rolling-horizon: cost 294090, worst fill 0.932, unmet 7383</title></circle>
+<text x="845" y="52" font-weight="bold">M4-transport-disruption</text>
 <rect x="845" y="60" width="200" height="140" fill="none" stroke="#ccc"/>
-<text x="841" y="203" text-anchor="end" font-size="9">0.25</text>
-<text x="841" y="156.33333333333331" text-anchor="end" font-size="9">0.52</text>
-<text x="841" y="109.66666666666667" text-anchor="end" font-size="9">0.78</text>
-<text x="841" y="63.00000000000006" text-anchor="end" font-size="9">1.05</text>
-<text x="845" y="212" text-anchor="middle" font-size="9">290k</text>
-<text x="945" y="212" text-anchor="middle" font-size="9">328k</text>
-<text x="1045" y="212" text-anchor="middle" font-size="9">367k</text>
-<polyline fill="none" stroke="#555" stroke-dasharray="3,2" points="861.6666666666666,96.30723411321033 872.0317380098095,72.38272693348365 879.4193590740906,71.66666666666666"/>
-<circle cx="1028.3333333333333" cy="188.33333333333334" r="10.0" fill="#9e9e9e" fill-opacity="0.8" stroke="none" stroke-width="1.5"><title>fixed-allocation: cost 360297, worst fill 0.319, unmet 15688</title></circle>
-<circle cx="1005.0520786179322" cy="78.21676066420451" r="4.4" fill="#8d6e63" fill-opacity="0.8" stroke="none" stroke-width="1.5"><title>reorder-point: cost 351413, worst fill 0.947, unmet 961</title></circle>
-<circle cx="872.0317380098095" cy="72.38272693348365" r="4.0" fill="#1f77b4" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>cost-first: cost 300654, worst fill 0.980, unmet 92</title></circle>
-<circle cx="861.6666666666666" cy="96.30723411321033" r="4.5" fill="#ff7f0e" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>equity-aware: cost 296699, worst fill 0.844, unmet 1450</title></circle>
-<circle cx="879.4193590740906" cy="71.66666666666666" r="4.0" fill="#2ca02c" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>equity-constrained-rolling-horizon: cost 303473, worst fill 0.984, unmet 42</title></circle>
-<text x="65" y="252" font-weight="bold">S05-supply-low</text>
+<text x="841" y="203" text-anchor="end" font-size="9">0.73</text>
+<text x="841" y="156.33333333333331" text-anchor="end" font-size="9">0.83</text>
+<text x="841" y="109.66666666666669" text-anchor="end" font-size="9">0.93</text>
+<text x="841" y="63" text-anchor="end" font-size="9">1.02</text>
+<text x="845" y="212" text-anchor="middle" font-size="9">275k</text>
+<text x="945.0000000000001" y="212" text-anchor="middle" font-size="9">311k</text>
+<text x="1045" y="212" text-anchor="middle" font-size="9">347k</text>
+<polyline fill="none" stroke="#555" stroke-dasharray="3,2" points="861.6666666666666,81.53059567714045 863.1375391034331,82.42429711605705 863.5398868236607,79.27495710393728 865.1729296457647,71.66666666666663"/>
+<circle cx="1028.3333333333333" cy="188.33333333333331" r="10.0" fill="#9e9e9e" fill-opacity="0.8" stroke="none" stroke-width="1.5"><title>fixed-allocation: cost 340907, worst fill 0.758, unmet 1169</title></circle>
+<circle cx="865.1729296457647" cy="71.66666666666663" r="4.0" fill="#8d6e63" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>reorder-point: cost 281810, worst fill 0.998, unmet 52</title></circle>
+<circle cx="861.6666666666666" cy="81.53059567714045" r="9.0" fill="#1f77b4" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>cost-first: cost 280540, worst fill 0.978, unmet 975</title></circle>
+<circle cx="863.1375391034331" cy="82.42429711605705" r="8.0" fill="#ff7f0e" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>equity-aware: cost 281073, worst fill 0.976, unmet 794</title></circle>
+<circle cx="863.5398868236607" cy="79.27495710393728" r="8.6" fill="#2ca02c" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>equity-constrained-rolling-horizon: cost 281218, worst fill 0.983, unmet 917</title></circle>
+<text x="65" y="252" font-weight="bold">M5-compound</text>
 <rect x="65" y="260" width="200" height="140" fill="none" stroke="#ccc"/>
-<text x="61" y="403" text-anchor="end" font-size="9">0.95</text>
-<text x="61" y="356.33333333333326" text-anchor="end" font-size="9">0.97</text>
-<text x="61" y="309.66666666666674" text-anchor="end" font-size="9">0.99</text>
-<text x="61" y="263" text-anchor="end" font-size="9">1.00</text>
-<text x="65" y="412" text-anchor="middle" font-size="9">259k</text>
-<text x="165.00000000000006" y="412" text-anchor="middle" font-size="9">302k</text>
-<text x="265" y="412" text-anchor="middle" font-size="9">346k</text>
-<polyline fill="none" stroke="#555" stroke-dasharray="3,2" points="81.66666666666664,271.90956817165556 82.65907238471927,271.66666666666674"/>
-<circle cx="248.33333333333331" cy="388.33333333333326" r="10.0" fill="#9e9e9e" fill-opacity="0.8" stroke="none" stroke-width="1.5"><title>fixed-allocation: cost 338592, worst fill 0.957, unmet 789</title></circle>
-<circle cx="90.78879810118381" cy="271.68261783555664" r="4.0" fill="#8d6e63" fill-opacity="0.8" stroke="none" stroke-width="1.5"><title>reorder-point: cost 270162, worst fill 0.999, unmet 1</title></circle>
-<circle cx="81.66666666666664" cy="271.90956817165556" r="4.0" fill="#1f77b4" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>cost-first: cost 266200, worst fill 0.999, unmet 2</title></circle>
-<circle cx="82.78554934096572" cy="275.3447574103949" r="4.1" fill="#ff7f0e" fill-opacity="0.8" stroke="none" stroke-width="1.5"><title>equity-aware: cost 266686, worst fill 0.998, unmet 9</title></circle>
-<circle cx="82.65907238471927" cy="271.66666666666674" r="4.0" fill="#2ca02c" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>equity-constrained-rolling-horizon: cost 266631, worst fill 0.999, unmet 1</title></circle>
-<text x="325" y="252" font-weight="bold">S06-supply-mid</text>
+<text x="61" y="403" text-anchor="end" font-size="9">0.48</text>
+<text x="61" y="356.3333333333333" text-anchor="end" font-size="9">0.66</text>
+<text x="61" y="309.6666666666667" text-anchor="end" font-size="9">0.84</text>
+<text x="61" y="263" text-anchor="end" font-size="9">1.02</text>
+<text x="65" y="412" text-anchor="middle" font-size="9">319k</text>
+<text x="164.9999999999999" y="412" text-anchor="middle" font-size="9">347k</text>
+<text x="265" y="412" text-anchor="middle" font-size="9">376k</text>
+<polyline fill="none" stroke="#555" stroke-dasharray="3,2" points="81.66666666666666,304.47607643851967 81.80310055028956,291.34046220480633 102.07474278779998,274.7831304561065 248.33333333333334,271.66666666666663"/>
+<circle cx="236.1090017285071" cy="388.3333333333333" r="10.0" fill="#9e9e9e" fill-opacity="0.8" stroke="none" stroke-width="1.5"><title>fixed-allocation: cost 367501, worst fill 0.527, unmet 32419</title></circle>
+<circle cx="248.33333333333334" cy="271.66666666666663" r="4.0" fill="#8d6e63" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>reorder-point: cost 370978, worst fill 0.974, unmet 1393</title></circle>
+<circle cx="81.66666666666666" cy="304.47607643851967" r="6.7" fill="#1f77b4" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>cost-first: cost 323563, worst fill 0.848, unmet 15244</title></circle>
+<circle cx="81.80310055028956" cy="291.34046220480633" r="6.0" fill="#ff7f0e" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>equity-aware: cost 323602, worst fill 0.899, unmet 11678</title></circle>
+<circle cx="102.07474278779998" cy="274.7831304561065" r="6.3" fill="#2ca02c" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>equity-constrained-rolling-horizon: cost 329369, worst fill 0.962, unmet 13198</title></circle>
+<text x="325" y="252" font-weight="bold">M6-long-lead</text>
 <rect x="325" y="260" width="200" height="140" fill="none" stroke="#ccc"/>
-<text x="321" y="403" text-anchor="end" font-size="9">0.51</text>
-<text x="321" y="356.3333333333333" text-anchor="end" font-size="9">0.69</text>
-<text x="321" y="309.6666666666667" text-anchor="end" font-size="9">0.87</text>
-<text x="321" y="263" text-anchor="end" font-size="9">1.04</text>
-<text x="325" y="412" text-anchor="middle" font-size="9">251k</text>
-<text x="425" y="412" text-anchor="middle" font-size="9">293k</text>
-<text x="525" y="412" text-anchor="middle" font-size="9">334k</text>
-<polyline fill="none" stroke="#555" stroke-dasharray="3,2" points="341.6666666666667,277.5344552355994 343.1465827086292,271.72521011994513 344.018868417963,271.6856921679978 373.2909848142302,271.6666666666667"/>
-<circle cx="508.3333333333333" cy="388.33333333333337" r="10.0" fill="#9e9e9e" fill-opacity="0.8" stroke="none" stroke-width="1.5"><title>fixed-allocation: cost 327093, worst fill 0.555, unmet 8157</title></circle>
-<circle cx="373.2909848142302" cy="271.6666666666667" r="4.0" fill="#8d6e63" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>reorder-point: cost 271175, worst fill 0.999, unmet 2</title></circle>
-<circle cx="343.1465827086292" cy="271.72521011994513" r="4.0" fill="#1f77b4" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>cost-first: cost 258692, worst fill 0.999, unmet 2</title></circle>
-<circle cx="341.6666666666667" cy="277.5344552355994" r="4.0" fill="#ff7f0e" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>equity-aware: cost 258079, worst fill 0.977, unmet 58</title></circle>
-<circle cx="344.018868417963" cy="271.6856921679978" r="4.0" fill="#2ca02c" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>equity-constrained-rolling-horizon: cost 259053, worst fill 0.999, unmet 1</title></circle>
-<text x="585" y="252" font-weight="bold">S07-supply-high</text>
+<text x="321" y="403" text-anchor="end" font-size="9">0.40</text>
+<text x="321" y="356.3333333333333" text-anchor="end" font-size="9">0.55</text>
+<text x="321" y="309.6666666666667" text-anchor="end" font-size="9">0.70</text>
+<text x="321" y="263" text-anchor="end" font-size="9">0.85</text>
+<text x="325" y="412" text-anchor="middle" font-size="9">317k</text>
+<text x="425.00000000000006" y="412" text-anchor="middle" font-size="9">356k</text>
+<text x="525" y="412" text-anchor="middle" font-size="9">395k</text>
+<polyline fill="none" stroke="#555" stroke-dasharray="3,2" points="341.66666666666663,304.4675479585552 375.3831236799052,298.90509933608894 508.33333333333337,271.6666666666667"/>
+<circle cx="422.2215813652773" cy="388.3333333333333" r="10.0" fill="#9e9e9e" fill-opacity="0.8" stroke="none" stroke-width="1.5"><title>fixed-allocation: cost 355127, worst fill 0.433, unmet 38034</title></circle>
+<circle cx="508.33333333333337" cy="271.6666666666667" r="4.0" fill="#8d6e63" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>reorder-point: cost 388779, worst fill 0.811, unmet 13119</title></circle>
+<circle cx="345.5347169953038" cy="329.8230224129734" r="6.4" fill="#1f77b4" fill-opacity="0.8" stroke="none" stroke-width="1.5"><title>cost-first: cost 325158, worst fill 0.622, unmet 23241</title></circle>
+<circle cx="341.66666666666663" cy="304.4675479585552" r="6.1" fill="#ff7f0e" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>equity-aware: cost 323647, worst fill 0.704, unmet 21831</title></circle>
+<circle cx="375.3831236799052" cy="298.90509933608894" r="6.3" fill="#2ca02c" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>equity-constrained-rolling-horizon: cost 336823, worst fill 0.722, unmet 22861</title></circle>
+<text x="585" y="252" font-weight="bold">M7-tight-warehouse</text>
 <rect x="585" y="260" width="200" height="140" fill="none" stroke="#ccc"/>
-<text x="581" y="403" text-anchor="end" font-size="9">0.31</text>
-<text x="581" y="356.33333333333337" text-anchor="end" font-size="9">0.56</text>
-<text x="581" y="309.6666666666667" text-anchor="end" font-size="9">0.81</text>
-<text x="581" y="263" text-anchor="end" font-size="9">1.06</text>
-<text x="585" y="412" text-anchor="middle" font-size="9">241k</text>
-<text x="685" y="412" text-anchor="middle" font-size="9">295k</text>
-<text x="785" y="412" text-anchor="middle" font-size="9">350k</text>
-<polyline fill="none" stroke="#555" stroke-dasharray="3,2" points="601.6666666666666,297.8009500235297 606.15853563446,273.75558259496523 606.8830212187992,271.66666666666663"/>
-<circle cx="724.848749824751" cy="388.3333333333333" r="10.0" fill="#9e9e9e" fill-opacity="0.8" stroke="none" stroke-width="1.5"><title>fixed-allocation: cost 316927, worst fill 0.371, unmet 11277</title></circle>
-<circle cx="768.3333333333334" cy="288.99138261185067" r="4.7" fill="#8d6e63" fill-opacity="0.8" stroke="none" stroke-width="1.5"><title>reorder-point: cost 340513, worst fill 0.906, unmet 1358</title></circle>
-<circle cx="606.15853563446" cy="273.75558259496523" r="4.1" fill="#1f77b4" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>cost-first: cost 252549, worst fill 0.988, unmet 175</title></circle>
-<circle cx="601.6666666666666" cy="297.8009500235297" r="4.7" fill="#ff7f0e" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>equity-aware: cost 250113, worst fill 0.859, unmet 1405</title></circle>
-<circle cx="606.8830212187992" cy="271.66666666666663" r="4.0" fill="#2ca02c" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>equity-constrained-rolling-horizon: cost 252942, worst fill 0.999, unmet 1</title></circle>
-<text x="845" y="252" font-weight="bold">S08-rural-road</text>
+<text x="581" y="403" text-anchor="end" font-size="9">0.34</text>
+<text x="581" y="356.33333333333337" text-anchor="end" font-size="9">0.51</text>
+<text x="581" y="309.6666666666667" text-anchor="end" font-size="9">0.68</text>
+<text x="581" y="263" text-anchor="end" font-size="9">0.85</text>
+<text x="585" y="412" text-anchor="middle" font-size="9">308k</text>
+<text x="685" y="412" text-anchor="middle" font-size="9">367k</text>
+<text x="785" y="412" text-anchor="middle" font-size="9">425k</text>
+<polyline fill="none" stroke="#555" stroke-dasharray="3,2" points="601.6666666666666,322.24707719834817 605.3839895865078,345.1849619935636 631.1798603146703,317.52114087432875 768.3333333333334,271.66666666666663"/>
+<circle cx="654.7535960240224" cy="388.3333333333333" r="10.0" fill="#9e9e9e" fill-opacity="0.8" stroke="none" stroke-width="1.5"><title>fixed-allocation: cost 349167, worst fill 0.385, unmet 39422</title></circle>
+<circle cx="768.3333333333334" cy="271.66666666666663" r="4.0" fill="#8d6e63" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>reorder-point: cost 415689, worst fill 0.807, unmet 10577</title></circle>
+<circle cx="605.3839895865078" cy="345.1849619935636" r="7.2" fill="#1f77b4" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>cost-first: cost 320252, worst fill 0.541, unmet 25985</title></circle>
+<circle cx="601.6666666666666" cy="322.24707719834817" r="7.2" fill="#ff7f0e" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>equity-aware: cost 318075, worst fill 0.624, unmet 26027</title></circle>
+<circle cx="631.1798603146703" cy="317.52114087432875" r="7.3" fill="#2ca02c" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>equity-constrained-rolling-horizon: cost 335360, worst fill 0.641, unmet 26515</title></circle>
+<text x="845" y="252" font-weight="bold">M8-tight-transport</text>
 <rect x="845" y="260" width="200" height="140" fill="none" stroke="#ccc"/>
-<text x="841" y="403" text-anchor="end" font-size="9">0.85</text>
-<text x="841" y="356.3333333333333" text-anchor="end" font-size="9">0.90</text>
-<text x="841" y="309.6666666666667" text-anchor="end" font-size="9">0.96</text>
-<text x="841" y="263" text-anchor="end" font-size="9">1.01</text>
-<text x="845" y="412" text-anchor="middle" font-size="9">268k</text>
-<text x="945" y="412" text-anchor="middle" font-size="9">311k</text>
-<text x="1045" y="412" text-anchor="middle" font-size="9">355k</text>
-<polyline fill="none" stroke="#555" stroke-dasharray="3,2" points="861.6666666666666,274.0526223109739 862.1640076409345,273.0364607448687 872.9238519824275,271.66666666666663"/>
-<circle cx="1028.3333333333333" cy="388.3333333333333" r="10.0" fill="#9e9e9e" fill-opacity="0.8" stroke="none" stroke-width="1.5"><title>fixed-allocation: cost 348066, worst fill 0.864, unmet 220</title></circle>
-<circle cx="872.9238519824275" cy="271.66666666666663" r="4.0" fill="#8d6e63" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>reorder-point: cost 279860, worst fill 0.998, unmet 3</title></circle>
-<circle cx="861.6666666666666" cy="274.0526223109739" r="4.1" fill="#1f77b4" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>cost-first: cost 274920, worst fill 0.995, unmet 8</title></circle>
-<circle cx="862.9480350613474" cy="276.1393894064329" r="4.4" fill="#ff7f0e" fill-opacity="0.8" stroke="none" stroke-width="1.5"><title>equity-aware: cost 275482, worst fill 0.993, unmet 18</title></circle>
-<circle cx="862.1640076409345" cy="273.0364607448687" r="4.1" fill="#2ca02c" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>equity-constrained-rolling-horizon: cost 275138, worst fill 0.996, unmet 6</title></circle>
-<text x="65" y="452" font-weight="bold">S09-surge-supply</text>
+<text x="841" y="403" text-anchor="end" font-size="9">0.19</text>
+<text x="841" y="356.3333333333333" text-anchor="end" font-size="9">0.47</text>
+<text x="841" y="309.66666666666663" text-anchor="end" font-size="9">0.75</text>
+<text x="841" y="263" text-anchor="end" font-size="9">1.04</text>
+<text x="845" y="412" text-anchor="middle" font-size="9">280k</text>
+<text x="945" y="412" text-anchor="middle" font-size="9">353k</text>
+<text x="1045" y="412" text-anchor="middle" font-size="9">426k</text>
+<polyline fill="none" stroke="#555" stroke-dasharray="3,2" points="861.6666666666666,295.0710160637858 870.0363357688772,272.9872810794744 871.3431987761174,271.66666666666663"/>
+<circle cx="902.019122002126" cy="388.3333333333333" r="10.0" fill="#9e9e9e" fill-opacity="0.8" stroke="none" stroke-width="1.5"><title>fixed-allocation: cost 321596, worst fill 0.264, unmet 47398</title></circle>
+<circle cx="1028.3333333333335" cy="371.5586314833765" r="5.7" fill="#8d6e63" fill-opacity="0.8" stroke="none" stroke-width="1.5"><title>reorder-point: cost 413695, worst fill 0.365, unmet 27849</title></circle>
+<circle cx="870.0363357688772" cy="272.9872810794744" r="4.0" fill="#1f77b4" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>cost-first: cost 298276, worst fill 0.957, unmet 20257</title></circle>
+<circle cx="861.6666666666666" cy="295.0710160637858" r="5.4" fill="#ff7f0e" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>equity-aware: cost 292174, worst fill 0.825, unmet 26469</title></circle>
+<circle cx="871.3431987761174" cy="271.66666666666663" r="4.0" fill="#2ca02c" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>equity-constrained-rolling-horizon: cost 299229, worst fill 0.965, unmet 20153</title></circle>
+<text x="65" y="452" font-weight="bold">M9-extreme</text>
 <rect x="65" y="460" width="200" height="140" fill="none" stroke="#ccc"/>
-<text x="61" y="603" text-anchor="end" font-size="9">0.22</text>
-<text x="61" y="556.3333333333334" text-anchor="end" font-size="9">0.50</text>
-<text x="61" y="509.6666666666667" text-anchor="end" font-size="9">0.77</text>
-<text x="61" y="463" text-anchor="end" font-size="9">1.05</text>
-<text x="65" y="612" text-anchor="middle" font-size="9">267k</text>
-<text x="165.00000000000006" y="612" text-anchor="middle" font-size="9">316k</text>
-<text x="265" y="612" text-anchor="middle" font-size="9">365k</text>
-<polyline fill="none" stroke="#555" stroke-dasharray="3,2" points="81.66666666666664,506.9149412939218 94.48266005720816,477.3727019867265 100.11521430280197,471.6666666666667"/>
-<circle cx="197.53668759097448" cy="588.3333333333334" r="10.0" fill="#9e9e9e" fill-opacity="0.8" stroke="none" stroke-width="1.5"><title>fixed-allocation: cost 332075, worst fill 0.288, unmet 14586</title></circle>
-<circle cx="248.33333333333337" cy="516.5493067844726" r="5.9" fill="#8d6e63" fill-opacity="0.8" stroke="none" stroke-width="1.5"><title>reorder-point: cost 357137, worst fill 0.716, unmet 4773</title></circle>
-<circle cx="94.48266005720816" cy="477.3727019867265" r="4.3" fill="#1f77b4" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>cost-first: cost 281230, worst fill 0.949, unmet 850</title></circle>
-<circle cx="81.66666666666664" cy="506.9149412939218" r="5.5" fill="#ff7f0e" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>equity-aware: cost 274907, worst fill 0.773, unmet 3681</title></circle>
-<circle cx="100.11521430280197" cy="471.6666666666667" r="4.0" fill="#2ca02c" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>equity-constrained-rolling-horizon: cost 284009, worst fill 0.984, unmet 153</title></circle>
-<text x="325" y="452" font-weight="bold">S10-surge-supply-road</text>
-<rect x="325" y="460" width="200" height="140" fill="none" stroke="#ccc"/>
-<text x="321" y="603" text-anchor="end" font-size="9">0.22</text>
-<text x="321" y="556.3333333333334" text-anchor="end" font-size="9">0.49</text>
-<text x="321" y="509.66666666666663" text-anchor="end" font-size="9">0.76</text>
-<text x="321" y="463" text-anchor="end" font-size="9">1.03</text>
-<text x="325" y="612" text-anchor="middle" font-size="9">267k</text>
-<text x="425.00000000000006" y="612" text-anchor="middle" font-size="9">316k</text>
-<text x="525" y="612" text-anchor="middle" font-size="9">365k</text>
-<polyline fill="none" stroke="#555" stroke-dasharray="3,2" points="341.66666666666663,509.924282570983 354.098318224233,481.4670874341226 361.040126801415,471.66666666666663"/>
-<circle cx="457.737682815021" cy="588.3333333333334" r="10.0" fill="#9e9e9e" fill-opacity="0.8" stroke="none" stroke-width="1.5"><title>fixed-allocation: cost 332048, worst fill 0.288, unmet 14760</title></circle>
-<circle cx="508.33333333333337" cy="514.3167702645856" r="5.9" fill="#8d6e63" fill-opacity="0.8" stroke="none" stroke-width="1.5"><title>reorder-point: cost 356984, worst fill 0.716, unmet 4776</title></circle>
-<circle cx="354.098318224233" cy="481.4670874341226" r="4.6" fill="#1f77b4" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>cost-first: cost 280968, worst fill 0.906, unmet 1640</title></circle>
-<circle cx="341.66666666666663" cy="509.924282570983" r="5.5" fill="#ff7f0e" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>equity-aware: cost 274841, worst fill 0.741, unmet 3993</title></circle>
-<circle cx="361.040126801415" cy="471.66666666666663" r="4.0" fill="#2ca02c" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>equity-constrained-rolling-horizon: cost 284390, worst fill 0.963, unmet 286</title></circle>
-<text x="585" y="452" font-weight="bold">S11-long-lead</text>
-<rect x="585" y="460" width="200" height="140" fill="none" stroke="#ccc"/>
-<text x="581" y="603" text-anchor="end" font-size="9">0.22</text>
-<text x="581" y="556.3333333333334" text-anchor="end" font-size="9">0.50</text>
-<text x="581" y="509.66666666666663" text-anchor="end" font-size="9">0.77</text>
-<text x="581" y="463" text-anchor="end" font-size="9">1.05</text>
-<text x="585" y="612" text-anchor="middle" font-size="9">266k</text>
-<text x="684.9999999999999" y="612" text-anchor="middle" font-size="9">314k</text>
-<text x="785" y="612" text-anchor="middle" font-size="9">361k</text>
-<polyline fill="none" stroke="#555" stroke-dasharray="3,2" points="601.6666666666667,514.7477052957585 616.8779854378582,481.76272078784245 623.1688250137468,471.66666666666663"/>
-<circle cx="724.3294635716601" cy="588.3333333333334" r="10.0" fill="#9e9e9e" fill-opacity="0.8" stroke="none" stroke-width="1.5"><title>fixed-allocation: cost 332333, worst fill 0.288, unmet 14644</title></circle>
-<circle cx="768.3333333333333" cy="516.6637468139203" r="5.9" fill="#8d6e63" fill-opacity="0.8" stroke="none" stroke-width="1.5"><title>reorder-point: cost 353176, worst fill 0.713, unmet 4841</title></circle>
-<circle cx="616.8779854378582" cy="481.76272078784245" r="4.5" fill="#1f77b4" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>cost-first: cost 281435, worst fill 0.920, unmet 1340</title></circle>
-<circle cx="601.6666666666667" cy="514.7477052957585" r="5.3" fill="#ff7f0e" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>equity-aware: cost 274230, worst fill 0.725, unmet 3297</title></circle>
-<circle cx="623.1688250137468" cy="471.66666666666663" r="4.0" fill="#2ca02c" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>equity-constrained-rolling-horizon: cost 284415, worst fill 0.980, unmet 203</title></circle>
-<text x="845" y="452" font-weight="bold">S12-limited-warehouse</text>
-<rect x="845" y="460" width="200" height="140" fill="none" stroke="#ccc"/>
-<text x="841" y="603" text-anchor="end" font-size="9">0.28</text>
-<text x="841" y="556.3333333333334" text-anchor="end" font-size="9">0.31</text>
-<text x="841" y="509.66666666666663" text-anchor="end" font-size="9">0.33</text>
-<text x="841" y="463" text-anchor="end" font-size="9">0.36</text>
-<text x="845" y="612" text-anchor="middle" font-size="9">210k</text>
-<text x="945" y="612" text-anchor="middle" font-size="9">289k</text>
-<text x="1045" y="612" text-anchor="middle" font-size="9">367k</text>
-<polyline fill="none" stroke="#555" stroke-dasharray="3,2" points="861.6666666666666,471.66666666666663 865.6505400568145,522.6088658326568"/>
-<circle cx="934.6654765521369" cy="588.3333333333334" r="8.8" fill="#9e9e9e" fill-opacity="0.8" stroke="none" stroke-width="1.5"><title>fixed-allocation: cost 280635, worst fill 0.288, unmet 14585</title></circle>
-<circle cx="1028.3333333333333" cy="546.9343671007551" r="7.5" fill="#8d6e63" fill-opacity="0.8" stroke="none" stroke-width="1.5"><title>reorder-point: cost 354223, worst fill 0.311, unmet 13689</title></circle>
-<circle cx="865.6505400568145" cy="522.6088658326568" r="4.0" fill="#1f77b4" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>cost-first: cost 226414, worst fill 0.324, unmet 11286</title></circle>
-<circle cx="861.6666666666666" cy="471.66666666666663" r="9.5" fill="#ff7f0e" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>equity-aware: cost 223285, worst fill 0.351, unmet 15110</title></circle>
-<circle cx="877.0916204120144" cy="489.43560835440377" r="10.0" fill="#2ca02c" fill-opacity="0.8" stroke="none" stroke-width="1.5"><title>equity-constrained-rolling-horizon: cost 235403, worst fill 0.342, unmet 15431</title></circle>
-<text x="65" y="652" font-weight="bold">S13-limited-capacity</text>
-<rect x="65" y="660" width="200" height="140" fill="none" stroke="#ccc"/>
-<text x="61" y="803" text-anchor="end" font-size="9">0.16</text>
-<text x="61" y="756.3333333333334" text-anchor="end" font-size="9">0.46</text>
-<text x="61" y="709.6666666666666" text-anchor="end" font-size="9">0.76</text>
-<text x="61" y="663" text-anchor="end" font-size="9">1.06</text>
-<text x="65" y="812" text-anchor="middle" font-size="9">226k</text>
-<text x="165.00000000000003" y="812" text-anchor="middle" font-size="9">327k</text>
-<text x="265" y="812" text-anchor="middle" font-size="9">428k</text>
-<polyline fill="none" stroke="#555" stroke-dasharray="3,2" points="81.66666666666667,736.1569402334238 98.39047729423176,697.8243520978066 103.3690296854185,671.6666666666667"/>
-<circle cx="145.09398327523843" cy="788.3333333333334" r="10.0" fill="#9e9e9e" fill-opacity="0.8" stroke="none" stroke-width="1.5"><title>fixed-allocation: cost 306502, worst fill 0.232, unmet 16777</title></circle>
-<circle cx="248.33333333333331" cy="779.80817151389" r="9.1" fill="#8d6e63" fill-opacity="0.8" stroke="none" stroke-width="1.5"><title>reorder-point: cost 410900, worst fill 0.287, unmet 14339</title></circle>
-<circle cx="98.39047729423176" cy="697.8243520978066" r="5.1" fill="#1f77b4" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>cost-first: cost 259275, worst fill 0.818, unmet 3035</title></circle>
-<circle cx="81.66666666666667" cy="736.1569402334238" r="7.4" fill="#ff7f0e" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>equity-aware: cost 242363, worst fill 0.569, unmet 9472</title></circle>
-<circle cx="103.3690296854185" cy="671.6666666666667" r="4.0" fill="#2ca02c" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>equity-constrained-rolling-horizon: cost 264309, worst fill 0.987, unmet 99</title></circle>
-<text x="325" y="652" font-weight="bold">S14-extreme</text>
-<rect x="325" y="660" width="200" height="140" fill="none" stroke="#ccc"/>
-<text x="321" y="803" text-anchor="end" font-size="9">0.22</text>
-<text x="321" y="756.3333333333334" text-anchor="end" font-size="9">0.25</text>
-<text x="321" y="709.6666666666666" text-anchor="end" font-size="9">0.27</text>
-<text x="321" y="663" text-anchor="end" font-size="9">0.30</text>
-<text x="325" y="812" text-anchor="middle" font-size="9">225k</text>
-<text x="425" y="812" text-anchor="middle" font-size="9">336k</text>
-<text x="525" y="812" text-anchor="middle" font-size="9">446k</text>
-<polyline fill="none" stroke="#555" stroke-dasharray="3,2" points="341.6666666666667,671.6666666666666 350.6967981872529,726.5430840099923 508.33333333333337,725.5716336684842"/>
-<circle cx="396.50735126353686" cy="788.3333333333334" r="10.0" fill="#9e9e9e" fill-opacity="0.8" stroke="none" stroke-width="1.5"><title>fixed-allocation: cost 304103, worst fill 0.226, unmet 20204</title></circle>
-<circle cx="508.33333333333337" cy="725.5716336684842" r="7.1" fill="#8d6e63" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>reorder-point: cost 427926, worst fill 0.263, unmet 18329</title></circle>
-<circle cx="350.6967981872529" cy="726.5430840099923" r="4.0" fill="#1f77b4" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>cost-first: cost 253378, worst fill 0.262, unmet 16322</title></circle>
-<circle cx="341.6666666666667" cy="671.6666666666666" r="7.7" fill="#ff7f0e" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>equity-aware: cost 243379, worst fill 0.294, unmet 18697</title></circle>
-<circle cx="362.06799776856695" cy="691.8452943138174" r="8.4" fill="#2ca02c" fill-opacity="0.8" stroke="none" stroke-width="1.5"><title>equity-constrained-rolling-horizon: cost 265969, worst fill 0.282, unmet 19174</title></circle>
-<g transform="translate(20,850)"><rect width="12" height="12" fill="#9e9e9e"/><text x="16" y="10">Fixed allocation</text></g>
-<g transform="translate(170,850)"><rect width="12" height="12" fill="#8d6e63"/><text x="16" y="10">Tuned (s,Q)</text></g>
-<g transform="translate(320,850)"><rect width="12" height="12" fill="#1f77b4"/><text x="16" y="10">Cost-first</text></g>
-<g transform="translate(470,850)"><rect width="12" height="12" fill="#ff7f0e"/><text x="16" y="10">Equity-aware (weighted)</text></g>
-<g transform="translate(620,850)"><rect width="12" height="12" fill="#2ca02c"/><text x="16" y="10">ERRRA</text></g>
-<text x="20" y="878" font-size="10">x: mean total cost; y: mean worst-region essential fill rate; marker size ∝ unmet essential demand; outlined = Pareto-efficient on (cost, worst-region fill, unmet). Synthetic data; 100 test seeds per point.</text>
+<text x="61" y="603" text-anchor="end" font-size="9">0.20</text>
+<text x="61" y="556.3333333333334" text-anchor="end" font-size="9">0.36</text>
+<text x="61" y="509.6666666666667" text-anchor="end" font-size="9">0.51</text>
+<text x="61" y="463" text-anchor="end" font-size="9">0.67</text>
+<text x="65" y="612" text-anchor="middle" font-size="9">284k</text>
+<text x="165" y="612" text-anchor="middle" font-size="9">359k</text>
+<text x="265" y="612" text-anchor="middle" font-size="9">435k</text>
+<polyline fill="none" stroke="#555" stroke-dasharray="3,2" points="81.66666666666663,523.5992342325353 97.55887421920771,518.7831299703985 109.83472416720635,471.6666666666667"/>
+<circle cx="119.03582022522335" cy="588.3333333333334" r="10.0" fill="#9e9e9e" fill-opacity="0.8" stroke="none" stroke-width="1.5"><title>fixed-allocation: cost 324598, worst fill 0.240, unmet 58935</title></circle>
+<circle cx="248.33333333333331" cy="580.648426080883" r="4.2" fill="#8d6e63" fill-opacity="0.8" stroke="none" stroke-width="1.5"><title>reorder-point: cost 422389, worst fill 0.266, unmet 43922</title></circle>
+<circle cx="97.55887421920771" cy="518.7831299703985" r="4.0" fill="#1f77b4" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>cost-first: cost 308354, worst fill 0.473, unmet 43372</title></circle>
+<circle cx="81.66666666666663" cy="523.5992342325353" r="7.6" fill="#ff7f0e" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>equity-aware: cost 296334, worst fill 0.457, unmet 52702</title></circle>
+<circle cx="109.83472416720635" cy="471.6666666666667" r="4.0" fill="#2ca02c" fill-opacity="0.8" stroke="#000" stroke-width="1.5"><title>equity-constrained-rolling-horizon: cost 317639, worst fill 0.631, unmet 43426</title></circle>
+<g transform="translate(20,650)"><rect width="12" height="12" fill="#9e9e9e"/><text x="16" y="10">Fixed allocation</text></g>
+<g transform="translate(170,650)"><rect width="12" height="12" fill="#8d6e63"/><text x="16" y="10">Tuned (s,Q)</text></g>
+<g transform="translate(320,650)"><rect width="12" height="12" fill="#1f77b4"/><text x="16" y="10">Cost-only</text></g>
+<g transform="translate(470,650)"><rect width="12" height="12" fill="#ff7f0e"/><text x="16" y="10">Weighted-equity heuristic</text></g>
+<g transform="translate(620,650)"><rect width="12" height="12" fill="#2ca02c"/><text x="16" y="10">ERRRA</text></g>
+<text x="20" y="678" font-size="10">x: mean total cost; y: mean worst-region essential fill rate; marker size ∝ unmet essential demand; outlined = Pareto-efficient on (cost, worst-region fill, unmet). Synthetic data; 100 test seeds per point.</text>
 </svg>

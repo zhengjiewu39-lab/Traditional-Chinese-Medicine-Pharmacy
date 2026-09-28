@@ -70,4 +70,32 @@ function computeRegionalDeficits(regionalStats, { maxWaitDays = 30, regions = RE
   return out;
 }
 
-module.exports = { summarizeWindow, computeRegionalDeficits, emptyRegionRow };
+/**
+ * Regional need score (≥ 0), increasing in unmet essential demand, vulnerability and shortage severity:
+ *   essentialDemandGap_r = 1 − EF_r                               ∈ [0, 1]
+ *   vulnerabilityWeight_r = v_r / max_r' v_r'                      ∈ (0, 1]
+ *   shortageSeverity_r   = 1 + min(1, BR_r)                        ∈ [1, 2]
+ *   needScore_r = essentialDemandGap_r × vulnerabilityWeight_r × shortageSeverity_r   ∈ [0, 2]
+ * Holding everything else fixed, a region with more unmet essential demand, a higher vulnerability
+ * weight or a larger backlog never receives a lower score.
+ */
+function computeRegionalNeed(regionalStats, vulnerability = {}, { regions = REGION_TYPES } = {}) {
+  const present = regions.filter((rt) => regionalStats[rt]);
+  const vMax = Math.max(1e-9, ...present.map((rt) => vulnerability[rt] ?? 1));
+  const out = {};
+  for (const rt of present) {
+    const s = regionalStats[rt];
+    const essentialDemandGap = Math.min(1, Math.max(0, 1 - (s.essentialFillRate ?? 1)));
+    const vulnerabilityWeight = (vulnerability[rt] ?? 1) / vMax;
+    const shortageSeverity = 1 + Math.min(1, Math.max(0, s.backlogRate ?? 0));
+    out[rt] = {
+      essentialDemandGap,
+      vulnerabilityWeight,
+      shortageSeverity,
+      needScore: essentialDemandGap * vulnerabilityWeight * shortageSeverity,
+    };
+  }
+  return out;
+}
+
+module.exports = { summarizeWindow, computeRegionalDeficits, computeRegionalNeed, emptyRegionRow };

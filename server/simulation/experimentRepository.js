@@ -2,7 +2,8 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
-const DATA_DIR = path.join(__dirname, '../../data/simulation-experiments');
+const DATA_DIR = process.env.SIMULATION_DATA_DIR || path.join(__dirname, '../../data/simulation-experiments');
+const EXPERIMENT_FILE_ID_RE = /^exp_\d{13}_[0-9a-f]{8}$/;
 
 function ensureDir() {
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -19,6 +20,7 @@ function newExperimentGroupId() {
 function saveExperiment(record) {
   ensureDir();
   const id = record.id || newExperimentId();
+  if (!EXPERIMENT_FILE_ID_RE.test(id)) throw new Error(`Invalid experiment id: ${id}`);
   const file = path.join(DATA_DIR, `${id}.json`);
   if (fs.existsSync(file)) {
     throw new Error(`Experiment ${id} already exists; immutable archive`);
@@ -60,7 +62,9 @@ function listExperiments() {
     .sort((a, b) => (b.startedAt || '').localeCompare(a.startedAt || ''));
 }
 
+/** Returns null for ids outside the whitelist, so a request can never address a path outside DATA_DIR. */
 function getExperiment(id) {
+  if (typeof id !== 'string' || !EXPERIMENT_FILE_ID_RE.test(id)) return null;
   ensureDir();
   const file = path.join(DATA_DIR, `${id}.json`);
   if (!fs.existsSync(file)) return null;

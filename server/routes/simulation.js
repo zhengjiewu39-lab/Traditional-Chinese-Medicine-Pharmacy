@@ -8,14 +8,15 @@ const {
   buildPreset,
 } = require('../simulation/scenarioSchema');
 const { hashScenario } = require('../simulation/scenarioHash');
-const { listPolicies, getPolicy, resolvePolicyId } = require('../simulation/policyEngine');
-const { getGitCommitHash, getPackageLockHash } = require('../simulation/gitInfo');
-const { runSimulation, runReplicates, ENGINE_VERSION } = require('../simulation/simulationEngine');
+const { listPolicies, listAblations, getPolicy, resolvePolicyId, resolveParams } = require('../simulation/policyEngine');
+const { getGitCommitHash, getCommitSource, getPackageLockHash } = require('../simulation/gitInfo');
+const { ENGINE_VERSION } = require('../simulation/simulationEngine');
 const {
   aggregateReplicates,
   aggregateDailyTimeSeries,
   aggregateRegionalReplicates,
   pairedPolicyComparison,
+  PRIMARY_METRICS,
 } = require('../simulation/metricsEngine');
 const {
   saveExperiment,
@@ -25,9 +26,72 @@ const {
   newExperimentGroupId,
 } = require('../simulation/experimentRepository');
 const { metricsToCsv, experimentSummaryMarkdown, pickExportMetrics } = require('../simulation/exportService');
+const {
+  MAX_REPLICATES,
+  parseReplicates,
+  parsePolicyId,
+  parsePolicyIds,
+  rejectUnknownKeys,
+  isExperimentId,
+  isGroupId,
+  isJobId,
+} = require('../simulation/requestValidation');
+const { JobQueue } = require('../simulation/jobQueue');
 
 const router = express.Router();
-const activeJobs = new Map();
+const queue = new JobQueue({ concurrency: Number(process.env.SIMULATION_WORKERS) || 1 });
+
+function bad(res, message, errors = []) {
+  return res.status(400).json({ message, errors });
+}
+
+function seedList(randomSeed, n) {
+  return Array.from({ length: n }, (_, i) => randomSeed + i);
+}
+
+function provenance() {
+  return {
+    engineVersion: ENGINE_VERSION,
+    gitCommitHash: getGitCommitHash(),
+    gitCommitSource: getCommitSource(),
+    packageLockHash: getPackageLockHash(),
+    nodeVersion: process.version,
+  };
+}
+
+function experimentPayload({ id, scenario, scenarioHash, policyId, results, startedAt, prov, extra = {} }) {
+  const base = {
+    id,
+    scenarioId: scenario.id,
+    scenarioHash,
+    scenarioVersion: scenario.schemaVersion,
+    scenario,
+    policyId,
+    policyVersion: getPolicy(policyId).version,
+    policyParams: resolveParams(policyId, scenario),
+    randomSeed: scenario.randomSeed,
+    replicateSeeds: results.map((r) => r.seed),
+    replicates: results.length,
+    ...prov,
+    startedAt,
+    finishedAt: new Date().toISOString(),
+    ...extra,
+  };
+  if (results.length === 1) {
+    return { ...base, metrics: results[0].metrics, runLog: results[0].runLog, summary: results[0].metrics };
+  }
+  return {
+    ...base,
+    results,
+    summary: aggregateReplicates(results.map((r) => r.metrics)),
+    regionalAggregate: aggregateRegionalReplicates(results),
+    dailyAggregate: aggregateDailyTimeSeries(results.filter((r) => r.runLog)),
+  };
+}
+
+router.param('id', (req, res, next, id) => (isExperimentId(id) ? next() : bad(res, 'Invalid experiment id')));
+router.param('jobId', (req, res, next, id) => (isJobId(id) ? next() : bad(res, 'Invalid job id')));
+router.param('groupId', (req, res, next, id) => (isGroupId(id) ? next() : bad(res, 'Invalid experiment group id')));
 
 router.get('/meta', (_req, res) => {
   res.json({
@@ -35,9 +99,11 @@ router.get('/meta', (_req, res) => {
     platformZh: '社区药房药品可及性与供应韧性仿真平台',
     dataClassification: 'synthetic-simulation-only',
     engineVersion: ENGINE_VERSION,
-    simulationRouteVersion: 2,
+    simulationRouteVersion: 3,
+    maxReplicates: MAX_REPLICATES,
+    primaryMetrics: PRIMARY_METRICS,
     gitCommitHash: getGitCommitHash(),
-    disclaimer: 'Synthetic simulation research platform. No real patient, prescription, pharmacy transaction, or clinical outcome data.',
+    disclaimer: 'Synthetic simulation research platform. No real patient, prescription, pharmacy transaction, or clinical outcome data. Results cannot be read as effects of real policies.',
   });
 });
 
@@ -52,18 +118,19 @@ router.get('/scenario/presets', (_req, res) => {
 });
 
 router.get('/scenario/presets/:key', (req, res) => {
-  const scenario = buildPreset(req.params.key);
-  if (!scenario) return res.status(404).json({ message: 'Unknown preset' });
-  res.json({ scenario });
+  if (!Object.prototype.hasOwnProperty.call(SCENARIO_PRESETS, req.params.key)) {
+    return res.status(404).json({ message: 'Unknown preset' });
+  }
+  res.json({ scenario: buildPreset(req.params.key) });
 });
 
 router.post('/scenario/validate', (req, res) => {
   const result = validateScenario(req.body);
-  res.status(200).json(result);
+  res.status(200).json({ ...result, scenarioHash: result.valid ? hashScenario(result.scenario) : null });
 });
 
 router.get('/policies', (_req, res) => {
-  res.json({ policies: listPolicies() });
+  res.json({ policies: listPolicies(), ablations: listAblations() });
 });
 
 router.get('/experiments', (_req, res) => {
@@ -77,129 +144,39 @@ router.get('/experiments/:id', (req, res) => {
 });
 
 router.post('/run', (req, res) => {
-  const { scenario: rawScenario, policyId, replicates = 1 } = req.body || {};
+  const unknown = rejectUnknownKeys(req.body, ['scenario', 'policyId', 'replicates']);
+  if (unknown.length) return bad(res, 'Invalid request', unknown);
+  const { scenario: rawScenario, policyId, replicates: rawReplicates } = req.body || {};
   const { valid, errors, scenario } = validateScenario(rawScenario || DEFAULT_SCENARIO);
-  if (!valid) {
-    return res.status(400).json({
-      message: 'Invalid scenario configuration',
-      errors,
-      scenario,
-    });
-  }
-  if (!policyId) {
-    return res.status(400).json({ message: 'Missing policyId', errors: ['policyId is required'] });
-  }
-  const canonicalPolicyId = resolvePolicyId(policyId);
-  if (!canonicalPolicyId) {
-    return res.status(400).json({ message: 'Unknown policyId', errors: [`Unknown policy: ${policyId}`] });
-  }
+  if (!valid) return bad(res, 'Invalid scenario configuration', errors);
+  const pol = parsePolicyId(policyId);
+  if (pol.error) return bad(res, pol.error, [pol.error]);
+  const reps = parseReplicates(rawReplicates, { defaultValue: 1 });
+  if (reps.error) return bad(res, reps.error, [reps.error]);
 
   const jobId = newExperimentId();
-  const gitCommitHash = getGitCommitHash();
-  const packageLockHash = getPackageLockHash();
+  const scenarioHash = hashScenario(scenario);
   const startedAt = new Date().toISOString();
-  activeJobs.set(jobId, { cancel: false, status: 'running' });
-
-  res.json({
-    jobId,
-    status: 'accepted',
-    message: 'Simulation started. Poll GET /api/simulation/jobs/:jobId',
-  });
-
-  setImmediate(() => {
-    try {
-      const shouldCancel = () => activeJobs.get(jobId)?.cancel;
-      const onProgress = (p) => {
-        const j = activeJobs.get(jobId);
-        if (j) activeJobs.set(jobId, { ...j, progress: p });
-      };
-
-      let payload;
-      if (replicates > 1) {
-        const rep = runReplicates({
-          scenario,
-          policyId: canonicalPolicyId,
-          replicates: Math.min(replicates, 100),
-          onProgress,
-          shouldCancel,
-        });
-        if (rep.cancelled) {
-          activeJobs.set(jobId, { status: 'cancelled', progress: activeJobs.get(jobId)?.progress });
-          return;
-        }
-        const metricsList = rep.results.map((r) => r.metrics);
-        const seeds = rep.results.map((r) => r.seed);
-        payload = {
-          id: jobId,
-          scenarioId: scenario.id,
-          scenarioHash: hashScenario(scenario),
-          scenarioVersion: scenario.schemaVersion,
-          scenario,
-          policyId: canonicalPolicyId,
-          policyVersion: getPolicy(canonicalPolicyId).version,
-          policyParams: getPolicy(canonicalPolicyId).params,
-          randomSeed: scenario.randomSeed,
-          replicateSeeds: seeds,
-          replicates: rep.results.length,
-          engineVersion: ENGINE_VERSION,
-          gitCommitHash,
-          packageLockHash,
-          nodeVersion: process.version,
-          startedAt,
-          finishedAt: new Date().toISOString(),
-          results: rep.results,
-          summary: aggregateReplicates(metricsList),
-          regionalAggregate: aggregateRegionalReplicates(rep.results),
-          dailyAggregate: aggregateDailyTimeSeries(rep.results),
-        };
-      } else {
-        const single = runSimulation({ scenario, policyId: canonicalPolicyId, onProgress, shouldCancel });
-        if (single.cancelled) {
-          activeJobs.set(jobId, { status: 'cancelled', progress: activeJobs.get(jobId)?.progress });
-          return;
-        }
-        payload = {
-          id: jobId,
-          scenarioId: scenario.id,
-          scenarioHash: hashScenario(scenario),
-          scenarioVersion: scenario.schemaVersion,
-          scenario,
-          policyId: canonicalPolicyId,
-          policyVersion: getPolicy(canonicalPolicyId).version,
-          policyParams: getPolicy(canonicalPolicyId).params,
-          randomSeed: scenario.randomSeed,
-          replicateSeeds: [scenario.randomSeed],
-          replicates: 1,
-          engineVersion: ENGINE_VERSION,
-          gitCommitHash,
-          packageLockHash,
-          nodeVersion: process.version,
-          startedAt,
-          finishedAt: new Date().toISOString(),
-          metrics: single.metrics,
-          runLog: single.runLog,
-          summary: single.metrics,
-        };
-      }
-      saveExperiment(payload);
-      activeJobs.set(jobId, { status: 'completed', experimentId: jobId, progress: { pct: 100 } });
-    } catch (e) {
-      activeJobs.set(jobId, { status: 'failed', error: e.message });
-    }
-  });
+  const prov = provenance();
+  const status = queue.submit(jobId, { policyIds: [pol.value], scenario, seeds: seedList(scenario.randomSeed, reps.value) }, (byPolicy) => {
+    saveExperiment(experimentPayload({
+      id: jobId, scenario, scenarioHash, policyId: pol.value, results: byPolicy[pol.value], startedAt, prov,
+    }));
+    return { experimentId: jobId };
+  }, { kind: 'run', policyId: pol.value, scenarioHash });
+  res.status(202).json({ jobId, ...status, message: 'Simulation queued. Poll GET /api/simulation/jobs/:jobId' });
 });
 
 router.get('/jobs/:jobId', (req, res) => {
-  const job = activeJobs.get(req.params.jobId);
+  const job = queue.status(req.params.jobId);
   if (!job) return res.status(404).json({ message: 'Job not found' });
   res.json(job);
 });
 
 router.post('/jobs/:jobId/cancel', (req, res) => {
-  const job = activeJobs.get(req.params.jobId);
+  const job = queue.cancel(req.params.jobId);
   if (!job) return res.status(404).json({ message: 'Job not found' });
-  activeJobs.set(req.params.jobId, { ...job, cancel: true });
-  res.json({ status: 'cancelling' });
+  res.json(job);
 });
 
 router.get('/experiments/:id/export.csv', (req, res) => {
@@ -229,191 +206,76 @@ router.get('/experiments/:id/export.json', (req, res) => {
 router.post('/experiments/:id/rerun-exact', (req, res) => {
   const source = getExperiment(req.params.id);
   if (!source) return res.status(404).json({ message: 'Experiment not found' });
-  const { scenario, policyId, replicates = 1 } = source;
-  if (!scenario || !policyId) {
-    return res.status(400).json({ message: 'Stored experiment missing scenario or policyId' });
-  }
-  const canonicalPolicyId = resolvePolicyId(policyId);
-  if (!canonicalPolicyId) {
-    return res.status(400).json({ message: 'Unknown stored policyId', policyId });
-  }
+  if (!source.scenario || !source.policyId) return bad(res, 'Stored experiment missing scenario or policyId');
+  const canonical = resolvePolicyId(source.policyId);
+  if (!canonical) return bad(res, 'Unknown stored policyId', [source.policyId]);
+  const { valid, errors, scenario } = validateScenario(source.scenario);
+  if (!valid) return bad(res, 'Stored scenario does not validate under the current schema', errors);
+  const n = source.replicateSeeds?.length || source.replicates || 1;
+  const seeds = source.replicateSeeds?.length ? source.replicateSeeds : seedList(source.randomSeed, n);
+  const scenarioHash = hashScenario(scenario);
+  const engineMismatch = source.engineVersion && source.engineVersion !== ENGINE_VERSION;
   const jobId = newExperimentId();
   const startedAt = new Date().toISOString();
-  const gitCommitHash = getGitCommitHash();
-  const packageLockHash = getPackageLockHash();
-  const scenarioHash = hashScenario(scenario);
-  activeJobs.set(jobId, { cancel: false, status: 'running' });
-  const engineMismatch = source.engineVersion && source.engineVersion !== ENGINE_VERSION;
-  res.json({
+  const prov = provenance();
+  const status = queue.submit(jobId, { policyIds: [canonical], scenario, seeds }, (byPolicy) => {
+    saveExperiment(experimentPayload({
+      id: jobId, scenario, scenarioHash, policyId: canonical, results: byPolicy[canonical], startedAt, prov,
+      extra: { rerunOf: source.id, sourceScenarioHash: source.scenarioHash },
+    }));
+    return { experimentId: jobId };
+  }, { kind: 'rerun-exact', policyId: canonical, scenarioHash, sourceExperimentId: source.id });
+  res.status(202).json({
     jobId,
-    status: 'accepted',
+    ...status,
     sourceExperimentId: source.id,
     engineVersion: ENGINE_VERSION,
     sourceEngineVersion: source.engineVersion,
+    scenarioHashMatches: scenarioHash === source.scenarioHash,
     reproductionNote: engineMismatch
       ? 'Configuration re-run, not bitwise reproduction because engine version differs.'
       : 'Exact re-run with frozen scenario and replicate seeds.',
   });
-
-  setImmediate(() => {
-    try {
-      const repCount = Math.max(1, replicates);
-      let payload;
-      if (repCount > 1) {
-        const n = source.results?.length || repCount;
-        const seeds = source.replicateSeeds?.length === n
-          ? source.replicateSeeds
-          : Array.from({ length: n }, (_, i) => source.randomSeed + i);
-        const results = [];
-        for (let i = 0; i < n; i += 1) {
-          const seed = seeds[i];
-          const scen = { ...scenario, randomSeed: seed };
-          const r = runSimulation({ scenario: scen, policyId: canonicalPolicyId });
-          results.push({ replicateIndex: i, seed, metrics: r.metrics, runLog: r.runLog });
-        }
-        payload = {
-          scenarioId: source.scenarioId,
-          scenarioHash,
-          scenarioVersion: source.scenarioVersion || scenario.schemaVersion,
-          scenario,
-          policyId: canonicalPolicyId,
-          policyVersion: getPolicy(canonicalPolicyId).version,
-          policyParams: getPolicy(canonicalPolicyId).params,
-          randomSeed: source.randomSeed,
-          replicateSeeds: seeds,
-          replicates: n,
-          engineVersion: ENGINE_VERSION,
-          nodeVersion: process.version,
-          dataClassification: 'synthetic-simulation',
-          id: jobId,
-          rerunOf: source.id,
-          startedAt,
-          finishedAt: new Date().toISOString(),
-          gitCommitHash,
-          packageLockHash,
-          results,
-          summary: aggregateReplicates(results.map((x) => x.metrics)),
-          regionalAggregate: aggregateRegionalReplicates(results),
-          dailyAggregate: aggregateDailyTimeSeries(results),
-        };
-      } else {
-        const seed = source.replicateSeeds?.[0] ?? source.randomSeed;
-        const scen = { ...scenario, randomSeed: seed };
-        const single = runSimulation({ scenario: scen, policyId: canonicalPolicyId });
-        payload = {
-          scenarioId: source.scenarioId,
-          scenarioHash,
-          scenarioVersion: source.scenarioVersion || scenario.schemaVersion,
-          scenario,
-          policyId: canonicalPolicyId,
-          policyVersion: getPolicy(canonicalPolicyId).version,
-          policyParams: getPolicy(canonicalPolicyId).params,
-          randomSeed: seed,
-          replicateSeeds: [seed],
-          replicates: 1,
-          engineVersion: ENGINE_VERSION,
-          nodeVersion: process.version,
-          dataClassification: 'synthetic-simulation',
-          id: jobId,
-          rerunOf: source.id,
-          startedAt,
-          finishedAt: new Date().toISOString(),
-          gitCommitHash,
-          packageLockHash,
-          metrics: single.metrics,
-          runLog: single.runLog,
-          summary: single.metrics,
-        };
-      }
-      saveExperiment(payload);
-      activeJobs.set(jobId, { status: 'completed', experimentId: jobId, progress: { pct: 100 } });
-    } catch (e) {
-      activeJobs.set(jobId, { status: 'failed', error: e.message });
-    }
-  });
 });
 
 router.post('/run-group', (req, res) => {
-  const { scenario: rawScenario, policyIds = [], replicates = 30 } = req.body || {};
+  const unknown = rejectUnknownKeys(req.body, ['scenario', 'policyIds', 'replicates']);
+  if (unknown.length) return bad(res, 'Invalid request', unknown);
+  const { scenario: rawScenario, policyIds: rawPolicyIds, replicates: rawReplicates } = req.body || {};
   const { valid, errors, scenario } = validateScenario(rawScenario || DEFAULT_SCENARIO);
-  if (!valid) return res.status(400).json({ message: 'Invalid scenario', errors });
-  if (!policyIds.length) return res.status(400).json({ message: 'policyIds required' });
+  if (!valid) return bad(res, 'Invalid scenario', errors);
+  const pols = parsePolicyIds(rawPolicyIds);
+  if (pols.errors) return bad(res, 'Invalid policyIds', pols.errors);
+  const reps = parseReplicates(rawReplicates, { defaultValue: 30 });
+  if (reps.error) return bad(res, reps.error, [reps.error]);
 
   const experimentGroupId = newExperimentGroupId();
-  const frozenScenario = JSON.parse(JSON.stringify(scenario));
-  const scenarioHash = hashScenario(frozenScenario);
-  const gitCommitHash = getGitCommitHash();
-  const packageLockHash = getPackageLockHash();
+  const scenarioHash = hashScenario(scenario);
   const startedAt = new Date().toISOString();
-  const jobId = newExperimentGroupId();
-  activeJobs.set(jobId, { status: 'running', experimentGroupId });
-
-  res.json({
-    jobId,
+  const prov = provenance();
+  const status = queue.submit(experimentGroupId, {
+    policyIds: pols.value, scenario, seeds: seedList(scenario.randomSeed, reps.value),
+  }, (byPolicy) => {
+    const groupSummary = {
+      policies: {},
+      pairedComparisons: pairedPolicyComparison(byPolicy),
+      commonRandomNumbers: true,
+    };
+    const payloads = pols.value.map((pid) => experimentPayload({
+      id: newExperimentId(), scenario, scenarioHash, policyId: pid, results: byPolicy[pid], startedAt, prov,
+      extra: { experimentGroupId },
+    }));
+    for (const p of payloads) groupSummary.policies[p.policyId] = p.summary;
+    const experimentIds = payloads.map((p) => saveExperiment({ ...p, groupSummary }).id);
+    return { experimentGroupId, experimentIds, groupSummary };
+  }, { kind: 'run-group', experimentGroupId, policyIds: pols.value, scenarioHash });
+  res.status(202).json({
+    jobId: experimentGroupId,
+    ...status,
     experimentGroupId,
-    status: 'accepted',
-    policyIds,
+    policyIds: pols.value,
     scenarioHash,
-    message: 'Experiment group started (common random numbers across policies).',
-  });
-
-  setImmediate(() => {
-    try {
-      const experimentIds = [];
-      const groupSummary = { policies: {}, pairedComparisons: null };
-      const resultsByPolicy = {};
-
-      const pendingPayloads = [];
-      for (const pid of policyIds) {
-        const canonical = resolvePolicyId(pid);
-        if (!canonical) continue;
-        const rep = runReplicates({
-          scenario: frozenScenario,
-          policyId: canonical,
-          replicates: Math.min(replicates, 100),
-        });
-        const expId = newExperimentId();
-        const payload = {
-          id: expId,
-          experimentGroupId,
-          scenarioId: frozenScenario.id,
-          scenarioHash,
-          scenarioVersion: frozenScenario.schemaVersion,
-          scenario: frozenScenario,
-          policyId: canonical,
-          policyVersion: getPolicy(canonical).version,
-          randomSeed: frozenScenario.randomSeed,
-          replicateSeeds: rep.results.map((r) => r.seed),
-          replicates: rep.results.length,
-          engineVersion: ENGINE_VERSION,
-          gitCommitHash,
-          packageLockHash,
-          nodeVersion: process.version,
-          startedAt,
-          finishedAt: new Date().toISOString(),
-          results: rep.results,
-          summary: aggregateReplicates(rep.results.map((r) => r.metrics)),
-          regionalAggregate: aggregateRegionalReplicates(rep.results),
-          dailyAggregate: aggregateDailyTimeSeries(rep.results),
-        };
-        pendingPayloads.push(payload);
-        experimentIds.push(expId);
-        groupSummary.policies[canonical] = payload.summary;
-        resultsByPolicy[canonical] = rep.results;
-      }
-      groupSummary.pairedComparisons = pairedPolicyComparison(resultsByPolicy);
-      for (const payload of pendingPayloads) {
-        saveExperiment({ ...payload, groupSummary });
-      }
-      activeJobs.set(jobId, {
-        status: 'completed',
-        experimentGroupId,
-        experimentIds,
-        groupSummary,
-      });
-    } catch (e) {
-      activeJobs.set(jobId, { status: 'failed', error: e.message });
-    }
+    message: 'Experiment group queued (common random numbers across policies).',
   });
 });
 
@@ -448,3 +310,4 @@ router.get('/experiments/:id/report.md', (req, res) => {
 });
 
 module.exports = router;
+module.exports.queue = queue;

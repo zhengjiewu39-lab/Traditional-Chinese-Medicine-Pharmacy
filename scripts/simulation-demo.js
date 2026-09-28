@@ -1,20 +1,24 @@
 #!/usr/bin/env node
 /**
- * Quick synthetic demo: default public-health scenario × all registered policies (14-day, 1 replicate each).
+ * Quick synthetic demo: default 120-day compound scenario × the five policies, one replicate each.
+ * Synthetic data only; the numbers illustrate the mechanics and are not policy evidence.
  */
 const { DEFAULT_SCENARIO } = require('../server/simulation/scenarioSchema');
 const { runSimulation } = require('../server/simulation/simulationEngine');
 const { listPolicies } = require('../server/simulation/policyEngine');
 
-const scenario = { ...DEFAULT_SCENARIO, simulationDays: 14, pharmacyCount: 12, randomSeed: DEFAULT_SCENARIO.randomSeed };
+const scenario = { ...DEFAULT_SCENARIO };
+const pct = (x) => `${(x * 100).toFixed(2)}%`;
 
-console.log('Community Pharmacy Access and Supply Resilience Simulator — synthetic demo\n');
+console.log('Community Pharmacy Access and Supply Resilience Simulator — synthetic demo');
+console.log(`${scenario.name}; seed ${scenario.randomSeed}\n`);
 for (const p of listPolicies()) {
-  const r = runSimulation({ scenario, policyId: p.id });
+  const r = runSimulation({ scenario, policyId: p.id, logLevel: 'summary' });
   const m = r.metrics;
   console.log(
-    `${p.id}: cost=${m.totalCost.toFixed(0)} stockout=${(m.stockoutRate * 100).toFixed(2)}% `
-    + `essential=${(m.essentialStockoutRate * 100).toFixed(2)}% worstRegionEssFill=${m.worstRegionEssentialFillRate.toFixed(4)} `
-    + `gap=${m.essentialServiceGap.toFixed(4)}`,
+    `${(p.shortName || p.id).padEnd(16)} fill ${pct(m.overallFillRate)}  essential ${pct(m.essentialMedicineFillRate)}  `
+    + `worst-region essential ${pct(m.worstRegionEssentialFillRate)}  gap ${m.regionalServiceGap.toFixed(3)}  `
+    + `unmet ${m.cumulativeUnmetDemand}  end-unmet ${pct(m.horizonEndUnmetRate)}  p95 wait ${m.p95WaitingTime}d  `
+    + `cost ${m.totalCost.toFixed(0)}  audit ${r.runLog.inventoryAudit.passed ? 'ok' : 'FAILED'}`,
   );
 }

@@ -1,20 +1,15 @@
-# Reorder-point (s,Q) calibration
+# (s,Q) baseline calibration (per SKU × region type)
 
-Tuned per scenario on calibration seeds 900001–900020 (disjoint from test seeds). Objective: mean total cost + weighted stockout penalty. Base grid z ∈ {0.84, 1.28, 1.65, 2.05, 2.58, 3, 4, 5, 6, 8}, qScale ∈ {0.5, 1, 1.5, 2, 3, 4, 6, 8, 12, 16, 24}; when the optimum lies on an upper edge the grid is extended by ×1.5 on that axis (at most 6 times) until it moves inside. Large z means the tuned baseline stockpiles ahead of disruptions.
+Tuned per scenario on calibration seeds 900001–900020 only (disjoint from test and sensitivity seeds). Objective: mean total cost + weighted stockout penalty. Uniform grid z ∈ {0.5, 1, 1.65, 2.5, 3.5, 5, 7, 10}, qScale ∈ {0.5, 1, 2, 3, 5, 8, 12, 18}, extended ×1.5 on an axis whose upper edge holds the optimum (at most 4 times). Each SKU × region group then takes the grid point minimizing its own attributed cost (procurement, transport, fixed order, pharmacy holding, stockout penalty); that per-line setting is used only if it lowers the full objective below the best uniform point.
 
-| Scenario | z | qScale | Objective | Grid extensions | Still at edge |
-| --- | --- | --- | --- | --- | --- |
-| S01-baseline | 1.28 | 1 | 276,915 | 0 | no |
-| S02-surge-low | 2.05 | 1 | 284,286 | 0 | no |
-| S03-surge-mid | 1.65 | 1.5 | 296,988 | 0 | no |
-| S04-surge-high | 8 | 12 | 566,113 | 1 | no |
-| S05-supply-low | 1.65 | 1 | 269,008 | 0 | no |
-| S06-supply-mid | 2.58 | 1.5 | 269,501 | 0 | no |
-| S07-supply-high | 27 | 3 | 661,359 | 4 | no |
-| S08-rural-road | 6 | 1 | 279,629 | 0 | no |
-| S09-surge-supply | 12 | 8 | 1,434,990 | 2 | no |
-| S10-surge-supply-road | 12 | 8 | 1,435,308 | 2 | no |
-| S11-long-lead | 6 | 12 | 1,486,264 | 0 | no |
-| S12-limited-warehouse | 5 | 8 | 3,440,724 | 0 | no |
-| S13-limited-capacity | 8 | 16 | 3,648,085 | 1 | no |
-| S14-extreme | 18 | 36 | 4,574,064 | 4 | no |
+| Scenario | Best uniform z / qScale | Uniform objective | Per-line objective | Chosen | Grid extensions | Per-line z/qScale |
+| --- | --- | --- | --- | --- | --- | --- |
+| M1-normal | 0.5 / 0.5 | 278,515 | 279,597 | uniform (per-line did not improve) | 0 | — |
+| M2-demand-surge | 1 / 1 | 326,344 | 325,615 | per SKU × region | 0 | D1|urban: 0.5/1; D1|suburban: 1/1; D1|rural: 1.65/1; D2|urban: 0.5/1; D2|suburban: 1/1; D2|rural: 2.5/1; D3|urban: 1/1; D3|suburban: 1/1; D3|rural: 1.65/1; D4|urban: 0.5/1; D4|suburban: 0.5/1; D4|rural: 1.65/1; D5|urban: 0.5/1; D5|suburban: 0.5/1; D5|rural: 1/1; D6|urban: 0.5/1; D6|suburban: 0.5/1; D6|rural: 0.5/1; D7|urban: 0.5/2; D7|suburban: 1/1; D7|rural: 1.65/1; D8|urban: 1/1; D8|suburban: 0.5/1; D8|rural: 1/1 |
+| M3-supply-disruption | 22.5 / 2 | 387,905 | 336,264 | per SKU × region | 3 | D1|urban: 33.75/3; D1|suburban: 7/2; D1|rural: 1/2; D2|urban: 33.75/2; D2|suburban: 1/3; D2|rural: 2.5/2; D3|urban: 33.75/2; D3|suburban: 7/2; D3|rural: 1/2; D4|urban: 33.75/2; D4|suburban: 5/2; D4|rural: 1.65/2; D5|urban: 10/5; D5|suburban: 3.5/2; D5|rural: 0.5/1; D6|urban: 7/2; D6|suburban: 7/2; D6|rural: 0.5/1; D7|urban: 15/2; D7|suburban: 1.65/2; D7|rural: 1/2; D8|urban: 10/2; D8|suburban: 0.5/2; D8|rural: 0.5/2 |
+| M4-transport-disruption | 10 / 0.5 | 288,342 | 282,482 | per SKU × region | 1 | D1|urban: 0.5/1; D1|suburban: 0.5/0.5; D1|rural: 10/1; D2|urban: 0.5/0.5; D2|suburban: 0.5/0.5; D2|rural: 15/0.5; D3|urban: 0.5/1; D3|suburban: 0.5/1; D3|rural: 10/0.5; D4|urban: 0.5/1; D4|suburban: 1.65/0.5; D4|rural: 10/0.5; D5|urban: 0.5/1; D5|suburban: 0.5/1; D5|rural: 0.5/1; D6|urban: 1.65/1; D6|suburban: 0.5/1; D6|rural: 0.5/1; D7|urban: 0.5/1; D7|suburban: 1.65/1; D7|rural: 0.5/1; D8|urban: 1.65/1; D8|suburban: 1.65/1; D8|rural: 1.65/1 |
+| M5-compound | 7 / 12 | 455,150 | 472,043 | uniform (per-line did not improve) | 0 | — |
+| M6-long-lead | 7 / 18 | 1,328,865 | 1,244,389 | per SKU × region | 1 | D1|urban: 7/27; D1|suburban: 5/3; D1|rural: 7/5; D2|urban: 7/8; D2|suburban: 5/5; D2|rural: 10/8; D3|urban: 10/3; D3|suburban: 10/3; D3|rural: 10/5; D4|urban: 5/5; D4|suburban: 5/5; D4|rural: 10/3; D5|urban: 0.5/2; D5|suburban: 0.5/2; D5|rural: 1/27; D6|urban: 2.5/2; D6|suburban: 2.5/2; D6|rural: 2.5/2; D7|urban: 1/2; D7|suburban: 1.65/3; D7|rural: 0.5/2; D8|urban: 2.5/2; D8|suburban: 2.5/2; D8|rural: 0.5/2 |
+| M7-tight-warehouse | 50.63 / 0.5 | 1,247,182 | 1,160,045 | per SKU × region | 4 (still at edge) | D1|urban: 50.63/0.5; D1|suburban: 15/3; D1|rural: 10/2; D2|urban: 50.63/0.5; D2|suburban: 10/2; D2|rural: 10/2; D3|urban: 50.63/0.5; D3|suburban: 15/3; D3|rural: 15/3; D4|urban: 50.63/0.5; D4|suburban: 15/27; D4|rural: 15/18; D5|urban: 50.63/0.5; D5|suburban: 7/2; D5|rural: 7/2; D6|urban: 33.75/0.5; D6|suburban: 10/2; D6|rural: 7/3; D7|urban: 33.75/0.5; D7|suburban: 10/3; D7|rural: 7/2; D8|urban: 50.63/0.5; D8|suburban: 7/2; D8|rural: 7/5 |
+| M8-tight-transport | 7 / 18 | 2,672,285 | 2,286,429 | per SKU × region | 1 | D1|urban: 7/18; D1|suburban: 3.5/5; D1|rural: 10/27; D2|urban: 10/12; D2|suburban: 3.5/5; D2|rural: 10/8; D3|urban: 7/3; D3|suburban: 3.5/8; D3|rural: 10/8; D4|urban: 7/5; D4|suburban: 5/12; D4|rural: 10/18; D5|urban: 7/27; D5|suburban: 2.5/3; D5|rural: 7/27; D6|urban: 10/3; D6|suburban: 0.5/2; D6|rural: 7/8; D7|urban: 7/3; D7|suburban: 2.5/2; D7|rural: 7/5; D8|urban: 7/2; D8|suburban: 2.5/3; D8|rural: 7/18 |
+| M9-extreme | 15 / 5 | 3,906,189 | 3,596,726 | per SKU × region | 2 | D1|urban: 22.5/1; D1|suburban: 15/8; D1|rural: 22.5/18; D2|urban: 22.5/0.5; D2|suburban: 15/5; D2|rural: 22.5/8; D3|urban: 22.5/1; D3|suburban: 22.5/8; D3|rural: 22.5/8; D4|urban: 22.5/1; D4|suburban: 15/5; D4|rural: 22.5/18; D5|urban: 10/2; D5|suburban: 15/8; D5|rural: 10/18; D6|urban: 5/2; D6|suburban: 10/8; D6|rural: 7/5; D7|urban: 7/2; D7|suburban: 7/3; D7|rural: 10/5; D8|urban: 7/2; D8|suburban: 10/5; D8|rural: 15/8 |

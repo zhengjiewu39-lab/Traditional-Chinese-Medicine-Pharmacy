@@ -6,6 +6,7 @@
 const { PRIORITY_WEIGHT } = require('./simulationConstants');
 const { lastEventEndDay } = require('./eventUtils');
 const { REGION_TYPES } = require('./scenarioSchema');
+const { createRng } = require('./rng');
 
 const RECOVERY_LEVELS = [0.9, 0.95, 0.99];
 const SMOOTHING_DAYS = 7;
@@ -176,11 +177,38 @@ function computeRunMetrics(runLog, instance, policyId) {
 
   const resilience = computeResilienceMetrics(runLog.daily, scenario);
   const last = runLog.daily[runLog.daily.length - 1];
+  const waits = waitingTimeStats(runLog.waitHistogram);
+  const counters = runLog.counters || {};
+  const sameDayUnfilledUnits = totalStockout;
 
   return {
     policyId,
     totalCost: runLog.totalCost || 0,
     costs: runLog.costs || null,
+    overallFillRate: fillRate,
+    essentialMedicineFillRate: rateFilled(priorityAgg.essential),
+    regionalServiceGap: spread(essFill),
+    sameDayUnfilledUnits,
+    sameDayUnfilledRate: stockoutRate,
+    cumulativeUnmetDemand: sameDayUnfilledUnits,
+    lateFilledUnits: eventuallyFilled,
+    lateFilledRate: totalDemand > 0 ? eventuallyFilled / totalDemand : 0,
+    horizonEndUnmetUnits: permanentlyUnmet,
+    horizonEndUnmetRate: totalDemand > 0 ? permanentlyUnmet / totalDemand : 0,
+    backlogArea: accessDelayUnitDays,
+    stockoutIncidentRate: counters.demandLines > 0 ? counters.stockoutIncidents / counters.demandLines : 0,
+    essentialStockoutIncidentRate: counters.essDemandLines > 0 ? counters.essStockoutIncidents / counters.essDemandLines : 0,
+    meanWaitingTime: waits.all.mean,
+    p95WaitingTime: waits.all.p95,
+    meanWaitingTimeEssential: waits.essential.mean,
+    p95WaitingTimeEssential: waits.essential.p95,
+    waitingTimeCensoredUnits: waits.all.censoredUnits,
+    recoveryTime90: resilience.timeToRecovery90,
+    recoveryTime95: resilience.timeToRecovery95,
+    recoveryTime99: resilience.timeToRecovery99,
+    lateralTransferUnits: counters.transferUnits ?? 0,
+    lateralTransferCount: counters.transfers ?? 0,
+    backupSupplierUnits: counters.upstreamUnitsByTier?.backup ?? 0,
     stockoutRate,
     fillRate,
     orderFillRate: fillRate,
@@ -221,6 +249,36 @@ function computeRunMetrics(runLog, instance, policyId) {
       compositeScore: (runLog.totalCost || 0) + weightedStockoutPenalty + accessDelayUnitDays * waitW + serviceInequalityIndex * ineqW,
     },
     disclaimer: 'Synthetic simulation metrics only.',
+  };
+}
+
+/**
+ * Waiting time per demanded unit (days) from the run's histograms: units filled on the day of
+ * demand wait 0, backordered units wait (day handed out − day demanded), units still backordered at
+ * the horizon enter with their censored wait (horizon − day demanded), so the mean and p95 are lower
+ * bounds whenever censoredUnits > 0.
+ */
+function waitingTimeStats(hist) {
+  const summarize = (served, censored) => {
+    const rows = [];
+    for (const [w, u] of Object.entries(served || {})) rows.push([Number(w), u]);
+    let censoredUnits = 0;
+    for (const [w, u] of Object.entries(censored || {})) { rows.push([Number(w), u]); censoredUnits += u; }
+    const total = rows.reduce((s, [, u]) => s + u, 0);
+    if (total <= 0) return { mean: 0, p95: 0, units: 0, censoredUnits: 0 };
+    rows.sort((a, b) => a[0] - b[0]);
+    const meanW = rows.reduce((s, [w, u]) => s + w * u, 0) / total;
+    let cum = 0;
+    let p95 = rows[rows.length - 1][0];
+    for (const [w, u] of rows) {
+      cum += u;
+      if (cum >= 0.95 * total - 1e-9) { p95 = w; break; }
+    }
+    return { mean: meanW, p95, units: total, censoredUnits };
+  };
+  return {
+    all: summarize(hist?.all, hist?.censoredAll),
+    essential: summarize(hist?.essential, hist?.censoredEssential),
   };
 }
 
@@ -329,12 +387,79 @@ function mean(vals) {
   return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
 }
 
-const SUMMARY_KEYS = [
-  'totalCost', 'stockoutRate', 'fillRate', 'essentialFillRate', 'essentialStockoutRate', 'chronicStockoutRate',
-  'avgSyntheticAccessDelayDays', 'serviceInequalityIndex', 'avgDeliveryTimeDays',
-  'worstRegionEssentialFillRate', 'minRegionalServiceLevel', 'essentialServiceGap',
-  'cumulativeUnmetEssentialDemand', 'maxBacklog', 'backlogAtHorizon', 'serviceLossAUC',
+/** Primary reported metrics with direction ('higher' | 'lower' is better). */
+const PRIMARY_METRICS = [
+  { key: 'overallFillRate', better: 'higher' },
+  { key: 'essentialMedicineFillRate', better: 'higher' },
+  { key: 'worstRegionEssentialFillRate', better: 'higher' },
+  { key: 'regionalServiceGap', better: 'lower' },
+  { key: 'cumulativeUnmetDemand', better: 'lower' },
+  { key: 'backlogArea', better: 'lower' },
+  { key: 'stockoutIncidentRate', better: 'lower' },
+  { key: 'horizonEndUnmetRate', better: 'lower' },
+  { key: 'meanWaitingTime', better: 'lower' },
+  { key: 'p95WaitingTime', better: 'lower' },
+  { key: 'recoveryTime90', better: 'lower' },
+  { key: 'recoveryTime95', better: 'lower' },
+  { key: 'recoveryTime99', better: 'lower' },
+  { key: 'serviceLossAUC', better: 'lower' },
+  { key: 'totalCost', better: 'lower' },
 ];
+
+const SUMMARY_KEYS = [
+  ...PRIMARY_METRICS.map((m) => m.key),
+  'sameDayUnfilledRate', 'lateFilledRate', 'horizonEndUnmetUnits', 'lateFilledUnits',
+  'essentialStockoutIncidentRate', 'meanWaitingTimeEssential', 'p95WaitingTimeEssential',
+  'lateralTransferUnits', 'backupSupplierUnits',
+  'stockoutRate', 'fillRate', 'essentialFillRate', 'essentialStockoutRate', 'chronicStockoutRate',
+  'avgSyntheticAccessDelayDays', 'serviceInequalityIndex', 'avgDeliveryTimeDays',
+  'minRegionalServiceLevel', 'essentialServiceGap', 'cumulativeUnmetEssentialDemand', 'maxBacklog', 'backlogAtHorizon',
+];
+
+const BOOTSTRAP_SEED = 20240901;
+const BOOTSTRAP_RESAMPLES = 2000;
+
+/**
+ * Paired percentile bootstrap of the mean difference over common random-number replicates.
+ * Resamples replicate indices with a fixed seed, so the CI is reproducible.
+ */
+function pairedBootstrap(diffs, { resamples = BOOTSTRAP_RESAMPLES, seed = BOOTSTRAP_SEED } = {}) {
+  const n = diffs.length;
+  if (!n) return null;
+  const rng = createRng(`bootstrap:${seed}`);
+  const m = mean(diffs);
+  const means = new Float64Array(resamples);
+  for (let b = 0; b < resamples; b += 1) {
+    let s = 0;
+    for (let i = 0; i < n; i += 1) s += diffs[Math.floor(rng.next() * n)];
+    means[b] = s / n;
+  }
+  means.sort();
+  const q = (p) => means[Math.min(resamples - 1, Math.max(0, Math.floor(p * resamples)))];
+  const sd = n > 1 ? Math.sqrt(diffs.reduce((acc, v) => acc + (v - m) ** 2, 0) / (n - 1)) : 0;
+  return {
+    meanDiff: m,
+    sd,
+    ci95Low: q(0.025),
+    ci95High: q(0.975),
+    n,
+    resamples,
+    bootstrapSeed: seed,
+    wins: diffs.filter((d) => d > 1e-12).length,
+    losses: diffs.filter((d) => d < -1e-12).length,
+    ties: diffs.filter((d) => Math.abs(d) <= 1e-12).length,
+  };
+}
+
+/**
+ * Price of Equity of policy A relative to a reference (default: cost-only):
+ *   PoE = (C_A − C_ref) / C_ref       (relative extra total cost; may be negative)
+ * computed on paired replicate means.
+ */
+function priceOfEquity(costA, costRef) {
+  if (!(costRef > 0)) return null;
+  return (costA - costRef) / costRef;
+}
 
 function aggregateReplicates(metricsList) {
   if (!metricsList.length) return null;
@@ -404,33 +529,41 @@ function aggregateDailyTimeSeries(results) {
   return series;
 }
 
-function pairedPolicyComparison(resultsByPolicy) {
+/**
+ * Paired comparisons (A − B) on every PRIMARY_METRICS key, matched by seed (common random numbers).
+ * Recovery times that are null (not recovered within the horizon) are excluded pairwise and counted.
+ */
+function pairedPolicyComparison(resultsByPolicy, { keys = PRIMARY_METRICS.map((m) => m.key), referencePolicy = 'cost-first' } = {}) {
   const policies = Object.keys(resultsByPolicy);
   if (policies.length < 2) return null;
-  const n = Math.min(...policies.map((p) => resultsByPolicy[p].length));
+  const bySeed = Object.fromEntries(policies.map((p) => [p, new Map(resultsByPolicy[p].map((r) => [r.seed, r]))]));
   const pairs = [];
-  const diffOf = (a, b, key) => {
-    const diffs = [];
-    for (let k = 0; k < n; k += 1) {
-      diffs.push(resultsByPolicy[a][k].metrics[key] - resultsByPolicy[b][k].metrics[key]);
-    }
-    return stats(diffs);
-  };
   for (let i = 0; i < policies.length - 1; i += 1) {
     for (let j = i + 1; j < policies.length; j += 1) {
       const a = policies[i];
       const b = policies[j];
-      pairs.push({
-        policyA: a,
-        policyB: b,
-        stockoutRateDiff: diffOf(a, b, 'stockoutRate'),
-        worstRegionEssentialFillRateDiff: diffOf(a, b, 'worstRegionEssentialFillRate'),
-        totalCostDiff: diffOf(a, b, 'totalCost'),
-        pairedReplicates: n,
-      });
+      const common = [...bySeed[a].keys()].filter((s) => bySeed[b].has(s));
+      const metrics = {};
+      for (const key of keys) {
+        const diffs = [];
+        let excluded = 0;
+        for (const s of common) {
+          const va = bySeed[a].get(s).metrics[key];
+          const vb = bySeed[b].get(s).metrics[key];
+          if (typeof va === 'number' && typeof vb === 'number') diffs.push(va - vb);
+          else excluded += 1;
+        }
+        metrics[key] = diffs.length ? { ...pairedBootstrap(diffs), excludedPairs: excluded } : null;
+      }
+      pairs.push({ policyA: a, policyB: b, pairedReplicates: common.length, metrics });
     }
   }
-  return pairs;
+  let poe = null;
+  if (resultsByPolicy[referencePolicy]) {
+    const refCost = mean(resultsByPolicy[referencePolicy].map((r) => r.metrics.totalCost));
+    poe = Object.fromEntries(policies.map((p) => [p, priceOfEquity(mean(resultsByPolicy[p].map((r) => r.metrics.totalCost)), refCost)]));
+  }
+  return { referencePolicy, priceOfEquity: poe, pairs };
 }
 
 /** Student-t critical value (two-sided 95%) — normal approximation above 30 df. */
@@ -459,9 +592,14 @@ module.exports = {
   aggregateRegionalReplicates,
   aggregateDailyTimeSeries,
   pairedPolicyComparison,
+  pairedBootstrap,
+  priceOfEquity,
+  waitingTimeStats,
   stats,
   gini,
+  PRIMARY_METRICS,
   SUMMARY_KEYS,
+  BOOTSTRAP_SEED,
   RECOVERY_LEVELS,
   PRIORITY_WEIGHT,
 };

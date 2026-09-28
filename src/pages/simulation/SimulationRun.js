@@ -42,7 +42,7 @@ export default function SimulationRun() {
     }
     const validated = await simulationApi.validateScenario(scenario);
     if (!validated.data.valid) {
-      throw new Error((validated.data.errors || []).join('; ') || t('simulationRun.runFailed'));
+      throw new Error((validated.data.errors || []).map((x) => x.message || x).join('; ') || t('simulationRun.runFailed'));
     }
     const normalized = validated.data.scenario;
     saveScenarioDraft(normalized);
@@ -58,11 +58,11 @@ export default function SimulationRun() {
     setError('');
     try {
       const scenario = await resolveScenario();
-      const rep = Math.min(100, Math.max(1, Number(replicates) || 1));
+      const rep = Math.min(500, Math.max(1, Math.round(Number(replicates)) || 1));
       const { data } = await simulationApi.runGroup({ scenario, policyIds: policies, replicates: rep });
       setJobs((prev) => [{
         jobId: data.jobId,
-        status: 'running',
+        status: data.status || 'queued',
         policyId: `group:${data.experimentGroupId}`,
         experimentGroupId: data.experimentGroupId,
       }, ...prev]);
@@ -81,7 +81,8 @@ export default function SimulationRun() {
   };
 
   const cancel = async (jobId) => {
-    await simulationApi.cancelJob(jobId);
+    const { data } = await simulationApi.cancelJob(jobId);
+    setJobs((prev) => prev.map((j) => (j.jobId === jobId ? { ...j, status: data.status } : j)));
   };
 
   return (
@@ -104,7 +105,7 @@ export default function SimulationRun() {
         <List dense>
           {jobs.map((j) => (
             <ListItem key={j.jobId} secondaryAction={
-              j.status === 'running' ? <Button size="small" onClick={() => cancel(j.jobId)}>{t('simulationRun.cancel')}</Button> : null
+              (j.status === 'running' || j.status === 'queued') ? <Button size="small" onClick={() => cancel(j.jobId)}>{t('simulationRun.cancel')}</Button> : null
             }>
               <ListItemText
                 primary={`${j.policyId} · ${j.jobId}`}

@@ -18,8 +18,12 @@
  *   projected essential SR above (current worst SR + δ) unless the worst region can no
  *   longer be improved (no leveling down).
  *
- * This is a heuristic, not an exact optimizer, except for the single-resource stage-1
- * problem where unit-step water-filling is exact (see server/simulation/__tests__/errra.test.js).
+ * This is an allocation heuristic. Only the single-resource stage-1 max–min subproblem with unit
+ * steps is solved exactly (checked by enumeration in __tests__/errraOptimality.test.js).
+ *
+ * priorityScore (higher = served first, ∈ (0, 2]):
+ *   stage 1: 1 + (1 − SR_r at the time of the line's first allocation)   ∈ (1, 2]
+ *   stage 2: (3 − tier + netPerUnit / (1 + |netPerUnit|)) / 4            ∈ (0.25, 1)
  */
 
 const { REGION_TYPES } = require('./scenarioSchema');
@@ -45,6 +49,7 @@ function waterFillStage1(lines, capRemaining, stockRemaining, {
 } = {}) {
   const alloc = new Map();
   const order = [];
+  const srAtFirstAlloc = new Map();
   const byRegion = Object.fromEntries(regions.map((r) => [r, []]));
   const need = Object.fromEntries(regions.map((r) => [r, 0]));
   const cov = Object.fromEntries(regions.map((r) => [r, 0]));
@@ -101,7 +106,10 @@ function waterFillStage1(lines, capRemaining, stockRemaining, {
     ));
     const before = lineCov(line);
     alloc.set(line.key, (alloc.get(line.key) || 0) + chunk);
-    if (!order.includes(line.key)) order.push(line.key);
+    if (!order.includes(line.key)) {
+      order.push(line.key);
+      srAtFirstAlloc.set(line.key, regionSR(cov[best.r], need[best.r]));
+    }
     capRemaining[line.warehouseId] -= chunk;
     stockRemaining[line.warehouseId][line.drugId] -= chunk;
     cov[best.r] += lineCov(line) - before;
@@ -113,6 +121,7 @@ function waterFillStage1(lines, capRemaining, stockRemaining, {
   return {
     alloc,
     order,
+    srAtFirstAlloc,
     regionalSR,
     need,
     cov,
@@ -145,7 +154,13 @@ function planErrra({ lines, capRemaining, stockRemaining, params }) {
 
   const alloc = new Map(s1.alloc);
   const reasons = new Map();
-  for (const k of s1.alloc.keys()) reasons.set(k, 'ERRRA stage 1: raise worst-region projected essential service toward floor');
+  const scores = new Map();
+  const stage1LineByKey = new Map(stage1Lines.map((l) => [l.key, l]));
+  for (const k of s1.alloc.keys()) {
+    const sr = s1.srAtFirstAlloc.get(k);
+    scores.set(k, 1 + (1 - sr));
+    reasons.set(k, `ERRRA stage 1: region ${stage1LineByKey.get(k).regionType} had lowest projected essential service ${sr.toFixed(3)} < floor`);
+  }
   const rankOrder = [...s1.order];
   const decisions = [];
 
@@ -221,7 +236,11 @@ function planErrra({ lines, capRemaining, stockRemaining, params }) {
     c.extra -= qty;
     if (essLine) regionCov[l.regionType] += Math.min(l.avail + alloc.get(l.key), l.need) - before;
     if (!rankOrder.includes(l.key)) rankOrder.push(l.key);
-    if (!reasons.has(l.key)) reasons.set(l.key, `ERRRA stage 2: positive net benefit (tier ${tierOf(l)})`);
+    if (!reasons.has(l.key)) {
+      const npu = c.eval.netPerUnit;
+      scores.set(l.key, (3 - tierOf(l) + npu / (1 + Math.abs(npu))) / 4);
+      reasons.set(l.key, `ERRRA stage 2: positive expected net benefit ${c.eval.net.toFixed(1)} (tier ${tierOf(l)})`);
+    }
   };
 
   for (const c of candidates) tryAllocate(c, false);
@@ -236,6 +255,7 @@ function planErrra({ lines, capRemaining, stockRemaining, params }) {
     alloc,
     rankOrder,
     reasons,
+    scores,
     decisions,
     diagnostics: {
       solver: 'ERRRA heuristic (water-filling stage 1 + greedy net-benefit stage 2)',

@@ -20,27 +20,31 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Dependency audit (fail on high or critical)
+      - name: Production dependency audit (must report no vulnerabilities)
+        run: npm audit --omit=dev
+
+      - name: Full dependency audit (fail on high or critical)
         run: npm audit --audit-level=high
 
       - name: Lint (zero warnings)
         run: npm run lint
 
-      - name: Simulation unit tests
+      - name: Simulation and server tests
         run: npm run simulation:test
-
-      - name: Paper pipeline smoke run (few seeds)
-        run: npm run paper:quick
 
       - name: Simulation demo
         run: npm run simulation:demo
 
-      - name: Research reproduce (smoke)
-        run: REPLICATES=3 npm run research:reproduce
+      - name: Research reproduce (10 replicates, exact re-run of every metric)
+        run: npm run research:reproduce
+        env:
+          REPLICATES: 10
 
-      - name: Exact reproduce check
+      - name: Exact reproduce check of the latest stored experiment
         run: npm run research:reproduce -- --latest
-        continue-on-error: true
+
+      - name: Paper pipeline smoke run (few seeds)
+        run: npm run paper:quick
 
       - name: Frontend build (strict, warnings are errors)
         run: npm run build
@@ -64,6 +68,5 @@ jobs:
           node-version: '20'
           cache: 'npm'
       - run: npm ci
-      - name: Legacy prescription benchmark (not research primary)
+      - name: Legacy prescription benchmark (not part of the research build)
         run: npm run evaluate:ablation
-        continue-on-error: true

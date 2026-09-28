@@ -1,6 +1,7 @@
 const { createRng } = require('./seededRandom');
 const { REGION_TYPES } = require('./scenarioSchema');
 const { computeEventFactors } = require('./eventUtils');
+const { buildSuppliers, drawReliability, supplierDayStatus } = require('./supplyNetwork');
 
 const PRIORITY_DEMAND_SCALE = { essential: 1.2, 'chronic-care': 1.0, routine: 0.75 };
 
@@ -35,15 +36,17 @@ function generateScenarioInstance(scenario) {
 
   const warehouses = [];
   for (let w = 0; w < scenario.warehouseCount; w += 1) {
+    const whCfg = scenario.warehouses?.[w] || {};
     warehouses.push({
       id: `WH${w + 1}`,
-      capacityUnits: scenario.warehouses?.[w]?.capacityUnits ?? 50000 + rng.int(0, 20000),
-      dailyDispatchCapacity: (scenario.warehouses?.[w]?.dailyDispatchCapacity
+      capacityInStandardUnits: whCfg.capacityInStandardUnits ?? whCfg.capacityUnits ?? null,
+      dailyDispatchCapacity: (whCfg.dailyDispatchCapacity
         ?? logistics.dailyDispatchCapacityPerWarehouse ?? 2500) * capacityMultiplier,
-      truckCapacityUnits: (scenario.warehouses?.[w]?.truckCapacityUnits
+      truckCapacityUnits: (whCfg.truckCapacityUnits
         ?? logistics.truckCapacityUnits ?? 2000) * capacityMultiplier,
       initialStock: {},
-      inboundBase: {},
+      targetStock: {},
+      servedDailyDemand: 0,
     });
   }
 
@@ -73,8 +76,8 @@ function generateScenarioInstance(scenario) {
 
   const whStockMult = logistics.warehouseInitialStockMultiplier ?? 15;
   const phStockMult = logistics.pharmacyInitialStockMultiplier ?? 1;
-  const inboundCoverage = logistics.upstreamInboundCoverage ?? 1.1;
   const stockDaysMult = logistics.initialStockMultiplier ?? 1;
+  const servedDemandByWarehouse = {};
   for (const wh of warehouses) {
     const served = pharmacies.filter((p) => p.warehouseId === wh.id);
     let servedDailyDemand = 0;
@@ -85,7 +88,21 @@ function generateScenarioInstance(scenario) {
       wh.initialStock[drug.id] = logistics.warehouseInitialStockDays != null
         ? Math.round(baseline * logistics.warehouseInitialStockDays * stockDaysMult)
         : Math.round((drug.initialStock ?? 200) * whStockMult + jitter);
-      wh.inboundBase[drug.id] = baseline * inboundCoverage;
+      const targetDays = logistics.warehouseTargetStockDays ?? logistics.warehouseInitialStockDays;
+      wh.targetStock[drug.id] = targetDays != null
+        ? Math.round(baseline * targetDays)
+        : wh.initialStock[drug.id];
+    }
+    wh.servedDailyDemand = servedDailyDemand;
+    servedDemandByWarehouse[wh.id] = servedDailyDemand;
+    if (wh.capacityInStandardUnits == null) {
+      const initialTotal = Object.values(wh.initialStock).reduce((a, b) => a + b, 0);
+      const targetTotal = Object.values(wh.targetStock).reduce((a, b) => a + b, 0);
+      wh.capacityInStandardUnits = Math.max(
+        initialTotal,
+        targetTotal,
+        Math.round(servedDailyDemand * (logistics.warehouseCapacityDays ?? 45)),
+      );
     }
     if (logistics.dispatchCapacityCoverage != null) {
       wh.dailyDispatchCapacity = Math.round(servedDailyDemand * logistics.dispatchCapacityCoverage * capacityMultiplier);
@@ -102,9 +119,14 @@ function generateScenarioInstance(scenario) {
     }
   }
 
+  const suppliers = buildSuppliers(scenario, warehouses, servedDemandByWarehouse);
+  const reliabilityDraws = drawReliability(scenario, suppliers);
+
   const dailyPlans = [];
   for (let day = 0; day < scenario.simulationDays; day += 1) {
     const eventFactors = computeEventFactors(scenario, day);
+    const supplierStatus = supplierDayStatus(scenario, suppliers, reliabilityDraws, day);
+    eventFactors.supplyByWarehouse = supplierStatus.warehouseFactor;
     const pharmacyDemand = pharmacies.map((ph) => {
       const reg = scenario.regions[ph.regionType];
       const drugDemand = {};
@@ -116,7 +138,7 @@ function generateScenarioInstance(scenario) {
       }
       return { pharmacyId: ph.id, regionType: ph.regionType, drugDemand };
     });
-    dailyPlans.push({ day, eventFactors, pharmacyDemand });
+    dailyPlans.push({ day, eventFactors, pharmacyDemand, supplierStatus });
   }
 
   return {
@@ -129,6 +151,7 @@ function generateScenarioInstance(scenario) {
     warehouses,
     pharmacies,
     drugs,
+    suppliers,
     dailyPlans,
     rngStateNote: 'Demand draws consumed RNG stream in fixed pharmacy×drug×day order; independent of policy (common random numbers).',
   };

@@ -1,8 +1,16 @@
 /**
  * Replenishment policies. All reorder quantities are computed from the inventory position
  *   IP = onHand + onOrder − backlog
- * and are non-negative integers. Every emitted order carries policyScore, policyRank
- * (0 = served first under supply and truck caps) and allocationReason.
+ * (onOrder = units shipped by the warehouse or a lateral donor and not yet received), so a line
+ * with an order in transit is not re-ordered for the same need.
+ *
+ * Every policy returns candidates with priorityScore (higher = served first) and priorityReason.
+ * decideReplenishment applies one selection gate to all policies:
+ *   qty > 0, expectedBenefit > 0, priorityScore > minPriorityScore, the serving warehouse holds
+ *   stock of the SKU, and the warehouse has non-zero dispatch and truck capacity.
+ * Selected orders are ranked by priorityScore; tieBreak (region, pharmacy, SKU) applies only to
+ * exactly equal scores. Downstream dispatch and truck allocation keep this rank (or ration
+ * proportionally for policies whose mechanism is proportional rationing).
  */
 
 const { PRIORITY_WEIGHT } = require('./simulationConstants');
@@ -11,10 +19,11 @@ const {
   computeTransitDays,
   arrivalLagDays,
   NEUTRAL_FACTORS,
+  tieBreak,
 } = require('./distributionEngine');
 const { inventoryPosition } = require('./inventoryEngine');
 const { forecastFor } = require('./forecastEngine');
-const { computeRegionalDeficits } = require('./equitySignals');
+const { computeRegionalNeed } = require('./equitySignals');
 const { effectiveDispatchCap } = require('./dispatchEngine');
 const { expectedShortfall, inv: normInv } = require('./normalDist');
 const { planErrra } = require('./errra');
@@ -32,45 +41,53 @@ const ERRRA_DEFAULTS = {
   useRollingHorizon: true,
   useEssentialPriority: true,
   useCompoundAwareness: true,
+  useLateralTransfers: true,
+  useSupplierRedundancy: true,
 };
+
+const EQUITY_AWARE_WEIGHTS = { stockout: 1, wait: 0.5, inequity: 2, cost: 0.01 };
 
 const POLICIES = {
   'fixed-allocation': {
     id: 'fixed-allocation',
+    shortName: 'fixed-allocation',
     name: 'Fixed allocation baseline',
-    version: '3.0.0',
-    algorithm: 'Periodic review (review day staggered by pharmacy index mod R) with a static order-up-to target = planning-prior daily demand × (nominal lead L + review period R + safetyDays); qty = max(0, target − IP); ignores observed demand and disruptions; shortages rationed proportionally',
+    version: '4.0.0',
+    algorithm: 'Periodic review (review day staggered by pharmacy index mod R) with a static order-up-to target = planning-prior daily demand × (nominal lead L + review period R + safetyDays); qty = max(0, target − IP); ignores observed demand and disruptions; shortages rationed proportionally; priorityScore = expected shortfall reduction per unit',
     params: { reviewPeriodDays: 3, safetyDays: 3 },
     rationing: 'proportional',
   },
   'reorder-point': {
     id: 'reorder-point',
-    name: 'Tuned reorder point (s, Q) baseline',
-    version: '3.0.0',
-    algorithm: 's = μL + z·σ·√L (nominal lead time L incl. 1-day review); Q = max(1, round(qScale·√(2·μ·K / h))) (EOQ); when IP ≤ s order n·Q with n = ⌈(s − IP)/Q⌉; z and qScale calibrated on calibration seeds only; shortages rationed proportionally',
-    params: { z: 1.65, qScale: 1.0 },
+    shortName: 'tuned-sQ',
+    name: 'Tuned (s, Q) reorder-point baseline',
+    version: '4.0.0',
+    algorithm: 's = μL + z·σ·√L (nominal lead L incl. 1-day review); Q = max(1, round(qScale·√(2μK/h))); when IP ≤ s order n·Q with n = ⌈(s − IP)/Q⌉ (smallest multiple of Q that lifts IP above s); z, qScale per SKU × region type calibrated on calibration seeds disjoint from evaluation seeds; shortages rationed proportionally; priorityScore = expected shortfall reduction per unit',
+    params: { z: 1.65, qScale: 1.0, perLine: null },
     rationing: 'proportional',
   },
   'cost-first': {
     id: 'cost-first',
-    name: 'Cost-first net-benefit heuristic',
-    version: '3.0.0',
-    algorithm: '(s, S) with cost-derived parameters: s = μτ + z*·σ√τ, z* = Φ⁻¹((p − c)/(p + hτ)), S = s + Q_EOQ; line selected only if expected avoided stockout penalty − (procurement + transport + fixed order + expected holding) > 0; ranked by net benefit per unit',
+    shortName: 'cost-only',
+    name: 'Cost-only net-benefit heuristic',
+    version: '4.0.0',
+    algorithm: '(s, S) with cost-derived parameters: s = μτ + z*·σ√τ, z* = Φ⁻¹((p − c)/(p + hτ)), S = s + Q_EOQ; line selected only if expected avoided stockout penalty − (procurement + transport + fixed order + expected holding) > 0; ranked by net benefit per unit; no regional or vulnerability term',
     params: {},
   },
   'equity-aware': {
     id: 'equity-aware',
+    shortName: 'weighted-equity',
     name: 'Weighted equity-aware heuristic',
-    version: '3.0.0',
-    algorithm: '(s, S) with s = μτ + z·σ√τ, S = s + Q_EOQ; ranked by weighted score = w_s·pw·ΔE[shortfall] + w_w·v·backlog + w_e·100·v·deficit_r − w_c·cost, where deficit_r ≥ 0 measures regional under-service; not a global optimizer',
+    version: '4.0.0',
+    algorithm: '(s, S) with s = μτ + z·σ√τ, S = s + Q_EOQ; ranked by weighted score = w_s·pw·ΔE[shortfall]·(1 + λ·needScore_r) + w_w·v·backlog − w_c·cost (λ = w_inequity), needScore_r = (1 − EF_r)·(v_r / max v)·(1 + min(1, BR_r)); a single weighted sum, no service floor',
     params: { z: 1.65 },
   },
   'equity-constrained-rolling-horizon': {
     id: 'equity-constrained-rolling-horizon',
-    name: 'Equity-constrained Resilient Rolling-horizon Allocation (ERRRA heuristic)',
     shortName: 'ERRRA',
-    version: '1.0.0',
-    algorithm: 'Daily two-stage lexicographic heuristic: (1) water-filling max–min of projected regional essential service up to floor φ under warehouse capacity and stock; (2) cost-aware net-benefit additions by priority tier subject to regional gap ≤ δ (no leveling down)',
+    name: 'Equity-constrained Resilient Rolling-horizon Allocation (ERRRA allocation heuristic)',
+    version: '2.0.0',
+    algorithm: 'Daily two-stage lexicographic allocation heuristic: (1) water-filling max–min of projected regional essential service up to floor φ under warehouse dispatch capacity and stock; (2) cost-aware net-benefit additions by priority tier subject to regional gap ≤ δ (no leveling down)',
     params: { ...ERRRA_DEFAULTS },
   },
 };
@@ -81,15 +98,18 @@ const ABLATIONS = {
   'errra-no-rolling': { useRollingHorizon: false, label: 'ERRRA − rolling-horizon adaptation' },
   'errra-no-essential-priority': { useEssentialPriority: false, label: 'ERRRA − essential-medicine priority' },
   'errra-no-compound-awareness': { useCompoundAwareness: false, label: 'ERRRA − compound disruption awareness' },
+  'errra-no-transfers': { useLateralTransfers: false, label: 'ERRRA − lateral emergency transfers' },
+  'errra-no-supplier-redundancy': { useSupplierRedundancy: false, label: 'ERRRA − backup supplier redundancy' },
 };
 
 const ABLATION_POLICIES = Object.fromEntries(Object.entries(ABLATIONS).map(([id, a]) => {
   const { label, ...flags } = a;
   return [id, {
     id,
+    shortName: id,
     name: label,
     version: POLICIES['equity-constrained-rolling-horizon'].version,
-    algorithm: `Ablation of ERRRA heuristic: ${Object.keys(flags).join(', ')} = false`,
+    algorithm: `Ablation of ERRRA allocation heuristic: ${Object.keys(flags).join(', ')} = false`,
     params: { ...ERRRA_DEFAULTS, ...flags },
     ablationOf: 'equity-constrained-rolling-horizon',
   }];
@@ -98,8 +118,11 @@ const ABLATION_POLICIES = Object.fromEntries(Object.entries(ABLATIONS).map(([id,
 const POLICY_ALIASES = {
   'fixed-allocation-v1': 'fixed-allocation',
   'reorder-point-v1': 'reorder-point',
+  'tuned-sQ': 'reorder-point',
   'cost-first-v1': 'cost-first',
+  'cost-only': 'cost-first',
   'equity-aware-v1': 'equity-aware',
+  'weighted-equity': 'equity-aware',
   errra: 'equity-constrained-rolling-horizon',
   ERRRA: 'equity-constrained-rolling-horizon',
 };
@@ -125,10 +148,12 @@ function getPolicy(id) {
 }
 
 function resolveParams(policyId, scenario, override) {
-  const policy = getPolicy(policyId);
+  const canonical = resolvePolicyId(policyId);
+  const policy = getPolicy(canonical);
   return {
+    minPriorityScore: 0,
     ...(policy?.params || {}),
-    ...(scenario?.policyParams?.[policyId] || {}),
+    ...(scenario?.policyParams?.[canonical] || {}),
     ...(override || {}),
   };
 }
@@ -148,7 +173,7 @@ function isErrraFamily(policyId) {
  *   ΔES     = E[(D − ip)⁺] − E[(D − ip − q)⁺]
  *   benefit = (p + w·τ/2) · ΔES                        (avoided penalty + avoided synthetic delay)
  *   cost    = (c_proc + c_trans)·q + K·1[line not yet opened today] + h·q·q/(2μ)
- * with Q = min(√(2μK/h), μ·maxCycleDays) (maxCycleDays = 30 by default).
+ * with Q = min(√(2μK/h), μ·maxCycleDays).
  */
 function lineEconomics(line, q, alreadyOpened = false) {
   if (q <= 0) return { q: 0, deltaShortfall: 0, benefit: 0, cost: 0, net: 0, netPerUnit: 0 };
@@ -164,7 +189,7 @@ function lineEconomics(line, q, alreadyOpened = false) {
   return { q, deltaShortfall, benefit, cost, variable, fixed, holding, net, netPerUnit: net / q };
 }
 
-/** (s, S) order quantity: when IP ≤ s order up to s + Q, Q = line.cycleQ = √(2μK/h). */
+/** (s, S) order quantity: when IP ≤ s order up to s + Q, Q = line.cycleQ. */
 function batchOrderQty(line, s, Q) {
   if (line.ip > s) return 0;
   return Math.max(0, Math.ceil(s + Q - line.ip));
@@ -192,7 +217,9 @@ function buildLines(ctx, { adaptiveForecast = true, useCurrentFactors = true, bu
     if (!st) continue;
     const rt = ph.regionType;
     const supplySideDisruption = useCurrentFactors && eventFactors && (
-      (eventFactors.supply[rt] ?? 1) < 1 || (eventFactors.transit[rt] ?? 1) > 1 || (eventFactors.lead[rt] ?? 1) > 1
+      (eventFactors.supplyByWarehouse?.[ph.warehouseId] ?? 1) < 1
+      || (eventFactors.transit[rt] ?? 1) > 1
+      || (eventFactors.lead[rt] ?? 1) > 1
     );
     drugs.forEach((drug, drugIndex) => {
       const fc = forecastFor(forecasts, ph.id, drug.id, adaptiveForecast);
@@ -261,55 +288,65 @@ function candidate(line, qty, extra) {
     backlog: line.backlog,
     requestQty: qty,
     qty,
+    line,
     ...extra,
   };
 }
 
-function stableBaselineOrder(a, b) {
-  return a.pharmacyIndex - b.pharmacyIndex || a.drugIndex - b.drugIndex;
+/** Expected shortfall reduction per shipped unit (used as priorityScore by the rationing baselines). */
+function shortfallReductionPerUnit(econ) {
+  return econ.q > 0 ? econ.deltaShortfall / econ.q : 0;
 }
 
 function fixedAllocation(ctx, params) {
   const lines = buildLines(ctx, { adaptiveForecast: false, useCurrentFactors: false });
   const out = [];
-  for (const l of [...lines].sort(stableBaselineOrder)) {
+  for (const l of lines) {
     if (ctx.day % params.reviewPeriodDays !== l.pharmacyIndex % params.reviewPeriodDays) continue;
     const coverDays = l.lead + params.reviewPeriodDays + params.safetyDays;
     const target = Math.ceil(l.prior * coverDays);
     const qty = Math.max(0, Math.ceil(target - l.ip));
     if (qty <= 0) continue;
+    const econ = lineEconomics(l, qty, false);
     out.push(candidate(l, qty, {
-      selected: true,
-      policyScore: 0,
+      expectedBenefit: econ.benefit,
+      marginalCost: econ.cost,
+      priorityScore: shortfallReductionPerUnit(econ),
       target,
-      allocationReason: `fixed-allocation: order-up-to target ${target} (prior × (L ${l.lead} + R ${params.reviewPeriodDays} + safety ${params.safetyDays})d) on review day`,
+      priorityReason: `fixed-allocation: review day, IP ${l.ip.toFixed(1)} < static target ${target} (prior × (L ${l.lead} + R ${params.reviewPeriodDays} + safety ${params.safetyDays})d)`,
     }));
   }
   return { candidates: out };
 }
 
+/** (s, Q) parameters for a line; params.perLine['drugId|regionType'] overrides the uniform z/qScale. */
 function reorderPointParams(line, params) {
+  const own = params.perLine?.[`${line.drugId}|${line.regionType}`];
+  const z = own?.z ?? params.z;
+  const qScale = own?.qScale ?? params.qScale;
   const L = line.lead + 1;
-  const s = line.mu * L + params.z * line.sigma * Math.sqrt(L);
+  const s = line.mu * L + z * line.sigma * Math.sqrt(L);
   const eoqUnits = Math.sqrt((2 * Math.max(line.mu, 0.1) * line.orderCost) / Math.max(line.holding, 1e-4));
-  const Q = Math.max(1, Math.round(params.qScale * eoqUnits));
-  return { s, Q };
+  const Q = Math.max(1, Math.round(qScale * eoqUnits));
+  return { s, Q, z, qScale };
 }
 
 function reorderPoint(ctx, params) {
   const lines = buildLines(ctx, { adaptiveForecast: true, useCurrentFactors: false });
   const out = [];
-  for (const l of [...lines].sort(stableBaselineOrder)) {
-    const { s, Q } = reorderPointParams(l, params);
+  for (const l of lines) {
+    const { s, Q, z, qScale } = reorderPointParams(l, params);
     if (l.ip > s) continue;
     const n = Math.max(1, Math.ceil((s - l.ip) / Q));
     const qty = n * Q;
+    const econ = lineEconomics(l, qty, false);
     out.push(candidate(l, qty, {
-      selected: true,
-      policyScore: 0,
+      expectedBenefit: econ.benefit,
+      marginalCost: econ.cost,
+      priorityScore: shortfallReductionPerUnit(econ),
       reorderPoint: s,
       batchQ: Q,
-      allocationReason: `reorder-point: IP ${l.ip.toFixed(1)} ≤ s ${s.toFixed(1)} → ${n}×Q(${Q})`,
+      priorityReason: `tuned-sQ: IP ${l.ip.toFixed(1)} ≤ s ${s.toFixed(1)} (z ${z}, qScale ${qScale}) → ${n}×Q(${Q})`,
     }));
   }
   return { candidates: out };
@@ -324,51 +361,45 @@ function costFirst(ctx) {
     const qty = batchOrderQty(l, l.muTau + z * l.sigmaTau, l.cycleQ);
     if (qty <= 0) continue;
     const econ = lineEconomics(l, qty, false);
-    const selected = econ.net > 0;
     out.push(candidate(l, qty, {
-      selected,
-      policyScore: econ.netPerUnit,
+      expectedBenefit: econ.net,
       marginalBenefit: econ.benefit,
       marginalCost: econ.cost,
       netBenefit: econ.net,
-      notSelectedReason: selected ? null : 'negative_net_benefit',
-      allocationReason: selected
-        ? `cost-first: net benefit ${econ.net.toFixed(1)} (benefit ${econ.benefit.toFixed(1)} − cost ${econ.cost.toFixed(1)})`
-        : `cost-first: rejected, net benefit ${econ.net.toFixed(1)} ≤ 0`,
+      priorityScore: econ.netPerUnit,
+      priorityReason: `cost-only: expected net benefit ${econ.net.toFixed(1)} = benefit ${econ.benefit.toFixed(1)} − cost ${econ.cost.toFixed(1)}`,
     }));
   }
-  out.sort((a, b) => b.policyScore - a.policyScore);
   return { candidates: out };
 }
 
 function equityAware(ctx, params) {
   const { scenario } = ctx.instance;
   const lines = buildLines(ctx, { adaptiveForecast: true, useCurrentFactors: true });
-  const w = scenario.policyWeights?.equityAware ?? { stockout: 1, wait: 0.5, inequity: 1, cost: 0.01 };
-  const deficits = computeRegionalDeficits(ctx.regionalStats || {}, {
-    maxWaitDays: scenario.metricsWeights?.maxRelevantWaitDays ?? 30,
-  });
+  const w = { ...EQUITY_AWARE_WEIGHTS, ...(scenario.policyWeights?.equityAware || {}) };
+  const vulnerability = {};
+  for (const ph of ctx.instance.pharmacies) vulnerability[ph.regionType] = ph.vulnerabilityWeight ?? 1;
+  const need = computeRegionalNeed(ctx.regionalStats || {}, vulnerability);
   const out = [];
   for (const l of lines) {
     const qty = batchOrderQty(l, l.muTau + params.z * l.sigmaTau, l.cycleQ);
     if (qty <= 0) continue;
     const econ = lineEconomics(l, qty, false);
-    const deficit = deficits[l.regionType]?.deficit ?? 0;
-    const equityBonus = deficit > 0 ? w.inequity * 100 * l.v * deficit : 0;
-    const score = w.stockout * l.pw * econ.deltaShortfall
+    const needScore = need[l.regionType]?.needScore ?? 0;
+    const base = w.stockout * l.pw * econ.deltaShortfall;
+    const equityBonus = base * w.inequity * needScore;
+    const score = base + equityBonus
       + w.wait * l.v * l.backlog
-      + equityBonus
       - w.cost * econ.cost;
     out.push(candidate(l, qty, {
-      selected: true,
-      policyScore: score,
-      regionalDeficit: deficit,
-      equityBonus,
+      expectedBenefit: econ.benefit,
       marginalCost: econ.cost,
-      allocationReason: `equity-aware: score ${score.toFixed(2)} (equity bonus ${equityBonus.toFixed(2)}, regional deficit ${deficit.toFixed(3)})`,
+      priorityScore: score,
+      needScore,
+      equityBonus,
+      priorityReason: `weighted-equity: score ${score.toFixed(2)} = shortfall term ${base.toFixed(2)} × (1 + ${w.inequity}·needScore ${needScore.toFixed(3)}) + backlog − cost`,
     }));
   }
-  out.sort((a, b) => b.policyScore - a.policyScore);
   return { candidates: out };
 }
 
@@ -397,13 +428,8 @@ function errraPolicy(ctx, params) {
 
   const capRemaining = {};
   const stockRemaining = {};
-  const neutral = { supply: { urban: 1, suburban: 1, rural: 1 } };
   for (const wh of instance.warehouses) {
-    const { dailyDispatchCap } = effectiveDispatchCap(
-      wh,
-      instance.pharmacies,
-      params.useCompoundAwareness ? ctx.eventFactors : neutral,
-    );
+    const { dailyDispatchCap } = effectiveDispatchCap(wh);
     capRemaining[wh.id] = Math.floor(Math.min(dailyDispatchCap, wh.truckCapacityUnits ?? Infinity));
     const ws = warehouseStates.find((w) => w.id === wh.id);
     stockRemaining[wh.id] = { ...(ws?.onHand || {}) };
@@ -412,30 +438,43 @@ function errraPolicy(ctx, params) {
   const plan = planErrra({ lines, capRemaining, stockRemaining, params });
   const lineByKey = new Map(lines.map((l) => [l.key, l]));
   const out = [];
-  plan.rankOrder.forEach((key) => {
+  for (const key of plan.rankOrder) {
     const qty = plan.alloc.get(key) || 0;
-    if (qty <= 0) return;
+    if (qty <= 0) continue;
     const l = lineByKey.get(key);
     const econ = lineEconomics(l, qty, false);
     out.push(candidate(l, qty, {
-      selected: true,
-      policyScore: econ.netPerUnit,
+      expectedBenefit: econ.benefit,
       marginalCost: econ.cost,
       netBenefit: econ.net,
-      allocationReason: plan.reasons.get(key),
+      priorityScore: plan.scores.get(key),
+      priorityReason: plan.reasons.get(key),
     }));
-  });
+  }
   for (const d of plan.decisions) {
     if (plan.alloc.get(d.key)) continue;
     const l = lineByKey.get(d.key);
     out.push(candidate(l, 0, {
-      selected: false,
-      policyScore: d.net ?? null,
+      expectedBenefit: d.net ?? 0,
+      priorityScore: null,
       notSelectedReason: d.notSelectedReason,
-      allocationReason: `ERRRA: not selected (${d.notSelectedReason})`,
+      priorityReason: `ERRRA: not selected (${d.notSelectedReason})`,
     }));
   }
   return { candidates: out, diagnostics: plan.diagnostics };
+}
+
+/** Unified selection gate; returns null when selected, otherwise the rejection reason. */
+function gateReason(c, params, whById, whStateById) {
+  if (c.notSelectedReason) return c.notSelectedReason;
+  if (!(c.qty > 0)) return 'zero_request';
+  if (!(c.expectedBenefit > 0)) return 'no_expected_benefit';
+  if (!(Number.isFinite(c.priorityScore) && c.priorityScore > params.minPriorityScore)) return 'score_below_threshold';
+  const wh = whById[c.warehouseId];
+  if (!wh) return 'no_serving_warehouse';
+  if ((whStateById[c.warehouseId]?.onHand?.[c.drugId] ?? 0) <= 0) return 'warehouse_out_of_stock';
+  if (effectiveDispatchCap(wh).dailyDispatchCap <= 0 || (wh.truckCapacityUnits ?? 1) <= 0) return 'no_transport_capacity';
+  return null;
 }
 
 /**
@@ -453,43 +492,49 @@ function decideReplenishment(ctx) {
   else if (isErrraFamily(canonical)) result = errraPolicy(ctx, params);
   else throw new Error(`Unknown policy: ${ctx.policyId}`);
 
-  const decisions = [];
-  const orders = [];
-  let rank = 0;
-  for (const rest of result.candidates) {
-    const selected = rest.selected && rest.qty > 0;
-    const decision = {
-      ...rest,
+  const whById = Object.fromEntries(ctx.instance.warehouses.map((w) => [w.id, w]));
+  const whStateById = Object.fromEntries((ctx.warehouseStates || []).map((w) => [w.id, w]));
+
+  const decisions = result.candidates.map(({ line: _line, ...c }) => {
+    const reason = gateReason(c, params, whById, whStateById);
+    return {
+      ...c,
       policyId: canonical,
-      selected,
-      policyRank: selected ? rank : null,
-      notSelectedReason: selected ? null : (rest.notSelectedReason || 'zero_request'),
+      policyScore: c.priorityScore,
+      selected: reason == null,
+      notSelectedReason: reason,
     };
-    decisions.push(decision);
-    if (selected) {
-      orders.push({
-        pharmacyId: rest.pharmacyId,
-        warehouseId: rest.warehouseId,
-        drugId: rest.drugId,
-        regionType: rest.regionType,
-        priority: rest.priority,
-        qty: rest.qty,
-        requestQty: rest.qty,
-        policyScore: rest.policyScore,
-        policyRank: rank,
-        rationing,
-        allocationReason: rest.allocationReason,
-      });
-      rank += 1;
-    }
-  }
+  });
+  const selected = decisions
+    .filter((d) => d.selected)
+    .sort((a, b) => b.priorityScore - a.priorityScore || tieBreak(a, b));
+  selected.forEach((d, i) => { d.policyRank = i; });
+  for (const d of decisions) if (!d.selected) d.policyRank = null;
+
+  const orders = selected.map((d) => ({
+    pharmacyId: d.pharmacyId,
+    warehouseId: d.warehouseId,
+    drugId: d.drugId,
+    regionType: d.regionType,
+    priority: d.priority,
+    qty: d.qty,
+    requestQty: d.qty,
+    priorityScore: d.priorityScore,
+    policyScore: d.priorityScore,
+    policyRank: d.policyRank,
+    rationing,
+    priorityReason: d.priorityReason,
+    allocationReason: d.priorityReason,
+  }));
   return { orders, decisions, diagnostics: result.diagnostics || null };
 }
 
 module.exports = {
   POLICIES,
   ABLATION_POLICIES,
+  ABLATIONS,
   ERRRA_DEFAULTS,
+  EQUITY_AWARE_WEIGHTS,
   POLICY_ALIASES,
   resolvePolicyId,
   resolveParams,

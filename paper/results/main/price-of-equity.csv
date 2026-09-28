@@ -1,57 +1,46 @@
-scenario,policy,deltaCost,deltaCostCI,gapReductionPP,costPerGapPoint,priceOfEquityRelative,status
-S01-baseline,fixed-allocation,73196.70177,"[73022, 73371]",-0.4810722686,,,no_gap_reduction
-S01-baseline,reorder-point,2394.886832,"[2164, 2626]",-0.02588964044,,,no_gap_reduction
-S01-baseline,equity-aware,589.1112647,"[385, 793]",-0.1068067564,,,no_gap_reduction
-S01-baseline,equity-constrained-rolling-horizon,129.0270824,"[-46, 304]",-0.004084561155,,,no_gap_reduction
-S02-surge-low,fixed-allocation,70981.25081,"[70765, 71198]",-8.056806376,,,no_gap_reduction
-S02-surge-low,reorder-point,3712.893239,"[3498, 3928]",0.05926568262,62648.2827,0.03354854231,ok
-S02-surge-low,equity-aware,193.9771535,"[-24, 412]",-0.3775141246,,,no_gap_reduction
-S02-surge-low,equity-constrained-rolling-horizon,194.7568018,"[-24, 414]",0.01094303572,17797.32853,0.009530579344,ok
-S03-surge-mid,fixed-allocation,67044.29113,"[66838, 67251]",-19.99618643,,,no_gap_reduction
-S03-surge-mid,reorder-point,8492.818878,"[8115, 8871]",0.353132639,24049.94027,0.05406282561,ok
-S03-surge-mid,equity-aware,-1113.278106,"[-1340, -887]",-4.059083442,,,no_gap_reduction
-S03-surge-mid,equity-constrained-rolling-horizon,265.4748959,"[43, 488]",0.1339413447,1982.023523,0.004455470194,ok
-S04-surge-high,fixed-allocation,59642.45947,"[59437, 59848]",-27.23031456,,,no_gap_reduction
-S04-surge-high,reorder-point,50758.66472,"[49791, 51726]",-3.329816104,,,no_gap_reduction
-S04-surge-high,equity-aware,-3955.163389,"[-4210, -3701]",-9.85841601,,,no_gap_reduction
-S04-surge-high,equity-constrained-rolling-horizon,2819.010829,"[2577, 3061]",0.4085267916,6900.430737,0.04553619851,ok
-S05-supply-low,fixed-allocation,72392.07742,"[72203, 72581]",-3.656829718,,,no_gap_reduction
-S05-supply-low,reorder-point,3962.22027,"[3704, 4220]",0.008242631466,480698.4622,0.1634382423,ok
-S05-supply-low,equity-aware,485.9894471,"[294, 678]",-0.1247629741,,,no_gap_reduction
-S05-supply-low,equity-constrained-rolling-horizon,431.0538694,"[223, 639]",0.008821963529,48861.44314,0.01661296844,ok
-S06-supply-mid,fixed-allocation,68401.2551,"[68184, 68618]",-31.86423403,,,no_gap_reduction
-S06-supply-mid,reorder-point,12482.3264,"[11764, 13200]",0.02229031567,559988.7676,0.2093966019,ok
-S06-supply-mid,equity-aware,-612.8101335,"[-844, -382]",-2.20735755,,,no_gap_reduction
-S06-supply-mid,equity-constrained-rolling-horizon,361.1998971,"[147, 575]",0.01504638989,24005.75153,0.008976470756,ok
-S07-supply-high,fixed-allocation,64377.5037,"[64185, 64570]",-31.33945727,,,no_gap_reduction
-S07-supply-high,reorder-point,87963.5167,"[87180, 88747]",-8.203795671,,,no_gap_reduction
-S07-supply-high,equity-aware,-2436.387136,"[-2689, -2184]",-8.488615272,,,no_gap_reduction
-S07-supply-high,equity-constrained-rolling-horizon,392.9605629,"[143, 643]",1.121244061,350.4683562,0.001666795176,ok
-S08-rural-road,fixed-allocation,73146.59973,"[72971, 73322]",-13.08169473,,,no_gap_reduction
-S08-rural-road,reorder-point,4940.548971,"[4684, 5197]",0.2731199615,18089.30019,0.03177578148,ok
-S08-rural-road,equity-aware,562.3664465,"[367, 757]",-0.2388718961,,,no_gap_reduction
-S08-rural-road,equity-constrained-rolling-horizon,218.2728071,"[24, 413]",0.1163198521,1876.488003,0.003296250939,ok
-S09-surge-supply,fixed-allocation,50844.62221,"[50641, 51048]",-30.42848196,,,no_gap_reduction
-S09-surge-supply,reorder-point,75906.58558,"[74983, 76830]",-23.33601993,,,no_gap_reduction
-S09-surge-supply,equity-aware,-6323.133194,"[-6578, -6069]",-3.843690458,,,no_gap_reduction
-S09-surge-supply,equity-constrained-rolling-horizon,2778.980109,"[2539, 3019]",3.597295091,772.5193622,0.01382743669,ok
-S10-surge-supply-road,fixed-allocation,51079.61591,"[50864, 51295]",-26.06868169,,,no_gap_reduction
-S10-surge-supply-road,reorder-point,76016.14852,"[75105, 76927]",-18.87732097,,,no_gap_reduction
-S10-surge-supply-road,equity-aware,-6127.054032,"[-6402, -5852]",-1.539063993,,,no_gap_reduction
-S10-surge-supply-road,equity-constrained-rolling-horizon,3421.334328,"[3137, 3705]",6.160984466,555.3226676,0.01856603382,ok
-S11-long-lead,fixed-allocation,50897.26496,"[50680, 51114]",-27.19344295,,,no_gap_reduction
-S11-long-lead,reorder-point,71740.87416,"[70870, 72612]",-20.49260134,,,no_gap_reduction
-S11-long-lead,equity-aware,-7205.247758,"[-7416, -6994]",-8.288010305,,,no_gap_reduction
-S11-long-lead,equity-constrained-rolling-horizon,2979.824329,"[2733, 3227]",6.359432623,468.5676389,0.01322779677,ok
-S12-limited-warehouse,fixed-allocation,54220.0974,"[54157, 54283]",31.61427422,1715.051152,0.5080286764,ok
-S12-limited-warehouse,reorder-point,127808.2303,"[127288, 128328]",-0.7642143629,,,no_gap_reduction
-S12-limited-warehouse,equity-aware,-3129.844266,"[-3210, -3050]",47.87059099,,,dominant_lower_cost_and_gap
-S12-limited-warehouse,equity-constrained-rolling-horizon,8988.438195,"[8887, 9090]",47.8818601,187.7211574,0.05560634796,ok
-S13-limited-capacity,fixed-allocation,47227.57228,"[47101, 47354]",-5.514761525,,,no_gap_reduction
-S13-limited-capacity,reorder-point,151625.3849,"[151144, 152106]",-51.25824058,,,no_gap_reduction
-S13-limited-capacity,equity-aware,-16911.47075,"[-17082, -16741]",6.589053092,,,dominant_lower_cost_and_gap
-S13-limited-capacity,equity-constrained-rolling-horizon,5034.417395,"[4813, 5256]",17.02646937,295.6818166,0.02076830637,ok
-S14-extreme,fixed-allocation,50725.34669,"[50598, 50853]",47.41625048,1069.78823,0.2437424733,ok
-S14-extreme,reorder-point,174548.5998,"[174211, 174886]",3.245442358,53782.68369,12.25394333,ok
-S14-extreme,equity-aware,-9998.930842,"[-10120, -9878]",39.63773329,,,dominant_lower_cost_and_gap
-S14-extreme,equity-constrained-rolling-horizon,12591.16082,"[12498, 12684]",48.94178426,257.2681199,0.05861643086,ok
+scenario,policy,priceOfEquity,priceOfEquityCi95Low,priceOfEquityCi95High,deltaCost,deltaWorstRegionEssentialFillPP,deltaWorstRegionEssentialFillPPCi95Low,deltaWorstRegionEssentialFillPPCi95High,costPerWorstRegionPP,status
+M1-normal,fixed-allocation,0.2184192875,0.2173361234,0.2194750318,61147.99622,-0.5061362597,-0.5396552159,-0.470762121,,worst_region_loss
+M1-normal,reorder-point,-0.00594191474,-0.006947706274,-0.004926042123,-1668.961846,-0.2025506673,-0.2339174406,-0.1751313984,,worst_region_loss
+M1-normal,cost-first,0,0,0,0,0,0,0,,reference
+M1-normal,equity-aware,0.002927642682,0.001861602684,0.003947555465,814.8898518,-0.06275334152,-0.0817960796,-0.04401613023,,worst_region_loss
+M1-normal,equity-constrained-rolling-horizon,0.002384765617,0.001311091312,0.003416733422,661.5499065,0.003102851915,-0.001246083384,0.008051135668,,gain_not_significant
+M2-demand-surge,fixed-allocation,0.167774989,0.1667959527,0.1687687237,53364.5078,-39.63692853,-39.98920783,-39.29961224,,worst_region_loss
+M2-demand-surge,reorder-point,0.02416783654,0.02282165684,0.02550581048,7684.102531,0.4179921662,0.3547703514,0.4833721485,18383.36494,ok
+M2-demand-surge,cost-first,0,0,0,0,0,0,0,,reference
+M2-demand-surge,equity-aware,-0.002099655896,-0.003016954397,-0.001209247019,-669.8869582,-2.007744424,-2.248755066,-1.782194993,,worst_region_loss
+M2-demand-surge,equity-constrained-rolling-horizon,0.003570401395,0.002767027272,0.004448045799,1134.684073,0.1388629851,0.112326658,0.1677176065,8171.24932,ok
+M3-supply-disruption,fixed-allocation,0.1638193447,0.1624305596,0.1652646135,47153.50372,-25.95791144,-26.36566371,-25.56309141,,worst_region_loss
+M3-supply-disruption,reorder-point,0.1334151837,0.1308308087,0.135917178,38406.59711,14.51343115,14.13788708,14.89845751,2646.279623,ok
+M3-supply-disruption,cost-first,0,0,0,0,0,0,0,,reference
+M3-supply-disruption,equity-aware,-0.001382140594,-0.002338530504,-0.0004042781059,-400.7852429,5.262863767,4.958344035,5.561980791,,gain_at_lower_cost
+M3-supply-disruption,equity-constrained-rolling-horizon,0.02151918199,0.02049096313,0.02258009535,6191.841982,8.00851943,7.783740087,8.234913113,773.1568908,ok
+M4-transport-disruption,fixed-allocation,0.2152109605,0.2141707928,0.2162053236,60367.16296,-21.9520952,-22.17554372,-21.75103698,,worst_region_loss
+M4-transport-disruption,reorder-point,0.004544672922,0.003506537657,0.005552618224,1269.978892,2.027419085,1.846385581,2.199621833,626.4017641,ok
+M4-transport-disruption,cost-first,0,0,0,0,0,0,0,,reference
+M4-transport-disruption,equity-aware,0.00190860954,0.0009424414402,0.002876473808,532.7543765,-0.1836902265,-0.2990031328,-0.07442467417,,worst_region_loss
+M4-transport-disruption,equity-constrained-rolling-horizon,0.002426162833,0.001552143319,0.003333834381,678.4859188,0.4636210062,0.379090193,0.5440078203,1463.449476,ok
+M5-compound,fixed-allocation,0.1358149793,0.134617594,0.1369669102,43937.55331,-32.12998881,-32.58411985,-31.6727504,,worst_region_loss
+M5-compound,reorder-point,0.146535443,0.1440512519,0.1490392504,47415.27347,12.57095698,12.02338073,13.10574821,3771.810973,ok
+M5-compound,cost-first,0,0,0,0,0,0,0,,reference
+M5-compound,equity-aware,0.0001203952291,-0.0007873186088,0.001054530099,38.81429941,5.032923255,4.674672315,5.387213696,,extra_cost_not_significant
+M5-compound,equity-constrained-rolling-horizon,0.01795056786,0.01696557332,0.01888732008,5805.927061,11.37688087,10.90667844,11.83599158,510.3267869,ok
+M6-long-lead,fixed-allocation,0.0921906562,0.09127399009,0.0931410384,29968.87919,-18.95109927,-19.39302812,-18.47144252,,worst_region_loss
+M6-long-lead,reorder-point,0.1956981203,0.1933110361,0.1980683351,63620.96175,18.83645555,18.12739019,19.5775097,3377.54423,ok
+M6-long-lead,cost-first,0,0,0,0,0,0,0,,reference
+M6-long-lead,equity-aware,-0.004642951665,-0.005487891843,-0.003787863507,-1511.616545,8.212468979,7.856312359,8.574355787,,gain_at_lower_cost
+M6-long-lead,equity-constrained-rolling-horizon,0.03588296801,0.035024686,0.03673112896,11664.62211,10.01410897,9.647621752,10.40115727,1164.818772,ok
+M7-tight-warehouse,fixed-allocation,0.09031444876,0.08933791911,0.09127604127,28915.02614,-15.58708417,-16.1169631,-15.03946136,,worst_region_loss
+M7-tight-warehouse,reorder-point,0.2980386648,0.2964172888,0.2996876123,95436.94742,26.5580327,25.8558856,27.24673539,3593.524735,ok
+M7-tight-warehouse,cost-first,0,0,0,0,0,0,0,,reference
+M7-tight-warehouse,equity-aware,-0.006786146375,-0.007432076997,-0.006082531243,-2177.179385,8.286170018,7.763781477,8.847230158,,gain_at_lower_cost
+M7-tight-warehouse,equity-constrained-rolling-horizon,0.04718827535,0.04631645757,0.04807695194,15108.24838,9.993385492,9.343834025,10.6334496,1511.824836,ok
+M8-tight-transport,fixed-allocation,0.07821420293,0.07738167883,0.07908996032,23319.51261,-69.33470221,-69.61640147,-69.07214132,,worst_region_loss
+M8-tight-transport,reorder-point,0.3869928154,0.3856618355,0.3882717442,115418.6131,-59.25140127,-59.85593263,-58.5927162,,worst_region_loss
+M8-tight-transport,cost-first,0,0,0,0,0,0,0,,reference
+M8-tight-transport,equity-aware,-0.02046037226,-0.02103346135,-0.01993080589,-6102.551627,-13.27456952,-13.70791083,-12.81631313,,worst_region_loss
+M8-tight-transport,equity-constrained-rolling-horizon,0.003196344039,0.002747552871,0.003642121347,952.8690888,0.7938235012,0.6553863329,0.9280694133,1200.353841,ok
+M9-extreme,fixed-allocation,0.05270399788,0.05194024933,0.05346087981,16243.63766,-23.30630115,-23.56440458,-23.03583857,,worst_region_loss
+M9-extreme,reorder-point,0.3698657457,0.3684328738,0.3712449694,114035.0998,-20.73108563,-21.01582379,-20.43728873,,worst_region_loss
+M9-extreme,cost-first,0,0,0,0,0,0,0,,reference
+M9-extreme,equity-aware,-0.03897427307,-0.03979733534,-0.03818055589,-12019.73786,-1.613878477,-2.126891238,-1.096597325,,worst_region_loss
+M9-extreme,equity-constrained-rolling-horizon,0.03011432252,0.02947590765,0.03074135204,9284.581636,15.78874582,15.47376852,16.09549667,588.0506116,ok

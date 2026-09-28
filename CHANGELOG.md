@@ -1,5 +1,59 @@
 # Changelog
 
+## 4.0.0 — 2026-09-28 (engine v4, matrix v2.0.0, research-quality revision)
+
+The full report is in [FINAL_VALIDATION_REPORT.md](FINAL_VALIDATION_REPORT.md). All data remain synthetic.
+
+### Model
+- **Supplier network:** primary and backup supplier per warehouse, with lead time, daily capacity, Bernoulli reliability and unit cost. `supplyDisruption` now targets suppliers (`supplierTier`, `targetWarehouses` or `targetSuppliers`) and never reduces warehouse dispatch; `targetRegions` on it is a validation error.
+- **Warehouse replenishment:** a base-stock upstream rule limited by `capacityInStandardUnits`.
+- **Lateral emergency transfers** between same-region pharmacies (essential SKUs, cost, capacity and cooldown).
+- **Backlog:** FIFO queue with per-unit waiting times; horizon-end backlog finalized with censored waits.
+- **Mandatory end-of-run inventory audit** at pharmacy, warehouse and network level, plus both pipelines; a failure throws `ConservationError`.
+- **Default horizon:** 120 days (warm-up 1–30, shock 31–60, recovery 61–120). Nine presets M1–M9 are shared by the API, tests and paper.
+
+### Policies (baselines 4.0.0, ERRRA 2.0.0)
+- One selection gate and one deterministic tie-break for all policies. Every candidate has `priorityScore` and `priorityReason`; every rejection has a reason.
+- weighted-equity: the equity term is multiplicative, \((1 + \lambda\cdot\text{needScore}_r)\), and `needScore` is monotone in unmet share, vulnerability and backlog.
+- tuned-sQ: \((z, q_{scale})\) per SKU × region type, calibrated on calibration seeds with a guard against the best uniform point.
+- Display names: fixed-allocation, tuned-sQ, cost-only, weighted-equity, ERRRA (the ids are unchanged; aliases added).
+- New ERRRA ablations: `errra-no-transfers` and `errra-no-supplier-redundancy`.
+
+### Metrics and statistics
+- New metrics:
+  - same-day unfilled, late-filled and horizon-end unmet (with identity)
+  - backlog area
+  - stockout incident rate
+  - mean and p95 waiting time (censored lower bounds)
+  - regional service gap
+  - transfer and backup counters
+- 15 primary metrics with direction.
+- Paired percentile bootstrap (2000 resamples, fixed seed) for all policy pairs; Price of Equity relative to cost-only.
+
+### Reproducibility
+- Canonical JSON hashing at every nesting level, with explicit rejection of non-JSON values. `SOURCE_COMMIT` is supported and validated.
+- `research:reproduce` stores a five-policy group and requires every metric to match exactly on re-run; `--latest` also fails on an engine mismatch.
+
+### API and security
+- Strict request validation (unknown fields, replicate bounds, unique policies, id whitelists).
+- Worker-thread job queue with progress and cancellation; run endpoints return 202.
+- bcrypt passwords; JWT algorithm check, `timingSafeEqual` and required `exp`; demo-token bypass removed.
+- Profile field whitelist; in-memory content-checked uploads; public `/uploads` removed; CSP.
+
+### Experiments
+- Matrix **v2.0.0**. v1.1.0 is archived in `paper/config/archive/` and the old results in `paper/archive/results-v1.1.0-engine-v3/`. The revision rationale is in the matrix revision log.
+- Pipeline stages: all-pairs bootstrap CSV, PoE with CIs, seven ablations on six scenarios, LHS + PRCC over eight factors, stress grid, and audited-run counts in the manifest.
+
+### Build and dependencies
+- Removed unused `react-simple-maps` and `d3-geo`; `react-router-dom` ^7.18.4; `bcryptjs` ^3.
+- `npm audit --omit=dev`: 0.
+- CI adds the reproduce check and runs without `continue-on-error`.
+
+### Docs
+- New: `docs/model-specification.md`, `verification-validation.md`, `experiment-protocol.md`, `result-interpretation.md`, `data-dictionary.md`.
+- Rewritten: methodology, metrics, algorithm, limitations, paper outline, checklists, reproducibility, assumptions, README and model card.
+- The v3 validation docs moved to `docs/archive/v3/`.
+
 ## 3.0.0 — 2026-09-26 (simulation engine v3, research platform)
 
 Legacy CDSS, ERP and CRM state is frozen at tag **`legacy-cdss-v1`** (commit 464dee7).

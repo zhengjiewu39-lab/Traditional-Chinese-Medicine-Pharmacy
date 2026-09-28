@@ -1,39 +1,27 @@
 /**
- * Warehouse outbound supply disruption: caps shippable units per warehouse per day.
- * Orders are served in the submitting policy's rank order (or rationed proportionally for
- * baselines that emit rationing: 'proportional'). Only units the warehouse can
- * actually issue from stock consume dispatch capacity (stock is reserved here and
- * deducted on confirmed shipment via warehouseIssue).
+ * Warehouse dispatch (outbound handling) capacity towards pharmacies.
+ *
+ * The daily dispatch cap is a property of the warehouse (dailyDispatchCapacity, standard units)
+ * and is not affected by upstream supply disruptions: those act on suppliers and reach
+ * pharmacies only through the warehouse's stock (supplyNetwork.js). Orders are served in the
+ * submitting policy's rank order (or rationed proportionally for baselines that emit
+ * rationing: 'proportional'). Only units the warehouse can actually issue from stock consume
+ * dispatch capacity (stock is reserved here and deducted on confirmed shipment).
  */
 
 const { sortByPolicyRank, proportionalShares, isProportional } = require('./distributionEngine');
 
-function warehouseSupplyFactor(warehouseId, pharmacies, eventFactors) {
-  const regions = new Set(
-    pharmacies.filter((p) => p.warehouseId === warehouseId).map((p) => p.regionType),
-  );
-  if (!regions.size) return 1;
-  let factor = 1;
-  for (const rt of regions) {
-    factor = Math.min(factor, eventFactors.supply[rt] ?? 1);
-  }
-  return factor;
-}
-
-function effectiveDispatchCap(warehouse, pharmacies, eventFactors) {
-  const supplyFactor = warehouseSupplyFactor(warehouse.id, pharmacies, eventFactors);
-  return {
-    supplyFactor,
-    dailyDispatchCap: (warehouse.dailyDispatchCapacity ?? 2500) * supplyFactor,
-  };
+function effectiveDispatchCap(warehouse) {
+  return { dailyDispatchCap: warehouse.dailyDispatchCapacity ?? 2500 };
 }
 
 /**
  * @param {Array} requestedOrders - { pharmacyId, warehouseId, drugId, qty, policyRank, ... }
+ * @param {Array} warehouses
  * @param {Array} [warehouseStates] - when given, acceptance is limited by remaining stock per SKU.
  * @returns { accepted, deferred, supplyLog[] }
  */
-function applyWarehouseSupplyCaps(requestedOrders, warehouses, pharmacies, eventFactors, warehouseStates) {
+function applyWarehouseSupplyCaps(requestedOrders, warehouses, warehouseStates) {
   const whMap = Object.fromEntries(warehouses.map((w) => [w.id, w]));
   const stateMap = Object.fromEntries((warehouseStates || []).map((w) => [w.id, w]));
   const byWh = {};
@@ -47,7 +35,7 @@ function applyWarehouseSupplyCaps(requestedOrders, warehouses, pharmacies, event
   const supplyLog = [];
 
   for (const [whId, orders] of Object.entries(byWh)) {
-    const { supplyFactor, dailyDispatchCap } = effectiveDispatchCap(whMap[whId], pharmacies, eventFactors);
+    const { dailyDispatchCap } = effectiveDispatchCap(whMap[whId]);
     const stock = stateMap[whId] ? { ...stateMap[whId].onHand } : null;
     let remainingCap = Math.floor(dailyDispatchCap);
     let requestedTotal = 0;
@@ -76,7 +64,7 @@ function applyWarehouseSupplyCaps(requestedOrders, warehouses, pharmacies, event
       const byStock = planned ? planned.byStock[idx] : Math.min(o.qty, stockAvail);
       const shipQty = planned ? planned.ship[idx] : Math.max(0, Math.min(byStock, remainingCap));
       if (shipQty > 0) {
-        accepted.push({ ...o, qty: shipQty, requestedQty: o.qty, supplyFactor, postSupplyRank: idx });
+        accepted.push({ ...o, qty: shipQty, requestedQty: o.qty, postSupplyRank: idx });
         remainingCap -= shipQty;
         shippedTotal += shipQty;
         if (stock) stock[o.drugId] -= shipQty;
@@ -87,12 +75,11 @@ function applyWarehouseSupplyCaps(requestedOrders, warehouses, pharmacies, event
         deferred.push({ ...o, qty: stockShort, reason: 'warehouse_stock' });
         stockLimitedTotal += stockShort;
       }
-      if (capShort > 0) deferred.push({ ...o, qty: capShort, reason: 'supply_cap' });
+      if (capShort > 0) deferred.push({ ...o, qty: capShort, reason: 'dispatch_cap' });
     });
 
     supplyLog.push({
       warehouseId: whId,
-      supplyFactor,
       dailyDispatchCap,
       requestedTotal,
       shippedTotal,
@@ -104,4 +91,4 @@ function applyWarehouseSupplyCaps(requestedOrders, warehouses, pharmacies, event
   return { accepted, deferred, supplyLog };
 }
 
-module.exports = { applyWarehouseSupplyCaps, warehouseSupplyFactor, effectiveDispatchCap };
+module.exports = { applyWarehouseSupplyCaps, effectiveDispatchCap };
