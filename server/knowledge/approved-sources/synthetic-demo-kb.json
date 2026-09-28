@@ -1,0 +1,534 @@
+{
+  "knowledgeBaseId": "tcm-pharmacy-synthetic-kb",
+  "version": "1.0.0",
+  "disclaimer": "合成演示知识库：条目为工程测试用途的概括性表述，审核人为虚构的“演示药事委员会（合成）”，不代表任何真实机构的审定意见，不可用于临床。",
+  "entries": [
+    {
+      "sourceId": "KS-PAIR-018",
+      "title": "十八反配伍禁忌（演示整理）",
+      "authority": "演示药事委员会（合成）",
+      "version": "1.0",
+      "effectiveDate": "2026-01-01",
+      "scope": {
+        "herbs": [
+          "甘草",
+          "甘遂",
+          "大戟",
+          "海藻",
+          "芫花",
+          "乌头",
+          "附子",
+          "半夏",
+          "瓜蒌",
+          "贝母",
+          "白蔹",
+          "白及",
+          "藜芦",
+          "人参",
+          "沙参",
+          "丹参",
+          "玄参",
+          "细辛",
+          "芍药",
+          "白芍"
+        ],
+        "topics": [
+          "配伍禁忌"
+        ]
+      },
+      "content": "十八反所列药对原则上不宜同方使用。处方出现十八反药对时，调剂前应退回处方医师修改或由医师书面说明；药师不得自行更改处方药味。",
+      "reviewStatus": "approved",
+      "reviewedBy": "演示药事委员会（合成）",
+      "reviewedAt": "2026-01-01",
+      "hash": "2524e86ea6b1cf270abb192d361d97ef91c5e46e27d231f3f9a8500b84046b96"
+    },
+    {
+      "sourceId": "KS-PAIR-019",
+      "title": "十九畏配伍禁忌（演示整理）",
+      "authority": "演示药事委员会（合成）",
+      "version": "1.0",
+      "effectiveDate": "2026-01-01",
+      "scope": {
+        "herbs": [
+          "硫黄",
+          "朴硝",
+          "水银",
+          "砒霜",
+          "狼毒",
+          "密陀僧",
+          "巴豆",
+          "牵牛子",
+          "丁香",
+          "郁金",
+          "川乌",
+          "草乌",
+          "犀角",
+          "牙硝",
+          "三棱",
+          "官桂",
+          "肉桂",
+          "石脂",
+          "人参",
+          "五灵脂",
+          "莱菔子"
+        ],
+        "topics": [
+          "配伍禁忌"
+        ]
+      },
+      "content": "十九畏所列药对原则上不宜同方使用。出现十九畏药对时应阻断调剂并退回处方医师确认。",
+      "reviewStatus": "approved",
+      "reviewedBy": "演示药事委员会（合成）",
+      "reviewedAt": "2026-01-01",
+      "hash": "a5edcb2d7430471b8a147b15ae5e60d7bc6018a99049f868d581b37801b811e7"
+    },
+    {
+      "sourceId": "KS-DUP-001",
+      "title": "重复药味核查（演示整理）",
+      "authority": "演示药事委员会（合成）",
+      "version": "1.0",
+      "effectiveDate": "2026-01-01",
+      "scope": {
+        "topics": [
+          "处方完整性"
+        ]
+      },
+      "content": "同一处方中同一药材重复出现时，应由药师与处方医师核实是否为录入错误，并核对合计剂量。",
+      "reviewStatus": "approved",
+      "reviewedBy": "演示药事委员会（合成）",
+      "reviewedAt": "2026-01-01",
+      "hash": "728d59935ac4c1d15f338d502000449a1c35a1f9cd1f1be33c64357d7da5ab26"
+    },
+    {
+      "sourceId": "KS-DOSE-001",
+      "title": "单味药常用剂量范围（演示规则表）",
+      "authority": "演示药事委员会（合成）",
+      "version": "1.0",
+      "effectiveDate": "2026-01-01",
+      "scope": {
+        "topics": [
+          "剂量"
+        ]
+      },
+      "content": "单味饮片剂量以规则表中的常用范围为参照。超出范围但未达硬阈值的，应由药师审核并视情况联系处方医师核实。",
+      "reviewStatus": "approved",
+      "reviewedBy": "演示药事委员会（合成）",
+      "reviewedAt": "2026-01-01",
+      "hash": "9e8790c5eeee45d46fc30f56be91fea1c259fab4d1858f015b3d6b57780987d8"
+    },
+    {
+      "sourceId": "KS-DOSE-002",
+      "title": "明显超剂量处方的双签要求（演示整理）",
+      "authority": "演示药事委员会（合成）",
+      "version": "1.0",
+      "effectiveDate": "2026-01-01",
+      "scope": {
+        "topics": [
+          "剂量",
+          "双签"
+        ]
+      },
+      "content": "剂量明显超出常用范围（本演示规则为超过上限1.5倍，或有毒药材超过上限）时应阻断调剂，需处方医师核实剂量并双签后方可重新评估。",
+      "reviewStatus": "approved",
+      "reviewedBy": "演示药事委员会（合成）",
+      "reviewedAt": "2026-01-01",
+      "hash": "424addeb3c1f5a127b2064d24a9bae8bb60fbf64fc14429e9391fc2e40491943"
+    },
+    {
+      "sourceId": "KS-DOSE-003",
+      "title": "全方药味数与总剂量（演示整理）",
+      "authority": "演示药事委员会（合成）",
+      "version": "1.0",
+      "effectiveDate": "2026-01-01",
+      "scope": {
+        "topics": [
+          "剂量"
+        ]
+      },
+      "content": "全方药味数或日总剂量明显偏大时，应由药师复核是否符合处方意图，必要时联系处方医师。",
+      "reviewStatus": "approved",
+      "reviewedBy": "演示药事委员会（合成）",
+      "reviewedAt": "2026-01-01",
+      "hash": "53d5afc04f5974c5303978b641dec4f8a5090883d94d7635c5ce59e4aeb4567b"
+    },
+    {
+      "sourceId": "KS-TOX-001",
+      "title": "有毒中药饮片调剂要求（演示整理）",
+      "authority": "演示药事委员会（合成）",
+      "version": "1.0",
+      "effectiveDate": "2026-01-01",
+      "scope": {
+        "herbs": [
+          "附子",
+          "川乌",
+          "草乌",
+          "乌头",
+          "半夏",
+          "甘遂",
+          "细辛",
+          "马钱子",
+          "朱砂",
+          "雄黄",
+          "蟾酥",
+          "杏仁"
+        ],
+        "topics": [
+          "有毒药材"
+        ]
+      },
+      "content": "含有毒饮片的处方须经药师审核，核对剂量、炮制品规格与煎煮要求（如附子、川乌、草乌需先煎久煎）。特殊人群使用有毒饮片需额外评估。",
+      "reviewStatus": "approved",
+      "reviewedBy": "演示药事委员会（合成）",
+      "reviewedAt": "2026-01-01",
+      "hash": "dcc2ad22563ce3746561b557f55f1c96f6f6c83577d90f6d1989f8bfd65c9495"
+    },
+    {
+      "sourceId": "KS-TOX-002",
+      "title": "医疗用毒性中药品种特殊管理（演示整理）",
+      "authority": "演示药事委员会（合成）",
+      "version": "1.0",
+      "effectiveDate": "2026-01-01",
+      "scope": {
+        "topics": [
+          "特殊管理药品"
+        ]
+      },
+      "content": "特殊管理的毒性中药品种须凭具备资质医师的专用处方，实行双人核对与专册登记；未满足条件时不得调剂。",
+      "reviewStatus": "approved",
+      "reviewedBy": "演示药事委员会（合成）",
+      "reviewedAt": "2026-01-01",
+      "hash": "c5a01dad03fda9316be25fb16099850a98fc8bcf84bd6eedbe408cc827360b83"
+    },
+    {
+      "sourceId": "KS-PREG-001",
+      "title": "妊娠禁用药（演示整理）",
+      "authority": "演示药事委员会（合成）",
+      "version": "1.0",
+      "effectiveDate": "2026-01-01",
+      "scope": {
+        "topics": [
+          "妊娠"
+        ]
+      },
+      "content": "妊娠期禁用名单中的药材原则上不得用于孕妇；如确需使用，须处方医师书面确认并双签，药师审核后方可调剂。妊娠状态不明的育龄期女性应先确认。",
+      "reviewStatus": "approved",
+      "reviewedBy": "演示药事委员会（合成）",
+      "reviewedAt": "2026-01-01",
+      "hash": "d8bf4af1ed99ff3b95fd32d8efca0713d7713f47fc85a44465b7e7fce42663bc"
+    },
+    {
+      "sourceId": "KS-PREG-002",
+      "title": "妊娠慎用药（演示整理）",
+      "authority": "演示药事委员会（合成）",
+      "version": "1.0",
+      "effectiveDate": "2026-01-01",
+      "scope": {
+        "topics": [
+          "妊娠"
+        ]
+      },
+      "content": "妊娠慎用药材用于孕妇时须由药师审核用药必要性与剂量，并向患者说明注意事项。",
+      "reviewStatus": "approved",
+      "reviewedBy": "演示药事委员会（合成）",
+      "reviewedAt": "2026-01-01",
+      "hash": "f0bbd0c39c403e38e19f1490156e3357cb9d26484b6e0adca3c8d1f5510c9500"
+    },
+    {
+      "sourceId": "KS-LACT-001",
+      "title": "哺乳期用药注意（演示整理）",
+      "authority": "演示药事委员会（合成）",
+      "version": "1.0",
+      "effectiveDate": "2026-01-01",
+      "scope": {
+        "topics": [
+          "哺乳期"
+        ]
+      },
+      "content": "部分药材可能影响泌乳或经乳汁影响婴儿，哺乳期患者使用前需药师评估并告知。",
+      "reviewStatus": "approved",
+      "reviewedBy": "演示药事委员会（合成）",
+      "reviewedAt": "2026-01-01",
+      "hash": "d00b8376562c621ca7b128c507244d1bda80aa29258c50307d9f9f1b5f0250c9"
+    },
+    {
+      "sourceId": "KS-PED-001",
+      "title": "儿童用药剂量核查（演示整理）",
+      "authority": "演示药事委员会（合成）",
+      "version": "1.0",
+      "effectiveDate": "2026-01-01",
+      "scope": {
+        "topics": [
+          "儿童"
+        ]
+      },
+      "content": "儿童处方剂量应按年龄或体重折算。接近成人剂量或含有毒药材的儿童处方须药师重点审核，必要时联系处方医师。",
+      "reviewStatus": "approved",
+      "reviewedBy": "演示药事委员会（合成）",
+      "reviewedAt": "2026-01-01",
+      "hash": "28849d2146837b97fde45bcfb8a0ddc7de556a48a26e3a00b1fdf38447d319de"
+    },
+    {
+      "sourceId": "KS-GER-001",
+      "title": "老年患者用药（演示整理）",
+      "authority": "演示药事委员会（合成）",
+      "version": "1.0",
+      "effectiveDate": "2026-01-01",
+      "scope": {
+        "topics": [
+          "老年"
+        ]
+      },
+      "content": "老年患者肝肾功能减退，使用有毒或峻烈药材时应重点关注剂量与合并用药。",
+      "reviewStatus": "approved",
+      "reviewedBy": "演示药事委员会（合成）",
+      "reviewedAt": "2026-01-01",
+      "hash": "eb369349805a0be31ed0c27d057a726470b3745a4ef53381ca6102bff1eb3044"
+    },
+    {
+      "sourceId": "KS-ALG-001",
+      "title": "过敏史核对（演示整理）",
+      "authority": "演示药事委员会（合成）",
+      "version": "1.0",
+      "effectiveDate": "2026-01-01",
+      "scope": {
+        "topics": [
+          "过敏"
+        ]
+      },
+      "content": "处方药材与患者已知过敏物相符时应阻断调剂；严重或不明程度的过敏须退回处方医师。",
+      "reviewStatus": "approved",
+      "reviewedBy": "演示药事委员会（合成）",
+      "reviewedAt": "2026-01-01",
+      "hash": "837e427856b7982733231fd0491dbb5bacd513800a822948f70430cef8b136dc"
+    },
+    {
+      "sourceId": "KS-HEP-001",
+      "title": "肝损伤风险药材（演示整理）",
+      "authority": "演示药事委员会（合成）",
+      "version": "1.0",
+      "effectiveDate": "2026-01-01",
+      "scope": {
+        "topics": [
+          "肝功能"
+        ]
+      },
+      "content": "有肝损伤报道的药材用于肝功能异常患者时，须药师审核并建议监测肝功能。",
+      "reviewStatus": "approved",
+      "reviewedBy": "演示药事委员会（合成）",
+      "reviewedAt": "2026-01-01",
+      "hash": "c9d07e615b592c8271ce28b41174e6242bd6d970339abdc30be4657744b802d8"
+    },
+    {
+      "sourceId": "KS-REN-001",
+      "title": "肾损伤风险与含马兜铃酸药材（演示整理）",
+      "authority": "演示药事委员会（合成）",
+      "version": "1.0",
+      "effectiveDate": "2026-01-01",
+      "scope": {
+        "topics": [
+          "肾功能",
+          "禁用药材"
+        ]
+      },
+      "content": "含马兜铃酸类药材在本演示规则中视为禁用，出现即阻断。有肾毒性报道的药材用于肾功能异常患者时须药师审核。",
+      "reviewStatus": "approved",
+      "reviewedBy": "演示药事委员会（合成）",
+      "reviewedAt": "2026-01-01",
+      "hash": "c7238001533c7f834b22e1e0b09ced6e566ab93525cc8b29ebaf66c8f7b6d818"
+    },
+    {
+      "sourceId": "KS-DDI-001",
+      "title": "活血药与抗凝/抗血小板药（演示整理）",
+      "authority": "演示药事委员会（合成）",
+      "version": "1.0",
+      "effectiveDate": "2026-01-01",
+      "scope": {
+        "herbs": [
+          "丹参",
+          "当归",
+          "红花",
+          "桃仁",
+          "三七",
+          "川芎",
+          "银杏叶"
+        ],
+        "topics": [
+          "药物相互作用"
+        ]
+      },
+      "content": "活血类药材与华法林、阿司匹林等合用可能增加出血风险，须药师评估并提示监测。",
+      "reviewStatus": "approved",
+      "reviewedBy": "演示药事委员会（合成）",
+      "reviewedAt": "2026-01-01",
+      "hash": "1e9a3c7ca04cc9f97d71096f1175bd1e3d14f85ffc1555b02d387b94056a635e"
+    },
+    {
+      "sourceId": "KS-DDI-002",
+      "title": "甘草与地高辛、利尿剂、糖皮质激素（演示整理）",
+      "authority": "演示药事委员会（合成）",
+      "version": "1.0",
+      "effectiveDate": "2026-01-01",
+      "scope": {
+        "herbs": [
+          "甘草"
+        ],
+        "topics": [
+          "药物相互作用"
+        ]
+      },
+      "content": "长期或大剂量甘草可致低血钾、水钠潴留；与地高辛、排钾利尿药、糖皮质激素合用须药师评估。",
+      "reviewStatus": "approved",
+      "reviewedBy": "演示药事委员会（合成）",
+      "reviewedAt": "2026-01-01",
+      "hash": "23ac26c6f3466436cb3109fcca8f12fa5d86c1db44d80140f419b72adbb8df38"
+    },
+    {
+      "sourceId": "KS-DDI-003",
+      "title": "麻黄与降压药、单胺氧化酶抑制剂（演示整理）",
+      "authority": "演示药事委员会（合成）",
+      "version": "1.0",
+      "effectiveDate": "2026-01-01",
+      "scope": {
+        "herbs": [
+          "麻黄"
+        ],
+        "topics": [
+          "药物相互作用"
+        ]
+      },
+      "content": "麻黄含拟交感成分，可能升高血压、拮抗降压药，与单胺氧化酶抑制剂合用风险较高，须药师评估。",
+      "reviewStatus": "approved",
+      "reviewedBy": "演示药事委员会（合成）",
+      "reviewedAt": "2026-01-01",
+      "hash": "2e15924251325cfa9fb49271f40337e45d3ca1c7d338e0236b045238c4b4a50f"
+    },
+    {
+      "sourceId": "KS-DDI-004",
+      "title": "人参与抗凝药、降糖药（演示整理）",
+      "authority": "演示药事委员会（合成）",
+      "version": "1.0",
+      "effectiveDate": "2026-01-01",
+      "scope": {
+        "herbs": [
+          "人参"
+        ],
+        "topics": [
+          "药物相互作用"
+        ]
+      },
+      "content": "人参可能影响华法林抗凝强度及血糖控制，合用时须药师评估并提示监测。",
+      "reviewStatus": "approved",
+      "reviewedBy": "演示药事委员会（合成）",
+      "reviewedAt": "2026-01-01",
+      "hash": "214501d829b740b67df23e1ee3056daff2cac827b0d083f8ebacaa00ae4d5b2e"
+    },
+    {
+      "sourceId": "KS-DEC-001",
+      "title": "特殊煎煮方法（演示整理）",
+      "authority": "演示药事委员会（合成）",
+      "version": "1.0",
+      "effectiveDate": "2026-01-01",
+      "scope": {
+        "topics": [
+          "煎煮"
+        ]
+      },
+      "content": "附子、川乌、草乌等应先煎久煎；矿物、贝壳类宜先煎；薄荷、砂仁等芳香类宜后下；车前子、旋覆花等宜包煎。处方未注明时应由药师核实。",
+      "reviewStatus": "approved",
+      "reviewedBy": "演示药事委员会（合成）",
+      "reviewedAt": "2026-01-01",
+      "hash": "bdbf295e053804bd753c030766f2dc62674fa0d37613e1bd1b5c4611198a5b81"
+    },
+    {
+      "sourceId": "KS-LEGAL-001",
+      "title": "处方完整性与有效期（演示整理）",
+      "authority": "演示药事委员会（合成）",
+      "version": "1.0",
+      "effectiveDate": "2026-01-01",
+      "scope": {
+        "topics": [
+          "处方合法性"
+        ]
+      },
+      "content": "处方应包含患者基本信息、药味与剂量、剂数、用法用量及开具日期。本演示规则中处方开具超过3日视为过期，须退回处方医师。",
+      "reviewStatus": "approved",
+      "reviewedBy": "演示药事委员会（合成）",
+      "reviewedAt": "2026-01-01",
+      "hash": "50993a573f286a2d8c760b4e1c755c6b307709d5300f91db674d7d5fc528c407"
+    },
+    {
+      "sourceId": "KS-LEGAL-002",
+      "title": "处方来源与身份核验（演示整理）",
+      "authority": "演示药事委员会（合成）",
+      "version": "1.0",
+      "effectiveDate": "2026-01-01",
+      "scope": {
+        "topics": [
+          "处方合法性"
+        ]
+      },
+      "content": "处方医师资质或患者身份核验不通过时应阻断调剂并核实来源，不得由患者或普通员工解除。",
+      "reviewStatus": "approved",
+      "reviewedBy": "演示药事委员会（合成）",
+      "reviewedAt": "2026-01-01",
+      "hash": "d70d93d6a09958fd5ec0ffe627b54507b2b68637d4b1402e016ed8e7bf5d4dc5"
+    },
+    {
+      "sourceId": "KS-SUB-001",
+      "title": "饮片批次替换规则（演示整理）",
+      "authority": "演示药事委员会（合成）",
+      "version": "1.0",
+      "effectiveDate": "2026-01-01",
+      "scope": {
+        "topics": [
+          "替换规则"
+        ]
+      },
+      "content": "同一饮片规格、检验合格的不同批次之间可在药师审核后替换，并记录批号；不同品种或不同炮制规格之间不得由系统自动替换。",
+      "reviewStatus": "approved",
+      "reviewedBy": "演示药事委员会（合成）",
+      "reviewedAt": "2026-01-01",
+      "hash": "e29894f78e52f53b573d0bf93ecc8bc25f64b1795723112811e5f224b8ce385b"
+    },
+    {
+      "sourceId": "KS-DRAFT-001",
+      "title": "（草稿）甘草大剂量长期使用建议",
+      "authority": "演示药事委员会（合成）",
+      "version": "0.1",
+      "effectiveDate": "2026-06-01",
+      "scope": {
+        "herbs": [
+          "甘草"
+        ],
+        "topics": [
+          "剂量"
+        ]
+      },
+      "content": "草稿条目：尚未审核，不得被检索或引用。",
+      "reviewStatus": "draft",
+      "reviewedBy": null,
+      "reviewedAt": null,
+      "hash": "1b4287ad5b5d7fc0efb089ac49329c247674b66112054dc7157c7c65b0f1206a"
+    },
+    {
+      "sourceId": "KS-RETIRED-001",
+      "title": "（已废止）旧版附子剂量说明",
+      "authority": "演示药事委员会（合成）",
+      "version": "0.9",
+      "effectiveDate": "2025-01-01",
+      "scope": {
+        "herbs": [
+          "附子"
+        ],
+        "topics": [
+          "剂量"
+        ]
+      },
+      "content": "已废止条目：不得被检索或引用。",
+      "reviewStatus": "retired",
+      "reviewedBy": "演示药事委员会（合成）",
+      "reviewedAt": "2025-01-01",
+      "hash": "a490f1bf6ef20beb643438b10ad465109030f89430c00893f61daae0ea00f8cb"
+    }
+  ]
+}

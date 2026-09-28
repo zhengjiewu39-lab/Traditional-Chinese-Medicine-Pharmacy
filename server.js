@@ -27,6 +27,17 @@ const exportRoutes = require('./server/routes/export');
 const researchRoutes = require('./server/routes/research');
 const traceabilityRoutes = require('./server/routes/traceability');
 const simulationRoutes = require('./server/routes/simulation');
+const aiRoutes = require('./server/routes/ai');
+const patientPortalRoutes = require('./server/routes/patientPortal');
+const { roleApiGuard } = require('./server/security/rbac');
+const { assertProductionAIConfig, describeProvider } = require('./server/ai/providerAdapter');
+
+try {
+  assertProductionAIConfig();
+} catch (err) {
+  console.error(`[ai] ${err.message}`);
+  process.exit(1);
+}
 
 const app = express();
 const port = process.env.PORT || 3002;
@@ -72,10 +83,17 @@ const upload = multer({
   limits: { fileSize: MAX_BYTES, files: 1, fields: 20 },
 });
 
+app.use(roleApiGuard);
+
 app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  const url = req.url.replace(/\/(confirmation|feedback)\/[^/?]+/, '/$1/[token]');
+  console.log(`${new Date().toISOString()} - ${req.method} ${url}`);
   next();
 });
+
+// ── 智能药房（药师监管 · 患者参与 · AI编排） ──
+app.use('/api/ai', aiRoutes);
+app.use('/api/patient', patientPortalRoutes);
 
 // ── 仪表盘 & 搜索 ──
 app.use('/api/dashboard', dashboardRoutes);
@@ -180,8 +198,9 @@ app.get('/api/health', (req, res) => {
     simulationEngine: ENGINE_VERSION.replace(/^simulation-engine-/, ''),
     scenarioMatrix: SCENARIO_MATRIX_VERSION,
     errraHeuristic: ERRA_HEURISTIC_VERSION,
-    features: ['supply-simulation-research', 'legacy-har-cdss', 'synthetic-data-only'],
+    features: ['pharmacist-governed-ai-pharmacy', 'supply-simulation-research', 'legacy-har-cdss', 'synthetic-data-only'],
     simulationRouteVersion: 3,
+    ai: { provider: describeProvider().provider, isMock: describeProvider().isMock },
   });
 });
 
@@ -189,7 +208,7 @@ const server = app.listen(port, () => {
   getStore();
   console.log(`中药药房 API http://localhost:${port} [持久化 · 全业务 CRUD]`);
   if (ALLOW_DEMO) {
-    console.log('  演示账号: admin/admin123 或 pharmacist/pharm123 (仅 DEV / ALLOW_DEMO_AUTH)');
+    console.log('  演示账号: admin/admin123 · pharmacist/pharm123 · pharmacist2/pharm456 · technician/tech123 · researcher/research123 · patient/patient123 (仅 DEV / ALLOW_DEMO_AUTH)');
   }
 });
 

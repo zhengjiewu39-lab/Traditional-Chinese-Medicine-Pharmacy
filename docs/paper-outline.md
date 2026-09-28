@@ -1,4 +1,14 @@
-# Paper outline (working title)
+# Paper outlines (working titles)
+
+## A. Pharmacist-governed AI pharmacy (product paper)
+
+**Design and Technical Validation of a Pharmacist-Governed Agentic AI Platform for Traditional Chinese Medicine Pharmacy: A Synthetic Case and Digital-Twin Study.**
+
+Technical contributions (not clinical claims): three-track rules + RAG + LLM; risk-adaptive autonomy and abstention; pharmacist and patient loops; tamper-evident audit; operations proposals checked on the digital twin; offline versioned learning from overrides without online self-training.
+
+Must not claim AI superiority to pharmacists, autonomous prescribing, real ADR reduction, or production readiness. See [ai-pharmacy-architecture.md](ai-pharmacy-architecture.md) and [clinical-validation-limitations.md](clinical-validation-limitations.md).
+
+## B. Supply-resilience digital twin (frozen simulation paper)
 
 **Equitable access to essential medicines and supply resilience in community pharmacy networks under compound public-health disruptions: a synthetic simulation comparison of allocation heuristics.**
 

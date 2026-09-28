@@ -1,114 +1,91 @@
-# 面向复合公共卫生扰动的社区药房基本药品公平可及性与供应韧性仿真
+# 智能中药药房平台
 
-*Equitable access to essential medicines and supply resilience in community pharmacy networks under compound public-health disruptions — a synthetic simulation study.*
+这是一个**药师监管、患者参与、AI编排**的智能中药药房研究原型。
 
-> **Disclaimer.** All data are **synthetic**. The repository contains no real patient, prescription, pharmacy or epidemic data, and results cannot be used to infer real policy effects. All conclusions hold only 在预定义仿真场景中 (in the predefined simulation scenarios). This is not a clinical, dispensing or resource-allocation tool.
+> **AI不独立诊断、开方或批准处方。**  
+> 系统使用**合成演示数据**，**尚未通过真实临床验证**。  
+> 不得用于真实发药、患者照护或现实世界资源配置。
 
-**Research question.** Under compound disruptions (demand surge + upstream supply cut + rural road delay + longer lead times), how much worst-region essential-medicine service can a capacity-aware allocation rule protect compared with cost-driven and practice-style replenishment? What does that cost, and where does it fail?
+**English working title.** *Design and Technical Validation of a Pharmacist-Governed Agentic AI Platform for Traditional Chinese Medicine Pharmacy: A Synthetic Case and Digital-Twin Study.*
 
-**Method.**
-- **Model** (engine v4, [model-specification](docs/model-specification.md)): a daily model of suppliers (primary and backup) → regional warehouses → community pharmacies in urban, suburban and rural regions.
-  - Replenishment uses the inventory position (on hand + on order − backlog), with FIFO backorders and waiting times.
-  - Supplier disruptions act on suppliers only. Warehouse capacity is in standard units; dispatch and truck caps and lateral emergency transfers are modelled.
-  - A mandatory stock-balance audit runs at the end of every run.
-- **Policies compared:**
-  - fixed-allocation
-  - tuned-sQ, calibrated per SKU × region type on separate seeds
-  - cost-only
-  - weighted-equity
-  - **ERRRA** (Equity-constrained Resilient Rolling-horizon Allocation), a two-stage allocation heuristic: a max–min essential service floor, then cost-aware additions under a regional gap bound. It uses no future demand, is not AI, and is not an optimizer.
-- **Experiments** ([protocol](docs/experiment-protocol.md)):
-  - frozen nine-scenario matrix M1–M9, 120 days (30 + 30 + 60)
-  - 100 common-random-number test seeds; paired bootstrap 95% CIs for every policy pair
-  - Price of Equity; 7 ablations; LHS + PRCC sensitivity (N = 256); 5 × 5 stress grid
-  - cross-check against exhaustive enumeration
+## 产品边界
 
-**Main finding (synthetic, [interpretation](docs/result-interpretation.md)).** In the compound scenario M5, ERRRA raises worst-region essential fill over cost-only by 11.4 pp [10.9, 11.8] at 1.8% extra cost. It also has a longer p95 wait. A calibrated stockpiling (s,Q) baseline reaches higher worst-region fill in M2–M7, at up to 30% extra cost, but collapses under tight transport (M8, M9). No policy avoids the failure region of very large surges combined with deep supply loss.
+| 角色 | 可以做 | 不可以做 |
+|---|---|---|
+| AI | 信息理解、风险筛查、证据检索、解释生成、运营预测、工作流编排 | 独立诊断、开方、改方、批准高风险处方、写入库存 |
+| 药师 | 处方安全与调剂放行的最终专业审核 | — |
+| 患者 | 信息确认、知情选择、服务偏好、拒绝服务、用药反馈 | 覆盖专业安全阻断、修改药味剂量、解除 A3 硬阻断 |
+| 调剂员 | 执行已批准的调剂与煎药任务 | 批准处方 |
+| 管理员 | 系统配置、AI 总开关 | 冒充药师批准处方 |
+| 研究员 | 去标识化/合成/聚合研究数据 | 访问患者确认令牌或批准处方 |
 
-**Reproduce.**
+默认首页是**智能中药药房工作台**（`/workbench`）。供应韧性仿真（含 ERRRA）降级为后台 **药房数字孪生**（`/simulation/*`），算法与论文流水线完整保留。
 
-Requires **Node 20** (see `.nvmrc` and `package.json` `engines`).
+## 快速启动
+
+需要 **Node 20**（见 `.nvmrc`）。
 
 ```bash
 cd chinese-medicine-pharmacy
 npm ci
-npm run simulation:test   # unit, hand-calculated, extreme, conservation, cross-model tests
-SOURCE_COMMIT=<frozen-source-sha> npm run paper:all   # full tables (about 6 min, ~29,500 audited runs)
-npm run paper:quick       # fast smoke run (used in CI)
+npm run dev          # API :3002 + 前端 :3000
 ```
 
-**Production (Docker):** set a strong `TCM_JWT_SECRET` and `TCM_USERS_JSON` (bcrypt `passwordHash`); leave `ALLOW_DEMO_AUTH=false` (default). Demo accounts work only when `ALLOW_DEMO_AUTH=true` (local dev).
+浏览器打开 [http://localhost:3000](http://localhost:3000)。开发演示账号（仅 `ALLOW_DEMO_AUTH` / 非生产）：
 
-Main outputs:
-- `paper/tables/main.md`, `ablation.md`, `sensitivity.md`, `stress.md`, `ci-stability.md`, `cross-model.md`, `calibration.md`, `scenarios.md`, `parameters.md`
-- `paper/figures/*.svg`
-
-See also [FINAL_VALIDATION_REPORT.md](FINAL_VALIDATION_REPORT.md), [model specification](docs/model-specification.md), [metrics](docs/metrics.md), [verification and validation](docs/verification-validation.md), [model card](MODEL_CARD.md) and [limitations](docs/limitations.md).
-
----
-
-**English name:** Community Pharmacy Access and Supply Resilience Simulator (社区药房药品可及性与供应韧性仿真平台).
-
-The legacy ERP, prescription CDSS and CRM features are frozen at tag `legacy-cdss-v1`. They are lazy-loaded under `/legacy/*` only and are not part of the research.
-
-## Default navigation
-
-| Page | Route |
-|------|--------|
-| Overview | `/simulation/overview` |
-| Scenario Configuration | `/simulation/scenario` |
-| Strategies | `/simulation/strategies` |
-| Run Simulation | `/simulation/run` |
-| Results | `/simulation/results` |
-| Experiment Archive | `/simulation/archive` |
-| Reproducibility | `/simulation/reproducibility` |
-| Documentation | `/simulation/documentation` |
-| Legacy Demo | `/legacy/dashboard` |
-
-## Quick start
-
-```bash
-cd chinese-medicine-pharmacy
-npm install
-npm run dev          # API :3002 + React :3000
-```
-
-Demo login: `admin` / `admin123`
-
-## Research commands
-
-```bash
-npm run simulation:demo       # all five policies on the default scenario
-npm run lint                  # ESLint, zero warnings allowed
-npm run simulation:test       # server + simulation tests (141)
-npm run research:reproduce    # five policies × 30 replicates, stored, re-run, exact match required
-npm run simulation:export     # export latest experiment JSON/CSV
-npm run verify:simulation     # API smoke test
-```
-
-Legacy prescription ablation (not for supply-resilience papers):
-
-```bash
-npm run evaluate:ablation
-```
-
-## Policies (algorithm names)
-
-| Name | Id | Rule |
+| 用户 | 密码 | 角色 |
 |---|---|---|
-| fixed-allocation | `fixed-allocation` | periodic order-up-to on prior demand (practice-style baseline) |
-| tuned-sQ | `reorder-point` (alias `tuned-sQ`) | (s, Q), z and qScale per SKU × region type, calibrated on calibration seeds |
-| cost-only | `cost-first` (alias `cost-only`) | newsvendor (s, S); orders only lines with positive expected net benefit |
-| weighted-equity | `equity-aware` (alias `weighted-equity`) | weighted score with a multiplicative regional need term |
-| ERRRA | `equity-constrained-rolling-horizon` (alias `ERRRA`) | two-stage allocation heuristic ([algorithm.md](docs/algorithm.md)) |
+| admin | admin123 | 管理员 |
+| pharmacist | pharm123 | 药师 |
+| pharmacist2 | pharm456 | 药师（二次复核） |
+| technician | tech123 | 调剂员 |
+| researcher | research123 | 研究员 |
+| patient | patient123 | 患者（合成） |
 
-## Documentation
+## 一级导航
 
-- [FINAL_VALIDATION_REPORT.md](FINAL_VALIDATION_REPORT.md) · [model-specification.md](docs/model-specification.md) · [verification-validation.md](docs/verification-validation.md) · [experiment-protocol.md](docs/experiment-protocol.md) · [result-interpretation.md](docs/result-interpretation.md) · [data-dictionary.md](docs/data-dictionary.md)
-- [methodology.md](docs/methodology.md) · [algorithm.md](docs/algorithm.md) · [metrics.md](docs/metrics.md) · [assumptions.md](docs/assumptions.md) · [reproducibility.md](docs/reproducibility.md) · [limitations.md](docs/limitations.md) · [stress-checklist.md](docs/stress-checklist.md) · [simulate-checklist.md](docs/simulate-checklist.md) · [vite-evaluation.md](docs/vite-evaluation.md)
-- Parameter table: `paper/tables/parameters.md`; scenario table: `paper/tables/scenarios.md`
-- [MODEL_CARD.md](MODEL_CARD.md) · [CHANGELOG.md](CHANGELOG.md) · [CITATION.cff](CITATION.cff) · [legacy-cdss.md](docs/legacy-cdss.md) · [paper-outline.md](docs/paper-outline.md) · v3 reports: `docs/archive/v3/`
+1. 智能工作台 `/workbench`
+2. 患者与处方接收 `/intake`
+3. AI处方安全中心 `/ai/cases`
+4. 药师审核队列 `/ai/review-queue`
+5. 调剂与复核 `/dispensing`
+6. 煎药与配送 `/distribution`
+7. 库存与采购 `/inventory`
+8. 质量追溯 `/traceability`
+9. 患者用药服务 `/patient-service`（公开确认页 `/patient/confirmation/:token`）
+10. AI治理中心 `/ai/governance`
+11. 药房数字孪生 `/simulation/overview`
+12. Legacy演示功能 `/legacy/dashboard`
 
-## Troubleshooting
+## 验收命令
 
-If simulation API returns 404, restart the backend: `npm run restart:server`. Frontend should use `REACT_APP_API_BASE_URL=http://localhost:3002/api` (see `.env.development`).
+```bash
+npm ci
+npm run lint
+npm run simulation:test
+npm run ai:evaluate
+CI=true npm run build
+npm audit --omit=dev
+npm run paper:quick
+```
+
+工程评估标注：**Engineering evaluation on synthetic standardized cases. Not a clinical validation.**
+
+## 文档
+
+- 平台架构：[docs/ai-pharmacy-architecture.md](docs/ai-pharmacy-architecture.md)
+- 安全边界：[docs/ai-safety-boundaries.md](docs/ai-safety-boundaries.md)
+- 药师治理：[docs/pharmacist-governance.md](docs/pharmacist-governance.md)
+- 患者参与：[docs/patient-participation.md](docs/patient-participation.md)
+- AI 评估协议：[docs/ai-evaluation-protocol.md](docs/ai-evaluation-protocol.md)
+- 知识治理：[docs/knowledge-governance.md](docs/knowledge-governance.md)
+- 数字孪生桥接：[docs/digital-twin-integration.md](docs/digital-twin-integration.md)
+- 临床验证限制：[docs/clinical-validation-limitations.md](docs/clinical-validation-limitations.md)
+- 本轮验收：[AI_PHARMACY_VALIDATION_REPORT.md](AI_PHARMACY_VALIDATION_REPORT.md)
+- 文档总索引：[docs/README.md](docs/README.md)
+
+供应韧性仿真（引擎 v4、矩阵 v2.0.0、ERRRA v2.0.0）仍冻结于标签 `v1.0.0-research`。详见 [FINAL_VALIDATION_REPORT.md](FINAL_VALIDATION_REPORT.md) 与 [药房数字孪生文档](docs/model-specification.md)。论文结果不因本次 UI/工作流重构而改变。
+
+## 生产部署
+
+设置强随机 `TCM_JWT_SECRET` 与 `TCM_USERS_JSON`（bcrypt `passwordHash`）。`ALLOW_DEMO_AUTH` 默认 false。**禁止**在生产环境使用 `AI_PROVIDER=mock`。未配置真实模型时，系统以硬规则引擎运行。

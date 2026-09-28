@@ -1,0 +1,42 @@
+import { createApiClient, attachAuthInterceptors } from '../config/httpClient';
+
+const api = attachAuthInterceptors(createApiClient());
+const publicApi = createApiClient();
+
+export const aiCasesApi = {
+  list: (params) => api.get('/ai/cases', { params }),
+  get: (id) => api.get(`/ai/cases/${id}`),
+  create: (body) => api.post('/ai/cases', body),
+  update: (id, body) => api.patch(`/ai/cases/${id}`, body),
+  analyze: (id) => api.post(`/ai/cases/${id}/analyze`, {}),
+  decide: (id, body) => api.post(`/ai/cases/${id}/pharmacist-decision`, body),
+  requestInformation: (id, body) => api.post(`/ai/cases/${id}/request-information`, body),
+  issuePatientConfirmation: (id) => api.post(`/ai/cases/${id}/patient-confirmation`, {}),
+  dispensing: (id, body) => api.post(`/ai/cases/${id}/dispensing`, body),
+  audit: (id) => api.get(`/ai/cases/${id}/audit`),
+  replay: (id, analysisId) => api.post(`/ai/cases/${id}/replay`, analysisId ? { analysisId } : {}),
+  workbench: () => api.get('/ai/workbench/summary'),
+};
+
+export const aiGovernanceApi = {
+  models: () => api.get('/ai/models'),
+  knowledge: () => api.get('/ai/knowledge/sources'),
+  metrics: () => api.get('/ai/governance/metrics'),
+  killSwitch: (enabled, reason) => api.post('/ai/governance/kill-switch', { enabled, reason }),
+};
+
+export const aiOperationsApi = {
+  analysis: () => api.get('/ai/operations/analysis'),
+  proposals: () => api.get('/ai/operations/proposals'),
+  propose: (body) => api.post('/ai/operations/proposals', body),
+  simulate: (id, replicates) => api.post(`/ai/operations/proposals/${id}/simulate`, replicates ? { replicates } : {}),
+  approve: (id, decision, comment) => api.post(`/ai/operations/proposals/${id}/approve`, { decision, comment }),
+};
+
+/** Token links are public; no session header is attached. */
+export const patientPortalApi = {
+  getConfirmation: (token) => publicApi.get(`/patient/confirmation/${token}`),
+  submitConfirmation: (token, body) => publicApi.post(`/patient/confirmation/${token}`, body),
+  submitFeedback: (token, body) => publicApi.post(`/patient/feedback/${token}`, body),
+  myCases: () => api.get('/patient/me/cases'),
+};

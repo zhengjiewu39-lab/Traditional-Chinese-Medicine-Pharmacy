@@ -32,6 +32,9 @@ jobs:
       - name: Simulation and server tests
         run: npm run simulation:test
 
+      - name: Offline AI review evaluation (synthetic cases)
+        run: npm run ai:evaluate
+
       - name: Simulation demo
         run: npm run simulation:demo
 

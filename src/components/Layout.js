@@ -19,10 +19,30 @@ import {
   KeyboardArrowUp,
   LocalPharmacy,
   AdminPanelSettings,
+  SpaceDashboard,
+  MoveToInbox,
+  MedicalServices,
+  People,
+  Description,
+  GppMaybe,
+  MenuBook,
+  FactCheck,
+  Scale,
+  QrCode2,
+  PointOfSale,
+  LocalShipping,
+  ShoppingCart,
+  Insights,
+  VerifiedUser,
+  VolunteerActivism,
+  Policy,
+  Handyman,
+  Person,
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { buildNav, getPageTitleForPath } from '../config/navigation';
 import SimulationDisclaimer from './SimulationDisclaimer';
+import SyntheticDataNotice from './ai/SyntheticDataNotice';
 import ApiStatusBanner from './ApiStatusBanner';
 import LanguageSwitcher from './LanguageSwitcher';
 import { useLanguage } from '../i18n/LanguageContext';
@@ -39,6 +59,33 @@ const ICONS = {
   archive: AssignmentTurnedIn,
   documentation: Science,
   legacy: Inventory,
+  workbench: SpaceDashboard,
+  intake: MoveToInbox,
+  doctor: MedicalServices,
+  patients: People,
+  customers: People,
+  templates: Description,
+  aiSafety: GppMaybe,
+  knowledge: MenuBook,
+  review: FactCheck,
+  dispensing: Scale,
+  pickup: QrCode2,
+  billing: PointOfSale,
+  delivery: LocalShipping,
+  inventory: Inventory,
+  orders: ShoppingCart,
+  operations: Insights,
+  quality: VerifiedUser,
+  patientService: VolunteerActivism,
+  governance: Policy,
+};
+
+const ROLE_ICONS = {
+  admin: AdminPanelSettings,
+  pharmacist: LocalPharmacy,
+  technician: Handyman,
+  researcher: Science,
+  patient: Person,
 };
 
 function NavIcon({ icon }) {
@@ -52,10 +99,13 @@ function Layout({ children }) {
   const [openSubMenus, setOpenSubMenus] = useState({});
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout, isAdmin, isPharmacist } = useAuth();
+  const { user, logout, isAdmin } = useAuth();
   const { t } = useLanguage();
+  const role = user?.role;
+  const RoleIcon = ROLE_ICONS[role] || AccountCircle;
+  const isTwinPage = location.pathname.startsWith('/simulation');
 
-  const sections = useMemo(() => buildNav(t), [t]);
+  const sections = useMemo(() => buildNav(t, role), [t, role]);
   const pageTitle = getPageTitleForPath(location.pathname, t);
 
   const isPathActive = (path) =>
@@ -72,8 +122,8 @@ function Layout({ children }) {
         </Typography>
         <Chip
           size="small"
-          icon={isAdmin ? <AdminPanelSettings sx={{ fontSize: 14 }} /> : <LocalPharmacy sx={{ fontSize: 14 }} />}
-          label={isAdmin ? t('roles.admin') : t('roles.pharmacist')}
+          icon={<RoleIcon sx={{ fontSize: 14 }} />}
+          label={t(`roles.${role}`)}
           color={isAdmin ? 'primary' : 'secondary'}
           sx={{ mt: 1, height: 22, fontSize: '0.7rem' }}
         />
@@ -157,7 +207,7 @@ function Layout({ children }) {
           </Typography>
           <LanguageSwitcher />
           <Chip
-            label={isPharmacist ? t('roles.pharmacistMode') : t('roles.adminMode')}
+            label={t(`roles.${role}Mode`)}
             size="small"
             sx={{ mr: 2, bgcolor: alpha('#fff', 0.15), color: '#fff', fontWeight: 600 }}
           />
@@ -168,7 +218,7 @@ function Layout({ children }) {
           </IconButton>
           <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={() => setAnchorEl(null)}>
             <MenuItem disabled>
-              <Typography variant="body2">{user?.name} · {isAdmin ? t('roles.admin') : t('roles.pharmacist')}</Typography>
+              <Typography variant="body2">{user?.name} · {t(`roles.${role}`)}</Typography>
             </MenuItem>
             <Divider />
             <MenuItem onClick={() => { logout(); navigate('/login'); }}>
@@ -187,9 +237,10 @@ function Layout({ children }) {
         </Drawer>
       </Box>
       <Box component="main" sx={{ flexGrow: 1, p: 3, width: { sm: `calc(100% - ${drawerWidth}px)` }, mt: '64px' }}>
-        <ApiStatusBanner />
+        {isTwinPage && <ApiStatusBanner />}
+        {!isTwinPage && <SyntheticDataNotice />}
         {children}
-        <SimulationDisclaimer />
+        {isTwinPage && <SimulationDisclaimer />}
       </Box>
     </Box>
   );

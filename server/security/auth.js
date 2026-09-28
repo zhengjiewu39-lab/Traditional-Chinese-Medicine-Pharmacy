@@ -9,6 +9,7 @@ const TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
 const BCRYPT_COST = 10;
 const JWT_HEADER = { alg: 'HS256', typ: 'JWT' };
 const PROFILE_FIELDS = ['name', 'email', 'phone', 'title'];
+const VALID_ROLES = new Set(['admin', 'pharmacist', 'technician', 'patient', 'researcher']);
 
 function assertProductionAuthConfig() {
   if (!IS_PROD) return;
@@ -46,6 +47,22 @@ function loadUsers() {
       pharmacist: {
         password: process.env.TCM_PHARMACIST_PASSWORD || 'pharm123',
         user: { id: 2, username: 'pharmacist', name: '李药师', role: 'pharmacist' },
+      },
+      pharmacist2: {
+        password: process.env.TCM_PHARMACIST2_PASSWORD || 'pharm456',
+        user: { id: 3, username: 'pharmacist2', name: '王药师', role: 'pharmacist' },
+      },
+      technician: {
+        password: process.env.TCM_TECHNICIAN_PASSWORD || 'tech123',
+        user: { id: 4, username: 'technician', name: '赵调剂员', role: 'technician' },
+      },
+      researcher: {
+        password: process.env.TCM_RESEARCHER_PASSWORD || 'research123',
+        user: { id: 5, username: 'researcher', name: '研究员', role: 'researcher' },
+      },
+      patient: {
+        password: process.env.TCM_PATIENT_PASSWORD || 'patient123',
+        user: { id: 6, username: 'patient', name: '演示患者（合成）', role: 'patient', patientRef: 'P1' },
       },
     } : {});
   const out = {};
@@ -100,6 +117,7 @@ function verifyToken(authHeader) {
   try {
     const payload = JSON.parse(Buffer.from(body, 'base64url').toString());
     if (typeof payload.exp !== 'number' || Date.now() > payload.exp) return null;
+    if (!VALID_ROLES.has(payload.role)) return null;
     return payload;
   } catch {
     return null;
@@ -111,6 +129,7 @@ function isPublicPath(path) {
   if (/^\/api\/prescriptions\/pickup\/[^/]+$/i.test(path) && path !== '/api/prescriptions/pickup/queue') {
     return true;
   }
+  if (/^\/api\/patient\/(confirmation|feedback)\/[A-Za-z0-9_-]{20,100}$/.test(path)) return true;
   return false;
 }
 

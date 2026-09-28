@@ -36,3 +36,6 @@ experiments/data/**/synth_n*.json
 experiments/data/**/synth_user_*.json
 experiments/data/**/synth_user_*.zip
 experiments/results/*.joblib
+
+# AI workflow runtime data (cases, tokens, audit chain)
+data/ai/

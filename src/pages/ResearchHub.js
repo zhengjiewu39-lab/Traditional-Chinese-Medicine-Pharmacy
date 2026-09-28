@@ -431,7 +431,7 @@ function ResearchHub() {
                   <li>ADR 预防/审方输出可能存在漏报与误报，须人工复核</li>
                   <li>生产环境需加密存储、RBAC、审计日志</li>
                 </Typography>
-                <Link href="https://github.com/zhengjiewu39-lab/Traditional-Chinese-Medicine-Pharmacy/blob/main/docs/ETHICS.md" target="_blank">完整伦理文档 →</Link>
+                <Link href="https://github.com/zhengjiewu39-lab/Traditional-Chinese-Medicine-Pharmacy/blob/main/docs/legacy-cdss/ETHICS.md" target="_blank" rel="noopener noreferrer">完整伦理文档 →</Link>
               </AccordionDetails>
             </Accordion>
             <Accordion>
@@ -443,7 +443,7 @@ function ResearchHub() {
                   <li>可解释 AI：线性特征归因（非黑盒深度学习）</li>
                   <li>评价指标：Accuracy、Macro-F1、ADR 高风险 Binary-F1、消融对比</li>
                 </Typography>
-                <Link href="https://github.com/zhengjiewu39-lab/Traditional-Chinese-Medicine-Pharmacy/blob/main/docs/LITERATURE.md" target="_blank">参考文献 →</Link>
+                <Link href="https://github.com/zhengjiewu39-lab/Traditional-Chinese-Medicine-Pharmacy/blob/main/docs/legacy-cdss/LITERATURE.md" target="_blank" rel="noopener noreferrer">参考文献 →</Link>
               </AccordionDetails>
             </Accordion>
             <Accordion>

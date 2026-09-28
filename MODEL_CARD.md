@@ -1,5 +1,7 @@
 # Model card — Community pharmacy supply simulation and the ERRRA allocation heuristic
 
+The default **product** is a pharmacist-governed AI pharmacy prototype (see [AI_PHARMACY_VALIDATION_REPORT.md](AI_PHARMACY_VALIDATION_REPORT.md)). This card describes the **digital-twin / ERRRA** layer only. ERRRA is not the LLM and is not claimed to be AI.
+
 | | |
 |---|---|
 | Software release | **1.0.0-research** (tag `v1.0.0-research`; frozen paper results commit separate from source) |

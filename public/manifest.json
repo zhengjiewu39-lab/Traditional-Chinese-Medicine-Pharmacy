@@ -1,6 +1,6 @@
 {
-  "short_name": "PharmSim",
-  "name": "Pharmacy supply simulation",
+  "short_name": "智能中药药房",
+  "name": "智能中药药房平台",
   "icons": [
     {
       "src": "favicon.ico",

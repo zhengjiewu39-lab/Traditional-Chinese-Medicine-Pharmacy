@@ -1,30 +1,20 @@
-import { RESEARCH_HOME, buildNav, getPageTitleForPath } from './navStructure';
+import {
+  WORKBENCH_HOME, RESEARCH_HOME, PATIENT_HOME, buildNav, getPageTitleForPath, rolesForPath,
+} from './navStructure';
 
-export { RESEARCH_HOME, buildNav, getPageTitleForPath };
+export {
+  WORKBENCH_HOME, RESEARCH_HOME, PATIENT_HOME, buildNav, getPageTitleForPath,
+};
 
-export const ADMIN_ONLY_PATHS = [
-  '/legacy/dashboard',
-  '/legacy/distribution',
-  '/legacy/organization',
-  '/legacy/organization/personnel',
-  '/legacy/organization/positions',
-  '/legacy/organization/performance',
-  '/legacy/compliance',
-  '/legacy/customers',
-  '/legacy/membership',
-  '/legacy/orders',
-  '/legacy/prescriptions/analytics',
-];
-
-export const PHARMACIST_HOME = RESEARCH_HOME;
-export const ADMIN_HOME = RESEARCH_HOME;
-
-export function getHomeForRole() {
-  return RESEARCH_HOME;
+export function getHomeForRole(role) {
+  if (role === 'patient') return PATIENT_HOME;
+  if (role === 'researcher') return RESEARCH_HOME;
+  return WORKBENCH_HOME;
 }
 
-export function isAdminOnlyPath(pathname) {
-  return ADMIN_ONLY_PATHS.some(
-    (p) => pathname === p || pathname.startsWith(`${p}/`)
-  );
+/** Unlisted paths (redirect targets, etc.) are open to staff only. */
+export function canAccessPath(role, pathname) {
+  const roles = rolesForPath(pathname);
+  if (roles) return roles.includes(role);
+  return ['admin', 'pharmacist', 'technician'].includes(role);
 }

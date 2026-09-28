@@ -1,11 +1,22 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Container, Box, Typography, TextField, Button, Paper, Alert, Stack } from '@mui/material';
-import { AdminPanelSettings, LocalPharmacy } from '@mui/icons-material';
+import {
+  AdminPanelSettings, LocalPharmacy, Handyman, Science, Person,
+} from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { getHomeForRole } from '../config/navigation';
 import { useLanguage } from '../i18n/LanguageContext';
 import LanguageSwitcher from '../components/LanguageSwitcher';
+
+const DEMO_ACCOUNTS = [
+  { username: 'admin', password: 'admin123', role: 'admin', Icon: AdminPanelSettings },
+  { username: 'pharmacist', password: 'pharm123', role: 'pharmacist', Icon: LocalPharmacy },
+  { username: 'pharmacist2', password: 'pharm456', role: 'pharmacist', Icon: LocalPharmacy },
+  { username: 'technician', password: 'tech123', role: 'technician', Icon: Handyman },
+  { username: 'researcher', password: 'research123', role: 'researcher', Icon: Science },
+  { username: 'patient', password: 'patient123', role: 'patient', Icon: Person },
+];
 
 function Login() {
   const [username, setUsername] = useState('');
@@ -69,40 +80,28 @@ function Login() {
               {loading ? t('auth.loggingIn') : t('auth.login')}
             </Button>
           </Box>
-          <Stack direction="row" spacing={1} justifyContent="center" sx={{ mt: 1 }}>
-            <Button
-              size="small"
-              variant="outlined"
-              startIcon={<AdminPanelSettings />}
-              disabled={loading}
-              onClick={async () => {
-                try {
-                  setLoading(true);
-                  const u = await login('admin', 'admin123');
-                  navigate(getHomeForRole(u?.role));
-                } catch { setError(t('auth.loginFailed')); } finally { setLoading(false); }
-              }}
-            >
-              {t('roles.admin')}
-            </Button>
-            <Button
-              size="small"
-              variant="outlined"
-              startIcon={<LocalPharmacy />}
-              disabled={loading}
-              onClick={async () => {
-                try {
-                  setLoading(true);
-                  const u = await login('pharmacist', 'pharm123');
-                  navigate(getHomeForRole(u?.role));
-                } catch { setError(t('auth.loginFailed')); } finally { setLoading(false); }
-              }}
-            >
-              {t('roles.pharmacist')}
-            </Button>
+          <Stack direction="row" spacing={1} justifyContent="center" flexWrap="wrap" useFlexGap sx={{ mt: 1 }}>
+            {DEMO_ACCOUNTS.map(({ username: u, password: p, role, Icon }) => (
+              <Button
+                key={u}
+                size="small"
+                variant="outlined"
+                startIcon={<Icon />}
+                disabled={loading}
+                onClick={async () => {
+                  try {
+                    setLoading(true);
+                    const loggedIn = await login(u, p);
+                    navigate(getHomeForRole(loggedIn?.role));
+                  } catch { setError(t('auth.loginFailed')); } finally { setLoading(false); }
+                }}
+              >
+                {u === 'pharmacist2' ? `${t('roles.pharmacist')}2` : t(`roles.${role}`)}
+              </Button>
+            ))}
           </Stack>
           <Typography variant="caption" color="text.secondary" display="block" textAlign="center" sx={{ mt: 1 }}>
-            {t('login.demoAdmin')} · {t('login.demoPharm')}
+            {t('login.demoAccounts')}
           </Typography>
         </Paper>
       </Box>

@@ -9,7 +9,19 @@ const {
   canTransition,
 } = require('../services/prescriptionWorkflow');
 
+const { requirePermission } = require('../security/rbac');
+
 const router = express.Router();
+
+/** Workflow fields only the server sets; clients cannot submit them on create or update. */
+const SERVER_OWNED_FIELDS = ['id', 'status', 'pickupCode', 'reviewer', 'approvedAt', 'timeline', 'reviewScore'];
+const CONTENT_FIELDS = ['herbs', 'prescriptionText', 'patientId', 'patientAge', 'patientGender', 'diagnosis'];
+
+function stripServerOwned(body) {
+  const out = { ...(body || {}) };
+  for (const k of SERVER_OWNED_FIELDS) delete out[k];
+  return out;
+}
 
 router.get('/', (req, res) => {
   const { status, patientId } = req.query;
@@ -62,40 +74,31 @@ router.get('/:id', (req, res) => {
 
 router.post('/', (req, res) => {
   let created;
+  const body = stripServerOwned(req.body);
   updateStore(data => {
-    const analysis = req.body.prescriptionText
+    const analysis = body.prescriptionText
       ? analyzePrescription({
-          prescription: req.body.prescriptionText,
-          patientAge: req.body.patientAge,
-          patientGender: req.body.patientGender,
-          diagnosis: req.body.diagnosis,
+          prescription: body.prescriptionText,
+          patientAge: body.patientAge,
+          patientGender: body.patientGender,
+          diagnosis: body.diagnosis,
         })
       : null;
 
     created = {
+      herbs: [],
+      ...body,
       id: nextId(data, 'prescription'),
       date: new Date().toISOString().slice(0, 10),
       status: '待审核',
-      herbs: req.body.herbs || [],
-      timeline: appendTimeline({}, '待审核', req.body.doctor || '医生', '处方已提交'),
-      ...req.body,
+      timeline: appendTimeline({}, '待审核', body.doctor || '医生', '处方已提交'),
     };
 
     if (analysis) {
       created.reviewScore = analysis.score;
       created.warnings = analysis.warnings;
       created.analysisSummary = analysis.summary;
-      if (analysis.status === '已通过') {
-        created.status = '已审核';
-        created.pickupCode = generatePickupCode(data.prescriptions);
-        created.timeline = appendTimeline(created, '已审核', 'AI审方', `自动审方通过 · 评分 ${analysis.score}`);
-      }
-    }
-
-    if (created.status === '已审核' && !created.pickupCode) {
-      created.pickupCode = generatePickupCode(data.prescriptions);
-      created.status = '待取药';
-      created.timeline = appendTimeline(created, '待取药', req.body.reviewer || '药师', '已生成取药码');
+      created.timeline = appendTimeline(created, '待审核', '规则预审', `预审${analysis.status} · 评分 ${analysis.score}（需药师审核）`);
     }
 
     data.prescriptions.unshift(created);
@@ -105,8 +108,9 @@ router.post('/', (req, res) => {
   res.status(201).json(created);
 });
 
-router.post('/:id/approve', (req, res) => {
+router.post('/:id/approve', requirePermission('legacy_rx:approve'), (req, res) => {
   let updated;
+  const reviewer = req.user.name || req.user.username;
   try {
     updateStore(data => {
       const idx = data.prescriptions.findIndex(p => p.id === +req.params.id);
@@ -120,10 +124,10 @@ router.post('/:id/approve', (req, res) => {
         ...rx,
         status: '待取药',
         pickupCode,
-        reviewer: req.body.reviewer || '药师',
-        reviewScore: req.body.reviewScore ?? rx.reviewScore,
+        reviewer,
+        reviewerId: req.user.id,
         approvedAt: new Date().toISOString(),
-        timeline: appendTimeline(rx, '待取药', req.body.reviewer || '药师', '审方通过，已生成取药码'),
+        timeline: appendTimeline(rx, '待取药', reviewer, '药师审方通过，已生成取药码'),
       };
       data.prescriptions[idx] = updated;
     });
@@ -182,8 +186,19 @@ router.put('/:id', (req, res) => {
   updateStore(data => {
     const idx = data.prescriptions.findIndex(p => p.id === +req.params.id);
     if (idx === -1) return;
-    data.prescriptions[idx] = { ...data.prescriptions[idx], ...req.body, id: +req.params.id };
-    updated = data.prescriptions[idx];
+    const before = data.prescriptions[idx];
+    const patch = stripServerOwned(req.body);
+    const next = { ...before, ...patch, id: +req.params.id };
+    const contentChanged = CONTENT_FIELDS.some((k) => k in patch && JSON.stringify(patch[k]) !== JSON.stringify(before[k]));
+    if (contentChanged && before.approvedAt && before.status !== '已完成') {
+      next.status = '待审核';
+      next.pickupCode = null;
+      next.approvedAt = null;
+      next.approvalInvalidatedAt = new Date().toISOString();
+      next.timeline = appendTimeline(before, '待审核', req.user?.name || '系统', '处方内容已修改，原审核失效，需重新审核');
+    }
+    data.prescriptions[idx] = next;
+    updated = next;
   });
   if (!updated) return res.status(404).json({ message: '未找到' });
   res.json(updated);

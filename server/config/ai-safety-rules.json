@@ -1,0 +1,138 @@
+{
+  "version": "1.0.0",
+  "id": "ai-safety-rules",
+  "disclaimer": "合成演示规则：数值与名单为工程测试用途的近似整理，未经药事委员会审定，不可用于真实临床决策。",
+  "limits": {
+    "maxHerbCount": 20,
+    "totalDailyDoseMaxG": 250,
+    "overdoseHardFactor": 1.5,
+    "pediatricAgeMax": 12,
+    "pediatricDoseFactor": 0.6,
+    "geriatricAge": 65,
+    "veryElderlyAge": 80,
+    "fertileAgeRange": [14, 50],
+    "prescriptionValidityDays": 3
+  },
+  "toxicHerbs": {
+    "附子": { "toxicity": "有毒", "min": 3, "max": 15, "preboil": true },
+    "川乌": { "toxicity": "有毒", "min": 1.5, "max": 3, "preboil": true },
+    "草乌": { "toxicity": "有毒", "min": 1.5, "max": 3, "preboil": true },
+    "乌头": { "toxicity": "有毒", "min": 1.5, "max": 3, "preboil": true },
+    "半夏": { "toxicity": "有毒", "min": 3, "max": 9 },
+    "甘遂": { "toxicity": "有毒", "min": 0.5, "max": 1.5 },
+    "细辛": { "toxicity": "小毒", "min": 1, "max": 3 },
+    "马钱子": { "toxicity": "大毒", "min": 0.3, "max": 0.6 },
+    "朱砂": { "toxicity": "有毒", "min": 0.1, "max": 0.5 },
+    "雄黄": { "toxicity": "有毒", "min": 0.05, "max": 0.1 },
+    "蟾酥": { "toxicity": "有毒", "min": 0.015, "max": 0.03 },
+    "杏仁": { "toxicity": "小毒", "min": 5, "max": 10 }
+  },
+  "specialManagedToxic": [
+    "生川乌", "生草乌", "生附子", "生半夏", "生天南星", "生南星", "生巴豆", "生甘遂", "生狼毒", "生藤黄",
+    "生马钱子", "砒石", "砒霜", "水银", "斑蝥", "红娘虫", "青娘虫", "洋金花", "闹羊花", "雪上一枝蒿",
+    "红升丹", "白降丹", "轻粉", "蟾酥"
+  ],
+  "bannedHerbs": ["关木通", "广防己", "青木香", "马兜铃", "天仙藤", "寻骨风"],
+  "pregnancyContraindicated": [
+    "甘遂", "大戟", "芫花", "巴豆", "牵牛子", "商陆", "麝香", "三棱", "莪术", "水蛭", "虻虫", "斑蝥",
+    "马钱子", "雄黄", "朱砂", "川乌", "草乌", "乌头", "轻粉", "天仙子"
+  ],
+  "pregnancyCaution": [
+    "桃仁", "红花", "牛膝", "附子", "大黄", "枳实", "枳壳", "三七", "肉桂", "蒲黄", "益母草", "薏苡仁",
+    "冰片", "王不留行", "半夏"
+  ],
+  "lactationCaution": ["大黄", "麦芽", "炒麦芽", "附子", "麻黄"],
+  "hepatotoxic": ["何首乌", "雷公藤", "土三七", "千里光", "苍耳子", "川楝子", "黄药子", "补骨脂"],
+  "nephrotoxic": ["雷公藤", "朱砂", "雄黄", "马钱子", "斑蝥"],
+  "interactions": [
+    {
+      "id": "DDI-ANTICOAG",
+      "herbs": ["丹参", "当归", "红花", "桃仁", "三七", "川芎", "银杏叶"],
+      "drugs": ["华法林", "warfarin", "阿司匹林", "aspirin", "氯吡格雷", "clopidogrel", "利伐沙班", "rivaroxaban"],
+      "message": "活血类药材与抗凝/抗血小板药合用可能增加出血风险",
+      "evidence": ["KS-DDI-001"]
+    },
+    {
+      "id": "DDI-GANCAO",
+      "herbs": ["甘草"],
+      "drugs": ["地高辛", "digoxin", "呋塞米", "furosemide", "氢氯噻嗪", "hydrochlorothiazide", "泼尼松", "prednisone"],
+      "message": "甘草可致低血钾与水钠潴留，与地高辛、排钾利尿药或糖皮质激素合用需评估",
+      "evidence": ["KS-DDI-002"]
+    },
+    {
+      "id": "DDI-MAHUANG",
+      "herbs": ["麻黄"],
+      "drugs": ["降压药", "氨氯地平", "amlodipine", "硝苯地平", "nifedipine", "单胺氧化酶抑制剂", "MAOI", "苯乙肼"],
+      "message": "麻黄含拟交感成分，可能拮抗降压药或与单胺氧化酶抑制剂产生相互作用",
+      "evidence": ["KS-DDI-003"]
+    },
+    {
+      "id": "DDI-RENSHEN",
+      "herbs": ["人参"],
+      "drugs": ["华法林", "warfarin", "胰岛素", "insulin", "二甲双胍", "metformin", "格列美脲"],
+      "message": "人参可能影响抗凝强度与血糖控制",
+      "evidence": ["KS-DDI-004"]
+    }
+  ],
+  "decoction": {
+    "先煎": ["附子", "川乌", "草乌", "乌头", "石膏", "龙骨", "牡蛎", "磁石"],
+    "后下": ["薄荷", "砂仁", "钩藤", "豆蔻"],
+    "包煎": ["车前子", "旋覆花", "蒲黄", "滑石"]
+  },
+  "substitutionRules": [
+    {
+      "ruleId": "SUB-R1",
+      "from": "陈皮",
+      "to": "陈皮（同规格、不同合格批次）",
+      "condition": "仅限同一饮片规格、检验合格批次之间替换",
+      "approvedBy": "演示药事委员会（合成）",
+      "evidence": ["KS-SUB-001"]
+    },
+    {
+      "ruleId": "SUB-R2",
+      "from": "山药",
+      "to": "山药（同规格、不同合格批次）",
+      "condition": "仅限同一饮片规格、检验合格批次之间替换",
+      "approvedBy": "演示药事委员会（合成）",
+      "evidence": ["KS-SUB-001"]
+    }
+  ],
+  "ruleEvidence": {
+    "EIGHTEEN_INCOMPATIBLE": ["KS-PAIR-018"],
+    "NINETEEN_FEAR": ["KS-PAIR-019"],
+    "INCOMPATIBLE_PAIR": ["KS-PAIR-018"],
+    "DUPLICATE_HERB": ["KS-DUP-001"],
+    "DOSE_ABOVE_RANGE": ["KS-DOSE-001"],
+    "DOSE_BELOW_RANGE": ["KS-DOSE-001"],
+    "OVERDOSE": ["KS-DOSE-002"],
+    "TOTAL_DOSE_HIGH": ["KS-DOSE-003"],
+    "HERB_COUNT_HIGH": ["KS-DOSE-003"],
+    "TOXIC_HERB_PRESENT": ["KS-TOX-001"],
+    "TOXIC_SPECIAL_MANAGED": ["KS-TOX-002"],
+    "BANNED_HERB": ["KS-REN-001"],
+    "PREGNANCY_CONTRAINDICATED": ["KS-PREG-001"],
+    "PREGNANCY_CAUTION": ["KS-PREG-002"],
+    "PREGNANCY_STATUS_UNKNOWN": ["KS-PREG-001", "KS-PREG-002"],
+    "LACTATION_CAUTION": ["KS-LACT-001"],
+    "PEDIATRIC_DOSE_CHECK": ["KS-PED-001"],
+    "PEDIATRIC_TOXIC": ["KS-PED-001", "KS-TOX-001"],
+    "GERIATRIC_TOXIC": ["KS-GER-001", "KS-TOX-001"],
+    "VERY_ELDERLY_TOXIC": ["KS-GER-001", "KS-TOX-001"],
+    "SEVERE_ALLERGY": ["KS-ALG-001"],
+    "ALLERGY_MATCH": ["KS-ALG-001"],
+    "HEPATOTOXIC_RISK": ["KS-HEP-001"],
+    "NEPHROTOXIC_RISK": ["KS-REN-001"],
+    "HERB_DRUG_INTERACTION": ["KS-DDI-001", "KS-DDI-002", "KS-DDI-003", "KS-DDI-004"],
+    "DECOCTION_PREBOIL_MISSING": ["KS-DEC-001"],
+    "DECOCTION_METHOD_NOTE": ["KS-DEC-001"],
+    "USAGE_INCOMPLETE": ["KS-LEGAL-001"],
+    "PRESCRIPTION_EXPIRED": ["KS-LEGAL-001"],
+    "PRESCRIBER_MISSING": ["KS-LEGAL-002"],
+    "SOURCE_ANOMALY": ["KS-LEGAL-002"],
+    "IDENTITY_ANOMALY": ["KS-LEGAL-002"],
+    "PATIENT_INFO_MISSING": ["KS-LEGAL-001"],
+    "HERB_NOT_IN_RULESET": [],
+    "UNJUDGEABLE_HIGH_RISK": ["KS-TOX-001", "KS-PREG-002"],
+    "INJECTION_SUSPECTED": []
+  }
+}

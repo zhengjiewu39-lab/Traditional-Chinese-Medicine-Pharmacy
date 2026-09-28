@@ -52,5 +52,5 @@ export function formatApiError(error, fallback) {
   const msg = errorMessages(lang);
   if (error.code === 'ECONNABORTED') return msg.timeout;
   if (!error.response) return msg.down;
-  return error.response?.data?.message || error.message || fallback || msg.failed;
+  return error.response?.data?.error?.message || error.response?.data?.message || error.message || fallback || msg.failed;
 }

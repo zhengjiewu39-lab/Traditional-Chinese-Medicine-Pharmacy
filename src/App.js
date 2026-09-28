@@ -20,7 +20,21 @@ import Reproducibility from './pages/simulation/Reproducibility';
 import ExperimentArchive from './pages/simulation/ExperimentArchive';
 import Documentation from './pages/simulation/Documentation';
 
-// Legacy CDSS demo (tag legacy-cdss-v1): code-split so it never loads with the research platform.
+// Pharmacist-governed AI pharmacy workflow.
+const Workbench = lazy(() => import('./pages/ai/Workbench'));
+const CaseIntake = lazy(() => import('./pages/ai/CaseIntake'));
+const CaseList = lazy(() => import('./pages/ai/CaseList'));
+const ReviewDetail = lazy(() => import('./pages/ai/ReviewDetail'));
+const DispensingBoard = lazy(() => import('./pages/ai/DispensingBoard'));
+const PatientService = lazy(() => import('./pages/ai/PatientService'));
+const Governance = lazy(() => import('./pages/ai/Governance'));
+const KnowledgeSources = lazy(() => import('./pages/ai/KnowledgeSources'));
+const OperationsAgent = lazy(() => import('./pages/ai/OperationsAgent'));
+const PatientConfirmation = lazy(() => import('./pages/patient/PatientConfirmation'));
+const PatientFeedback = lazy(() => import('./pages/patient/PatientFeedback'));
+const MyPrescriptions = lazy(() => import('./pages/patient/MyPrescriptions'));
+
+// Pharmacy business pages (formerly under /legacy) and the remaining legacy demos: code-split.
 const OperationsDashboard = lazy(() => import('./pages/OperationsDashboard'));
 const DoctorWorkbench = lazy(() => import('./pages/DoctorWorkbench'));
 const PatientPickup = lazy(() => import('./pages/PatientPickup'));
@@ -73,6 +87,29 @@ function RoleHome() {
   return <Navigate to={getHomeForRole(user.role)} replace />;
 }
 
+/** Business pages that rejoined the formal workflow: path → component. `/legacy/<path>` redirects here. */
+const BUSINESS_ROUTES = [
+  ['/doctor', DoctorWorkbench],
+  ['/patients', PatientRecords],
+  ['/customers', Customers],
+  ['/membership', MembershipManagement],
+  ['/prescriptions/templates', PrescriptionTemplates],
+  ['/prescriptions/review', PrescriptionReview],
+  ['/knowledge', HerbalKnowledgeBase],
+  ['/pickup', PatientPickup],
+  ['/billing', Billing],
+  ['/distribution', Distribution],
+  ['/inventory', Inventory],
+  ['/orders', Orders],
+  ['/traceability', TraceabilitySystem],
+  ['/quality', QualityManagement],
+  ['/compliance', Compliance],
+];
+
+function PublicPage({ children }) {
+  return <Suspense fallback={<Loading />}>{children}</Suspense>;
+}
+
 function App() {
   return (
     <ThemeProvider theme={theme}>
@@ -83,7 +120,22 @@ function App() {
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/" element={<RoleHome />} />
+            <Route path="/patient/confirmation/:token" element={<PublicPage><PatientConfirmation /></PublicPage>} />
+            <Route path="/patient/feedback/:token" element={<PublicPage><PatientFeedback /></PublicPage>} />
             <Route element={<ProtectedRoute />}>
+              <Route path="/workbench" element={<Workbench />} />
+              <Route path="/intake" element={<CaseIntake />} />
+              <Route path="/ai/cases" element={<CaseList mode="all" />} />
+              <Route path="/ai/review-queue" element={<CaseList mode="queue" />} />
+              <Route path="/ai/reviews/:caseId" element={<ReviewDetail />} />
+              <Route path="/ai/knowledge" element={<KnowledgeSources />} />
+              <Route path="/ai/governance" element={<Governance />} />
+              <Route path="/ai/operations" element={<OperationsAgent />} />
+              <Route path="/dispensing" element={<DispensingBoard />} />
+              <Route path="/patient-service" element={<PatientService />} />
+              <Route path="/patient/me" element={<MyPrescriptions />} />
+              {BUSINESS_ROUTES.map(([p, Page]) => <Route key={p} path={p} element={<Page />} />)}
+              {BUSINESS_ROUTES.map(([p]) => <Route key={`legacy${p}`} path={`/legacy${p}`} element={<Navigate to={p} replace />} />)}
               <Route path="/simulation/overview" element={<SimulationOverview />} />
               <Route path="/simulation/scenario" element={<ScenarioConfiguration />} />
               <Route path="/simulation/strategies" element={<StrategyComparison />} />
@@ -94,47 +146,17 @@ function App() {
               <Route path="/simulation/documentation" element={<Documentation />} />
               <Route path="/legacy" element={<Navigate to="/legacy/dashboard" replace />} />
               <Route path="/legacy/dashboard" element={<OperationsDashboard />} />
-              <Route path="/dashboard" element={<Navigate to="/simulation/overview" replace />} />
-              <Route path="/legacy/billing" element={<Billing />} />
-              <Route path="/legacy/doctor" element={<DoctorWorkbench />} />
-              <Route path="/legacy/pickup" element={<PatientPickup />} />
-              <Route path="/legacy/inventory" element={<Inventory />} />
-              <Route path="/legacy/orders" element={<Orders />} />
-              <Route path="/legacy/customers" element={<Customers />} />
-              <Route path="/legacy/compliance" element={<Compliance />} />
               <Route path="/legacy/organization" element={<Organization />} />
               <Route path="/legacy/organization/personnel" element={<PersonnelManagement />} />
               <Route path="/legacy/organization/positions" element={<PositionsManagement />} />
               <Route path="/legacy/organization/performance" element={<PerformanceManagement />} />
-              <Route path="/legacy/distribution" element={<Distribution />} />
-              <Route path="/legacy/prescriptions/review" element={<PrescriptionReview />} />
-              <Route path="/legacy/prescriptions/templates" element={<PrescriptionTemplates />} />
               <Route path="/legacy/prescriptions/analytics" element={<PrescriptionAnalytics />} />
               <Route path="/legacy/research" element={<ResearchHub />} />
-              <Route path="/legacy/patients" element={<PatientRecords />} />
-              <Route path="/legacy/traceability" element={<TraceabilitySystem />} />
-              <Route path="/legacy/quality" element={<QualityManagement />} />
-              <Route path="/legacy/membership" element={<MembershipManagement />} />
-              <Route path="/legacy/knowledge" element={<HerbalKnowledgeBase />} />
               <Route path="/legacy/training" element={<PharmacistTraining />} />
-              <Route path="/billing" element={<Navigate to="/legacy/billing" replace />} />
-              <Route path="/doctor" element={<Navigate to="/legacy/doctor" replace />} />
-              <Route path="/pickup" element={<Navigate to="/legacy/pickup" replace />} />
-              <Route path="/inventory" element={<Navigate to="/legacy/inventory" replace />} />
-              <Route path="/orders" element={<Navigate to="/legacy/orders" replace />} />
-              <Route path="/customers" element={<Navigate to="/legacy/customers" replace />} />
-              <Route path="/compliance" element={<Navigate to="/legacy/compliance" replace />} />
+              <Route path="/dashboard" element={<Navigate to="/workbench" replace />} />
               <Route path="/organization" element={<Navigate to="/legacy/organization" replace />} />
-              <Route path="/distribution" element={<Navigate to="/legacy/distribution" replace />} />
-              <Route path="/prescriptions/review" element={<Navigate to="/legacy/prescriptions/review" replace />} />
-              <Route path="/prescriptions/templates" element={<Navigate to="/legacy/prescriptions/templates" replace />} />
               <Route path="/prescriptions/analytics" element={<Navigate to="/legacy/prescriptions/analytics" replace />} />
               <Route path="/research" element={<Navigate to="/legacy/research" replace />} />
-              <Route path="/patients" element={<Navigate to="/legacy/patients" replace />} />
-              <Route path="/traceability" element={<Navigate to="/legacy/traceability" replace />} />
-              <Route path="/quality" element={<Navigate to="/legacy/quality" replace />} />
-              <Route path="/membership" element={<Navigate to="/legacy/membership" replace />} />
-              <Route path="/knowledge" element={<Navigate to="/legacy/knowledge" replace />} />
               <Route path="/training" element={<Navigate to="/legacy/training" replace />} />
             </Route>
           </Routes>

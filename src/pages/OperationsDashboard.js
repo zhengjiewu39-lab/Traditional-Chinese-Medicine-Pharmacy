@@ -37,9 +37,9 @@ function OperationsDashboard() {
 
   const kpis = [
     { label: '今日销售额 (演示)', value: `¥${data.todaySales?.toLocaleString()}`, icon: <TrendingUp />, color: '#1565C0' },
-    { label: '待审处方 (演示)', value: data.alerts.pendingPrescriptions, icon: <LocalPharmacy />, color: '#EF6C00', path: '/legacy/prescriptions/review' },
-    { label: '待取药 (演示)', value: data.alerts.awaitingPickup, icon: <QrCode2 />, color: '#6A1B9A', path: '/legacy/pickup' },
-    { label: '低库存预警 (演示)', value: data.alerts.lowStock, icon: <Warning />, color: '#C62828', path: '/legacy/inventory' },
+    { label: '待审处方 (演示)', value: data.alerts.pendingPrescriptions, icon: <LocalPharmacy />, color: '#EF6C00', path: '/ai/review-queue' },
+    { label: '待取药 (演示)', value: data.alerts.awaitingPickup, icon: <QrCode2 />, color: '#6A1B9A', path: '/pickup' },
+    { label: '低库存预警 (演示)', value: data.alerts.lowStock, icon: <Warning />, color: '#C62828', path: '/inventory' },
   ];
 
   return (
@@ -107,7 +107,7 @@ function OperationsDashboard() {
           <Paper sx={{ p: 2 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
               <Typography variant="h6" fontWeight={600}>待取药队列 (演示)</Typography>
-              <Button size="small" onClick={() => navigate('/legacy/billing')}>去收银</Button>
+              <Button size="small" onClick={() => navigate('/billing')}>去收银</Button>
             </Box>
             {(data.pickupQueue || []).length === 0 ? (
               <Typography variant="body2" color="text.secondary">暂无待取药处方</Typography>
@@ -122,7 +122,7 @@ function OperationsDashboard() {
                 </TableHead>
                 <TableBody>
                   {data.pickupQueue.map(p => (
-                    <TableRow key={p.id} hover sx={{ cursor: 'pointer' }} onClick={() => navigate(`/legacy/billing?code=${p.pickupCode}`)}>
+                    <TableRow key={p.id} hover sx={{ cursor: 'pointer' }} onClick={() => navigate(`/billing?code=${p.pickupCode}`)}>
                       <TableCell>{p.patientName}</TableCell>
                       <TableCell><Chip label={p.pickupCode} size="small" color="secondary" variant="outlined" /></TableCell>
                       <TableCell><Chip label={p.status} size="small" color={statusColor[p.status] || 'default'} /></TableCell>

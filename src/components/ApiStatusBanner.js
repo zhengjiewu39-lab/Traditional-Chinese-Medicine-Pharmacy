@@ -16,7 +16,8 @@ export default function ApiStatusBanner() {
       .then((res) => {
         const routeVer = res.data?.simulationRouteVersion ?? 1;
         setDown(
-          !res.data?.features?.includes('supply-simulation-research')
+          !res.data?.features?.includes('pharmacist-governed-ai-pharmacy')
+          || !res.data?.features?.includes('supply-simulation-research')
           || routeVer < 2
         );
       })

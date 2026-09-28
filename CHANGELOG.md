@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.0-ai-pharmacy — 2026-09-28 (pharmacist-governed AI layer)
+
+Product default is the intelligent TCM pharmacy workbench. Supply-resilience simulation (engine 4.0.0, matrix 2.0.0, ERRRA 2.0.0) remains under **药房数字孪生**; frozen paper tables are unchanged.
+
+- Prescription state machine, RBAC (`admin|pharmacist|technician|patient|researcher`), three-track screening, pharmacist queue, patient token portal, governance, audit chain, operations agent + digital-twin proposals.
+- `npm run ai:evaluate` on synthetic cases. Production refuses `AI_PROVIDER=mock`.
+- Documentation: `docs/ai-*.md`, `AI_PHARMACY_VALIDATION_REPORT.md`.
+
 ## 1.0.0-research — 2026-09-28 (research release patch)
 
 Software release tag aligned with frozen paper results (`v1.0.0-research`). Simulation engine remains **4.0.0**; scenario matrix **2.0.0**; ERRRA heuristic **2.0.0**.
