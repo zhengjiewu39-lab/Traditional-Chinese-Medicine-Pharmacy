@@ -3,7 +3,7 @@ FROM node:20-alpine AS base
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
-RUN npm ci --omit=dev 2>/dev/null || npm install --omit=dev
+RUN npm ci --omit=dev
 
 COPY server.js ./
 COPY server ./server

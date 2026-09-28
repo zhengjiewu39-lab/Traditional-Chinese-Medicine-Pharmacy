@@ -12,8 +12,8 @@ authors:
   - alias: zhengjiewu39-lab
     email: zhengjiewu39@gmail.com
 repository-code: "https://github.com/zhengjiewu39-lab/Traditional-Chinese-Medicine-Pharmacy"
-version: 3.0.0
-date-released: 2026-09-26
+version: 1.0.0-research
+date-released: 2026-09-28
 license: MIT
 keywords:
   - community pharmacy

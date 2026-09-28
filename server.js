@@ -160,21 +160,27 @@ app.put('/api/auth/profile', (req, res) => {
 
 app.post('/api/auth/change-password', (req, res) => {
   if (!req.user) return res.status(401).json({ success: false, message: '未授权访问' });
-  res.json({ success: true, message: '密码已更新（演示）' });
+  res.status(501).json({ success: false, message: '密码修改未启用；请联系管理员更新 TCM_USERS_JSON 中的 passwordHash' });
 });
 
 app.post('/api/auth/register', (req, res) => {
   res.status(501).json({ message: '请联系管理员开通账号' });
 });
 
+const {
+  RELEASE_VERSION, ENGINE_VERSION, SCENARIO_MATRIX_VERSION, ERRA_HEURISTIC_VERSION,
+} = require('./server/simulation/releaseVersions');
+
 // 健康检查
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
     service: 'TCM Pharmacy API',
-    version: '2.1',
-    features: ['supply-simulation-v1', 'legacy-har-cdss', 'synthetic-data-only'],
-    /** Bump when simulation router adds breaking/new research endpoints (presets, run-group, …). */
+    release: RELEASE_VERSION,
+    simulationEngine: ENGINE_VERSION.replace(/^simulation-engine-/, ''),
+    scenarioMatrix: SCENARIO_MATRIX_VERSION,
+    errraHeuristic: ERRA_HEURISTIC_VERSION,
+    features: ['supply-simulation-research', 'legacy-har-cdss', 'synthetic-data-only'],
     simulationRouteVersion: 3,
   });
 });

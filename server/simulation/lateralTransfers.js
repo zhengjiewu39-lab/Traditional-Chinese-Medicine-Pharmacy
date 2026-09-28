@@ -1,5 +1,5 @@
 /**
- * Emergency lateral transfers between neighbouring pharmacies (same region), essential SKUs only.
+ * Emergency lateral transfers between pharmacies within the same synthetic regional stratum, essential SKUs only.
  *
  * Run once per day after demand has been served and forecasts updated, before replenishment
  * decisions (so policies see transfers in IP). For pharmacy i and SKU k:

@@ -143,7 +143,8 @@ const SCENARIO_PRESETS = {
 };
 
 const FIELD_HELP = {
-  randomSeed: 'Integer seed for reproducible synthetic demand, supplier reliability and disruptions.',
+  randomSeed: 'Integer seed for reproducible synthetic demand noise and supplier reliability draws during the run.',
+  networkSeed: 'Optional integer seed fixing pharmacy population splits and other structural network draws. Defaults to randomSeed when omitted.',
   simulationDays: 'Number of discrete daily simulation steps (1–365). Default 120: warm-up 1–30, shock 31–60, recovery 61–120.',
   warehouseCount: 'Central warehouses replenishing pharmacies (1–10).',
   pharmacyCount: 'Community pharmacies in the synthetic network (3–60).',
@@ -213,6 +214,9 @@ function validateScenario(input) {
   const merged = deepMerge(DEFAULT_SCENARIO, input || {});
 
   checkNumber(errors, 'randomSeed', merged.randomSeed, { integer: true, min: 0, max: 2 ** 31 - 1, required: true });
+  if (merged.networkSeed != null) {
+    checkNumber(errors, 'networkSeed', merged.networkSeed, { integer: true, min: 0, max: 2 ** 31 - 1 });
+  }
   for (const [k, [lo, hi]] of Object.entries(LIMITS)) checkNumber(errors, k, merged[k], { integer: true, min: lo, max: hi, required: true });
   checkNumber(errors, 'demandMultiplier', merged.demandMultiplier, { min: 0, max: 10 });
   checkNumber(errors, 'defaultReplicates', merged.defaultReplicates, { integer: true, min: 1, max: 1000 });

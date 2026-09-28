@@ -33,7 +33,9 @@ Identity (tested): same-day unfilled = late-filled + horizon-end unmet. Rates di
 | `horizonEndUnmetRate` | horizon-end unmet / total demand | fraction | lower | [0, 1] |
 | `meanWaitingTime` | mean wait per demanded unit; 0 for units filled on demand | days | lower | [0, T] |
 | `p95WaitingTime` | 95th percentile of the same distribution | days | lower | [0, T] |
-| `recoveryTime90`, `recoveryTime95`, `recoveryTime99` | see Resilience | days after shock end | lower | [0, \(T - t_1\)] |
+| `recoveryTime95` | see Resilience (observed; null if censored) | days after shock end | lower | [0, \(T - t_1\)] or null |
+| `restrictedRecoveryTime95` | observed recovery or horizon cap if censored | days after shock end | lower | [0, \(T - t_1\)] |
+| `recovered90Share`, `recovered95Share`, `recovered99Share` | share of runs with sustained recovery | fraction | higher | [0, 1] |
 | `serviceLossAUC` | \(\sum_{t \ge t_0}\max(0, B - e_t)\) | fill-rate·days | lower | [0, \(T - t_0\)] |
 | `totalCost` | see Cost | synthetic currency | lower | [0, ∞) |
 
@@ -51,9 +53,12 @@ Definitions:
 | Quantity | Definition |
 |---|---|
 | Trough | \(\min_{t\ge t_0}\tilde e_t\) at day \(t^\*\) |
-| `timeToRecovery{p}` | 0 if the trough is \(\ge pB\); otherwise \(\max(0, t_p - t_1)\), where \(t_p\) is the first day \(\ge t^\*\) with \(\tilde e_t \ge pB\). **Right-censored** (`null`) if never reached |
+| Sustained recovery at level \(p\) | the first day \(t \ge t_1\) such that \(\tilde e_{t..t+6} \ge pB\) (seven consecutive days on the 7-day trailing mean) |
+| `timeToRecovery{p}` | \(\max(0, t - t_1)\) for that first sustained-recovery day; **`null` if never reached** (right-censored; do not read as “recovered on day 60”) |
+| `restrictedRecoveryTime{p}` | `timeToRecovery{p}` if recovered, else \(T - t_1\) (horizon cap for RMTR / summary tables only) |
+| `recovered{p}Share` | fraction of replicates with sustained recovery within the horizon |
 
-The paper tables replace censored values by the maximum observable delay \(T - t_1\) (60 days) and report the share of runs that recovered. Recovery metrics are n/a in M1, which has no event.
+Kaplan–Meier median and restricted mean time to recovery (RMTR) are computed across replicates in the paper pipeline. Recovery metrics are n/a in M1, which has no event.
 
 ## Cost
 

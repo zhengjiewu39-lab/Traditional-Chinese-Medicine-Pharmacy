@@ -10,6 +10,8 @@ const { createRng } = require('./rng');
 
 const RECOVERY_LEVELS = [0.9, 0.95, 0.99];
 const SMOOTHING_DAYS = 7;
+/** Smoothed essential fill must stay at or above the recovery target for this many consecutive days. */
+const CONSECUTIVE_RECOVERY_DAYS = 7;
 const WARMUP_SKIP_DAYS = 7;
 
 function computeServiceInequalityIndex({
@@ -206,6 +208,12 @@ function computeRunMetrics(runLog, instance, policyId) {
     recoveryTime90: resilience.timeToRecovery90,
     recoveryTime95: resilience.timeToRecovery95,
     recoveryTime99: resilience.timeToRecovery99,
+    restrictedRecoveryTime90: resilience.restrictedRecoveryTime90,
+    restrictedRecoveryTime95: resilience.restrictedRecoveryTime95,
+    restrictedRecoveryTime99: resilience.restrictedRecoveryTime99,
+    recovered90: resilience.firstDisruptionStartDay == null ? null : (resilience.recoveredWithinHorizon?.timeToRecovery90 ? 1 : 0),
+    recovered95: resilience.firstDisruptionStartDay == null ? null : (resilience.recoveredWithinHorizon?.timeToRecovery95 ? 1 : 0),
+    recovered99: resilience.firstDisruptionStartDay == null ? null : (resilience.recoveredWithinHorizon?.timeToRecovery99 ? 1 : 0),
     lateralTransferUnits: counters.transferUnits ?? 0,
     lateralTransferCount: counters.transfers ?? 0,
     backupSupplierUnits: counters.upstreamUnitsByTier?.backup ?? 0,
@@ -313,15 +321,29 @@ function firstEventStartDay(scenario) {
 /**
  * Resilience on the daily essential fill rate EF_t (falls back to overall fill rate).
  *   baseline B   = mean EF_t over warm-up days [7, onset)
- *   AUC          = Σ_{t ≥ onset} max(0, B − EF_t)                         (fraction·days, lower is better)
+ *   AUC          = Σ_{t ≥ onset} max(0, B − EF_t)
  *   S_t          = trailing 7-day mean of EF_t; trough = min_{t ≥ onset} S_t
- *   T_p          = 0 if trough ≥ p·B; else max(0, t* − end) with t* the first day ≥ trough day with S_t ≥ p·B;
- *                  null if not reached within the horizon (right-censored)
- *   slope        = (S_{t*95} − trough) / (t*95 − troughDay)                  (fraction per day)
+ *   T_p          = days from lastDisruptionEndDay until the first day t where S_{t..t+6} ≥ p·B
+ *                  (only t with day ≥ lastDisruptionEndDay); null if not sustained before horizon (right-censored)
+ *   restrictedRecoveryTime_p = T_p if recovered, else (horizon − lastDisruptionEndDay)
  */
+function firstSustainedRecoveryIndex(smoothed, daily, target, minDay) {
+  for (let i = 0; i <= smoothed.length - CONSECUTIVE_RECOVERY_DAYS; i += 1) {
+    if (daily[i].day < minDay) continue;
+    let ok = true;
+    for (let j = 0; j < CONSECUTIVE_RECOVERY_DAYS; j += 1) {
+      if (smoothed[i + j] < target - 1e-12) { ok = false; break; }
+    }
+    if (ok) return i;
+  }
+  return null;
+}
+
 function computeResilienceMetrics(daily, scenario) {
   const onset = firstEventStartDay(scenario);
   const end = lastEventEndDay(scenario);
+  const horizon = daily.length ? daily[daily.length - 1].day + 1 : scenario.simulationDays;
+  const censorAt = end >= 0 ? Math.max(0, horizon - end) : null;
   const ef = daily.map((d) => d.dailyEssentialFillRate ?? d.dailyFillRate ?? (1 - (d.dailyStockoutRate ?? 0)));
   const sr = daily.map((d) => d.dailyStockoutRate ?? 0);
 
@@ -337,6 +359,8 @@ function computeResilienceMetrics(daily, scenario) {
     disruptionPeakStockoutRate: sr.length ? Math.max(...sr) : 0,
     firstDisruptionStartDay: onset,
     lastDisruptionEndDay: end,
+    recoveryCensorDays: censorAt,
+    consecutiveRecoveryDaysRequired: CONSECUTIVE_RECOVERY_DAYS,
     serviceLossAUC: 0,
     serviceLossAbsolute: ef.reduce((s, v) => s + (1 - v), 0),
     troughEssentialFillRate: null,
@@ -344,6 +368,9 @@ function computeResilienceMetrics(daily, scenario) {
     timeToRecovery90: null,
     timeToRecovery95: null,
     timeToRecovery99: null,
+    restrictedRecoveryTime90: null,
+    restrictedRecoveryTime95: null,
+    restrictedRecoveryTime99: null,
     recoveredWithinHorizon: {},
     recoverySlope: null,
     recoveryDay: null,
@@ -353,7 +380,7 @@ function computeResilienceMetrics(daily, scenario) {
 
   const postIdx = daily.map((d, i) => i).filter((i) => daily[i].day >= onset);
   out.serviceLossAUC = postIdx.reduce((s, i) => s + Math.max(0, baseline - ef[i]), 0);
-  if (!postIdx.length) return out;
+  if (!postIdx.length || end < 0) return out;
 
   let troughI = postIdx[0];
   for (const i of postIdx) if (smoothed[i] < smoothed[troughI]) troughI = i;
@@ -362,25 +389,92 @@ function computeResilienceMetrics(daily, scenario) {
 
   for (const p of RECOVERY_LEVELS) {
     const key = `timeToRecovery${Math.round(p * 100)}`;
+    const rKey = `restrictedRecoveryTime${Math.round(p * 100)}`;
     const target = p * baseline;
-    if (smoothed[troughI] >= target - 1e-12) {
-      out[key] = 0;
-      out.recoveredWithinHorizon[key] = true;
-      if (p === 0.95) out.recoveryDay = daily[troughI].day;
-      continue;
-    }
-    const hit = postIdx.find((i) => i >= troughI && smoothed[i] >= target - 1e-12);
-    out.recoveredWithinHorizon[key] = hit != null;
-    if (hit != null) {
+    const hit = firstSustainedRecoveryIndex(smoothed, daily, target, end);
+    const recovered = hit != null;
+    out.recoveredWithinHorizon[key] = recovered;
+    if (recovered) {
       out[key] = Math.max(0, daily[hit].day - end);
+      out[rKey] = out[key];
       if (p === 0.95) {
         out.recoveryDay = daily[hit].day;
-        out.recoverySlope = hit > troughI ? (smoothed[hit] - smoothed[troughI]) / (daily[hit].day - daily[troughI].day) : null;
+        out.recoverySlope = hit > troughI
+          ? (smoothed[hit] - smoothed[troughI]) / (daily[hit].day - daily[troughI].day)
+          : null;
       }
+    } else {
+      out[key] = null;
+      out[rKey] = censorAt;
     }
   }
   out.daysToRecover = out.timeToRecovery95;
   return out;
+}
+
+/**
+ * Kaplan–Meier median time-to-recovery across replicates (event = sustained recovery; censored otherwise).
+ */
+function kaplanMeierMedianRecovery(records, { timeKey = 'recoveryTime95', censoredKey = 'restrictedRecoveryTime95' } = {}) {
+  const obs = records
+    .map((r) => {
+      const recovered = r.recovered95 === 1 || r.recovered95 === true;
+      const t = recovered ? r[timeKey] : r[censoredKey];
+      return typeof t === 'number' && Number.isFinite(t) ? { t, event: recovered ? 1 : 0 } : null;
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.t - b.t);
+  if (!obs.length) return null;
+  const n = obs.length;
+  let surv = 1;
+  for (let i = 0; i < n; i += 1) {
+    const ti = obs[i].t;
+    let di = 0;
+    let ni = 0;
+    for (let j = i; j < n && obs[j].t === ti; j += 1) {
+      ni += 1;
+      if (obs[j].event) di += 1;
+    }
+    if (ni > 0) surv *= (1 - di / (n - i));
+    if (surv <= 0.5 - 1e-12) return ti;
+    i += ni - 1;
+  }
+  return null;
+}
+
+/** Restricted mean time to recovery (RMTR): integrate KM survival up to max follow-up). */
+function restrictedMeanRecovery(records, { censoredKey = 'restrictedRecoveryTime95' } = {}) {
+  const times = records.map((r) => r[censoredKey]).filter((t) => typeof t === 'number' && Number.isFinite(t));
+  if (!times.length) return null;
+  const tMax = Math.max(...times);
+  const obs = records
+    .map((r) => {
+      const recovered = r.recovered95 === 1 || r.recovered95 === true;
+      const t = recovered ? r.recoveryTime95 : r[censoredKey];
+      return typeof t === 'number' && Number.isFinite(t) ? { t, event: recovered ? 1 : 0 } : null;
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.t - b.t);
+  if (!obs.length) return null;
+  let surv = 1;
+  let rmtr = 0;
+  let prev = 0;
+  for (let i = 0; i < obs.length; i += 1) {
+    const ti = obs[i].t;
+    let di = 0;
+    let ni = 0;
+    for (let j = i; j < obs.length && obs[j].t === ti; j += 1) {
+      ni += 1;
+      if (obs[j].event) di += 1;
+    }
+    const dt = Math.min(ti, tMax) - prev;
+    if (dt > 0) rmtr += surv * dt;
+    prev = ti;
+    if (ni > 0) surv *= (1 - di / (obs.length - i));
+    i += ni - 1;
+  }
+  if (prev < tMax) rmtr += surv * (tMax - prev);
+  return rmtr;
 }
 
 function mean(vals) {
@@ -399,9 +493,8 @@ const PRIMARY_METRICS = [
   { key: 'horizonEndUnmetRate', better: 'lower' },
   { key: 'meanWaitingTime', better: 'lower' },
   { key: 'p95WaitingTime', better: 'lower' },
-  { key: 'recoveryTime90', better: 'lower' },
   { key: 'recoveryTime95', better: 'lower' },
-  { key: 'recoveryTime99', better: 'lower' },
+  { key: 'restrictedRecoveryTime95', better: 'lower' },
   { key: 'serviceLossAUC', better: 'lower' },
   { key: 'totalCost', better: 'lower' },
 ];
@@ -601,5 +694,8 @@ module.exports = {
   SUMMARY_KEYS,
   BOOTSTRAP_SEED,
   RECOVERY_LEVELS,
+  CONSECUTIVE_RECOVERY_DAYS,
+  kaplanMeierMedianRecovery,
+  restrictedMeanRecovery,
   PRIORITY_WEIGHT,
 };

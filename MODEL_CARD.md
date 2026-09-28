@@ -2,6 +2,7 @@
 
 | | |
 |---|---|
+| Software release | **1.0.0-research** (tag `v1.0.0-research`; frozen paper results commit separate from source) |
 | Model | Daily simulation of a synthetic supplier → warehouse → community pharmacy network (`simulation-engine-v4.0.0`) and the allocation policies it evaluates |
 | Proposed method | **ERRRA allocation heuristic** (Equity-constrained Resilient Rolling-horizon Allocation, id `equity-constrained-rolling-horizon`, v2.0.0) |
 | Type | Deterministic, rule-based operations-research heuristic. Not machine learning, not AI, not an optimizer; no trained parameters |

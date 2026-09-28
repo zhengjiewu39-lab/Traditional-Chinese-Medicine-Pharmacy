@@ -16,7 +16,7 @@ export default function ApiStatusBanner() {
       .then((res) => {
         const routeVer = res.data?.simulationRouteVersion ?? 1;
         setDown(
-          !res.data?.features?.includes('supply-simulation-v1')
+          !res.data?.features?.includes('supply-simulation-research')
           || routeVer < 2
         );
       })

@@ -3,16 +3,31 @@ const bcrypt = require('bcryptjs');
 
 const IS_PROD = process.env.NODE_ENV === 'production';
 const ALLOW_DEMO = !IS_PROD || process.env.ALLOW_DEMO_AUTH === 'true';
-const JWT_SECRET = process.env.TCM_JWT_SECRET || (ALLOW_DEMO ? 'tcm-jwt-dev-only' : null);
+const FORBIDDEN_SECRETS = new Set(['change-me-in-production', 'tcm-jwt-dev-only', '']);
+const JWT_SECRET = process.env.TCM_JWT_SECRET || (ALLOW_DEMO && !IS_PROD ? 'tcm-jwt-dev-only' : null);
 const TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
 const BCRYPT_COST = 10;
 const JWT_HEADER = { alg: 'HS256', typ: 'JWT' };
 const PROFILE_FIELDS = ['name', 'email', 'phone', 'title'];
 
-if (IS_PROD && !process.env.TCM_JWT_SECRET) {
-  console.error('[security] TCM_JWT_SECRET is required when NODE_ENV=production');
-  process.exit(1);
+function assertProductionAuthConfig() {
+  if (!IS_PROD) return;
+  const secret = process.env.TCM_JWT_SECRET;
+  if (!secret || FORBIDDEN_SECRETS.has(secret)) {
+    console.error('[security] TCM_JWT_SECRET must be set to a strong unique value in production');
+    process.exit(1);
+  }
+  if (process.env.ALLOW_DEMO_AUTH === 'true') {
+    console.warn('[security] ALLOW_DEMO_AUTH=true in production — demo accounts are enabled');
+  }
+  const users = loadUsers();
+  if (!Object.keys(users).length && process.env.ALLOW_DEMO_AUTH !== 'true') {
+    console.error('[security] no accounts configured: set TCM_USERS_JSON or ALLOW_DEMO_AUTH=true');
+    process.exit(1);
+  }
 }
+
+assertProductionAuthConfig();
 
 let usersCache = null;
 
@@ -139,6 +154,7 @@ module.exports = {
   getUsers,
   isPublicPath,
   sanitizeProfileUpdate,
+  assertProductionAuthConfig,
   PROFILE_FIELDS,
   ALLOW_DEMO,
   IS_PROD,

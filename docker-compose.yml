@@ -8,8 +8,8 @@ services:
     environment:
       - PORT=3002
       - NODE_ENV=production
-      - TCM_JWT_SECRET=${TCM_JWT_SECRET:-change-me-in-production}
-      - ALLOW_DEMO_AUTH=${ALLOW_DEMO_AUTH:-true}
+      - TCM_JWT_SECRET=${TCM_JWT_SECRET:?Set TCM_JWT_SECRET in .env for production}
+      - ALLOW_DEMO_AUTH=${ALLOW_DEMO_AUTH:-false}
       - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:3000}
       - TCM_RULES_PATH=/app/server/config/tcm-rules.json
     restart: unless-stopped

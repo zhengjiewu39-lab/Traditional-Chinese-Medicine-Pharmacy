@@ -17,7 +17,7 @@
   - no supplier contracts, allocation among warehouses, price dynamics or tier-2 suppliers
   - the warehouse upstream rule is the same base-stock rule for every policy; policies decide only the warehouse → pharmacy flow
 - **No expiry, batches or lots;** `expiredOrLost` is 0 in the audit.
-- **Lateral transfers** are limited to pharmacies of the same region type and to essential SKUs, with a stylized cost and a daily capacity.
+- **Warehouse assignment and lateral transfers** use a stratified synthetic network (region types, warehouse links), not real geography, road distances or nearest-neighbour adjacency. Lateral transfers are limited to pharmacies within the same synthetic regional stratum and to essential SKUs, with a stylized cost and a daily capacity.
 - **Unshipped requests** are not queued; they are re-planned the next day from the updated inventory position.
 
 ## Evaluation
@@ -31,7 +31,7 @@
 - **Mechanism versus rule.** Supplier redundancy has by far the largest ablation effect, but it is a network mechanism available to every policy. The vulnerability tilt (β = 0.05) has no measurable effect in four of six ablation scenarios. Lateral transfers change worst-region fill by ≤ 0.5 pp.
 - **ERRRA stage 1** is exact only for a single shared capacity; with two warehouse capacities it is exact in 86–91% of instances (max gap 0.15–0.20). Stage 2 is greedy.
 - **ERRRA parameters** (φ, δ, β, …) were fixed a priori and not tuned. LHS varies φ only within 0.8–1.0; its PRCC is not significant.
-- **Statistics.** No multiplicity correction is applied across scenarios, pairs and metrics. With 100 seeds, practically negligible differences can have CIs excluding 0.
+- **Statistics.** Only one comparison (ERRRA vs cost-only on worst-region essential fill in M5) is pre-registered as primary inference. All other cells are exploratory; Holm adjustment applies to exploratory pairs only. Sub-1 pp gains can still have CIs excluding 0 and are flagged as below the minimum important difference (1 pp).
 - **Scenario matrix revision.** The v2.0.0 base warehouse buffer (10 days) was set after observing, on non-reporting seeds, that a 20-day buffer absorbed single-mechanism shocks completely. The same buffer applies to every policy, and the rationale is recorded in the matrix revision log.
 - **No face validation.** Review of the model structure by pharmacy-logistics experts is planned but has not been conducted.
 

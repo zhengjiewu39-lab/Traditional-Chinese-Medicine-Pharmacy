@@ -2,6 +2,7 @@ const { createRng } = require('./seededRandom');
 const { REGION_TYPES } = require('./scenarioSchema');
 const { computeEventFactors } = require('./eventUtils');
 const { buildSuppliers, drawReliability, supplierDayStatus } = require('./supplyNetwork');
+const { assignPharmacyPopulations } = require('./populationAllocation');
 
 const PRIORITY_DEMAND_SCALE = { essential: 1.2, 'chronic-care': 1.0, routine: 0.75 };
 
@@ -28,8 +29,13 @@ function baselineDailyDemand(pharmacy, drug, scenario) {
   return (pharmacy.population / 1000) * reg.baseDemand * (PRIORITY_DEMAND_SCALE[drug.priority] ?? 1);
 }
 
+function networkSeedOf(scenario) {
+  return scenario.networkSeed != null ? scenario.networkSeed : scenario.randomSeed;
+}
+
 function generateScenarioInstance(scenario) {
   const rng = createRng(scenario.randomSeed);
+  const networkRng = createRng(networkSeedOf(scenario));
   const drugs = scenario.drugs.map((d) => ({ ...d }));
   const logistics = scenario.logistics || {};
   const capacityMultiplier = logistics.capacityMultiplier ?? 1;
@@ -60,19 +66,18 @@ function generateScenarioInstance(scenario) {
   for (let p = 0; p < scenario.pharmacyCount; p += 1) {
     const regionType = regionTypes[p];
     const reg = scenario.regions[regionType];
-    const nInRegion = phCountByRegion[regionType] || 1;
-    const popShare = reg.population / nInRegion;
     pharmacies.push({
       id: `PH${p + 1}`,
       index: p,
       regionType,
-      population: Math.round(popShare * (0.95 + rng.next() * 0.1)),
+      population: 0,
       warehouseId: warehouses[p % warehouses.length].id,
       vulnerabilityWeight: reg.vulnerabilityWeight,
       transitDaysBase: reg.transitDays,
       onHand: {},
     });
   }
+  assignPharmacyPopulations(pharmacies, scenario, networkRng);
 
   const whStockMult = logistics.warehouseInitialStockMultiplier ?? 15;
   const phStockMult = logistics.pharmacyInitialStockMultiplier ?? 1;
@@ -146,6 +151,7 @@ function generateScenarioInstance(scenario) {
       synthetic: true,
       scenarioId: scenario.id,
       randomSeed: scenario.randomSeed,
+      networkSeed: networkSeedOf(scenario),
     },
     scenario,
     warehouses,
@@ -162,5 +168,6 @@ module.exports = {
   computeEventFactors,
   assignPharmacyRegions,
   baselineDailyDemand,
+  networkSeedOf,
   PRIORITY_DEMAND_SCALE,
 };

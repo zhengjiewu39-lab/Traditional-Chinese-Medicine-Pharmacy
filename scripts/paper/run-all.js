@@ -54,11 +54,11 @@ const mean = (xs) => xs.reduce((s, x) => s + x, 0) / xs.length;
 
 function stage(name, fn) {
   if (!STAGES.includes(name)) return;
-  const t0 = Date.now();
+  const t0 = process.hrtime.bigint();
   const a0 = L.auditCount();
   console.log(`\n=== ${name} ===`);
   fn();
-  timings[name] = (Date.now() - t0) / 1000;
+  timings[name] = Number(process.hrtime.bigint() - t0) / 1e9;
   auditByStage[name] = L.auditCount() - a0;
   console.log(`${name} done in ${timings[name].toFixed(1)}s`);
 }
@@ -208,8 +208,14 @@ function runMain() {
         row[`${m.key}_ci95Low`] = s?.ci95Low;
         row[`${m.key}_ci95High`] = s?.ci95High;
       }
+      const rec90 = recs.filter((r) => r.recovered90 != null);
       const rec95 = recs.filter((r) => r.recovered95 != null);
+      const rec99 = recs.filter((r) => r.recovered99 != null);
+      row.recovered90Share = rec90.length ? mean(rec90.map((r) => r.recovered90)) : null;
       row.recovered95Share = rec95.length ? mean(rec95.map((r) => r.recovered95)) : null;
+      row.recovered99Share = rec99.length ? mean(rec99.map((r) => r.recovered99)) : null;
+      row.kaplanMeierMedianRecovery95 = rec95.length ? L.kaplanMeierMedianRecovery(recs) : null;
+      row.restrictedMeanRecovery95 = rec95.length ? L.restrictedMeanRecovery(recs) : null;
       summaryRows.push(row);
       points.push({ policy: p, cost: row.totalCost_mean, worst: row.worstRegionEssentialFillRate_mean, unmet: row.cumulativeUnmetDemand_mean });
 
@@ -217,10 +223,12 @@ function runMain() {
       const dWorst = L.pairedDiff(recs, cf, 'worstRegionEssentialFillRate');
       const dCost = L.pairedDiff(recs, cf, 'totalCost');
       const pp = dWorst.mean * 100;
-      const gain = dWorst.ci95Low > 0;
+      const gain = dWorst.ci95Low > 0 && pp >= L.MID_WORST_REGION_FILL_PP;
+      const gainExploratory = dWorst.ci95Low > 0 && pp < L.MID_WORST_REGION_FILL_PP;
       const extra = dCost.ci95Low > 0;
       let status = 'ok';
       if (p === CF) status = 'reference';
+      else if (gainExploratory) status = 'gain_below_mid';
       else if (!gain) status = dWorst.ci95High < 0 ? 'worst_region_loss' : 'gain_not_significant';
       else if (!extra) status = dCost.ci95High < 0 ? 'gain_at_lower_cost' : 'extra_cost_not_significant';
       poeRows.push({
@@ -244,9 +252,11 @@ function runMain() {
         for (const m of L.METRICS) {
           const d = L.pairedDiff(recsOf(sc.key, a), recsOf(sc.key, b), m.key);
           if (d) {
+            const inference = L.isPrimaryComparison(sc.key, a, b, m.key) ? 'primary' : 'exploratory';
             pairedRows.push({
-              scenario: sc.key, policyA: a, policyB: b, metric: m.key, better: m.better,
+              scenario: sc.key, policyA: a, policyB: b, metric: m.key, better: m.better, inference,
               meanDiff: d.mean, sd: d.std, ci95Low: d.ci95Low, ci95High: d.ci95High, aHigher: d.wins, aLower: d.losses, ties: d.ties, n: d.n,
+              pRaw: L.bootstrapPValue(d),
             });
           }
         }
@@ -266,6 +276,9 @@ function runMain() {
   }
 
   L.writeCsv(path.join(OUT, 'main/summary.csv'), summaryRows);
+  const exploratory = pairedRows.filter((r) => r.inference === 'exploratory');
+  const holm = L.holmAdjust(exploratory.map((r, i) => ({ id: i, pRaw: r.pRaw })));
+  exploratory.forEach((r, i) => { r.pHolm = holm.get(i); });
   L.writeCsv(path.join(OUT, 'main/paired-all-pairs.csv'), pairedRows);
   L.writeCsv(path.join(OUT, 'main/price-of-equity.csv'), poeRows);
   L.writeCsv(path.join(OUT, 'main/pareto.csv'), paretoRows);
@@ -282,7 +295,7 @@ function runMain() {
   const summaryOf = (s, p) => summaryRows.find((r) => r.scenario === s && r.policy === p);
   const msc = (r, m) => (r[`${m.key}_mean`] == null ? 'n/a' : `${L.fmt(r[`${m.key}_mean`], m.digits)} (${L.fmt(r[`${m.key}_sd`], m.digits)}) [${L.fmt(r[`${m.key}_ci95Low`], m.digits)}, ${L.fmt(r[`${m.key}_ci95High`], m.digits)}]`);
   const defaultTable = L.METRICS.map((m) => [`${m.label} (${m.better} better; ${m.unit})`, ...matrix.policies.map((p) => msc(summaryOf(DEFAULT_KEY, p), m))]);
-  const keyMetrics = ['worstRegionEssentialFillRate', 'regionalServiceGap', 'cumulativeUnmetDemand', 'p95WaitingTime', 'recoveryTime95', 'totalCost'].map((k2) => L.METRICS.find((m) => m.key === k2));
+  const keyMetrics = ['worstRegionEssentialFillRate', 'regionalServiceGap', 'cumulativeUnmetDemand', 'p95WaitingTime', 'restrictedRecoveryTime95', 'totalCost'].map((k2) => L.METRICS.find((m) => m.key === k2));
   const cell = (r, m) => (r[`${m.key}_mean`] == null ? 'n/a' : `${L.fmt(r[`${m.key}_mean`], m.digits)} ± ${L.fmt((r[`${m.key}_ci95High`] - r[`${m.key}_ci95Low`]) / 2, m.digits)}`);
   const matrixRows = summaryRows.map((r) => [r.scenario, L.POLICY_LABEL[r.policy], ...keyMetrics.map((m) => cell(r, m))]);
   const pairText = (s, a, b, key) => {
@@ -293,8 +306,11 @@ function runMain() {
     const m = L.METRICS.find((x) => x.key === key);
     const lo = sign > 0 ? d.ci95Low : -d.ci95High;
     const hi = sign > 0 ? d.ci95High : -d.ci95Low;
-    const excl = lo > 0 || hi < 0 ? '*' : '';
-    return `${L.fmt(sign * d.meanDiff, m.digits)} [${L.fmt(lo, m.digits)}, ${L.fmt(hi, m.digits)}]${excl}`;
+    const excl = lo > 0 || hi < 0;
+    let tag = '';
+    if (d.inference === 'primary' && excl) tag = '*';
+    else if (d.inference === 'exploratory' && d.pHolm != null && d.pHolm <= 0.05) tag = '†';
+    return `${L.fmt(sign * d.meanDiff, m.digits)} [${L.fmt(lo, m.digits)}, ${L.fmt(hi, m.digits)}]${tag}`;
   };
   const cmpMetrics = ['worstRegionEssentialFillRate', 'regionalServiceGap', 'cumulativeUnmetDemand', 'p95WaitingTime', 'totalCost'];
   const cmpBlocks = [[ERRRA, CF], [ERRRA, EQ], [ERRRA, 'reorder-point'], [EQ, CF]].map(([a, b]) => [
@@ -314,7 +330,7 @@ function runMain() {
   L.writeText(path.join(TABLES, 'main.md'), [
     '# Main results (synthetic scenarios; frozen matrix; test seeds)',
     '',
-    `All values from ${SEEDS.test.length} common-random-number test seeds per cell. Paired differences use a percentile bootstrap over seeds (${2000} resamples, fixed bootstrap seed ${BOOTSTRAP_SEED}); * marks a 95% CI excluding 0. Recovery times are right-censored at the horizon. Results describe computational experiments under synthetic scenario assumptions (合成场景假设) and cannot be read as effects of real policies.`,
+    `All values from ${SEEDS.test.length} common-random-number test seeds per cell. Paired differences use a percentile bootstrap over seeds (${2000} resamples, fixed bootstrap seed ${BOOTSTRAP_SEED}). **Primary inference** (pre-registered): scenario ${L.PRIMARY_SCENARIO}, ${L.POLICY_LABEL[L.PRIMARY_COMPARISON.policyA]} vs ${L.POLICY_LABEL[L.PRIMARY_COMPARISON.policyB]}, outcome ${L.PRIMARY_OUTCOME}; * marks a 95% CI excluding 0. All other policy × scenario × metric cells are **exploratory**; † marks Holm-adjusted p ≤ 0.05 among exploratory pairs only. Minimum important difference for worst-region essential fill: ${L.MID_WORST_REGION_FILL_PP} pp. Recovery: sustained 7-day smoothed essential fill at p·baseline starting only after shock end; null if censored; restricted recovery time uses the horizon cap for censored runs (not “recovered on day 60”). Results describe synthetic scenario assumptions (合成场景假设) only.`,
     '',
     `## Default scenario ${DEFAULT_KEY}: mean (SD) [95% CI]`,
     '',
@@ -729,7 +745,7 @@ function runDocs() {
 }
 
 // ---------------------------------------------------------------- run
-const t0 = Date.now();
+const t0 = process.hrtime.bigint();
 if (!stageArg || STAGES.includes('docs')) stage('docs', runDocs);
 stage('calibrate', calibrate);
 stage('main', runMain);
@@ -741,16 +757,28 @@ stage('crossModel', runCrossModel);
 
 const manifestPath = path.join(OUT, 'manifest.json');
 const prev = fs.existsSync(manifestPath) ? JSON.parse(fs.readFileSync(manifestPath, 'utf8')) : {};
+const { RELEASE_VERSION, ERRA_HEURISTIC_VERSION } = require(path.join(L.ROOT, 'server/simulation/releaseVersions'));
+
 L.writeJson(manifestPath, {
   synthetic: true,
   disclaimer: 'All data are synthetic. Conclusions hold only within the predefined simulation scenarios (在预定义仿真场景中) and must not be read as real-world policy effects.',
+  releaseVersion: RELEASE_VERSION,
   engineVersion: L.ENGINE_VERSION,
   matrixVersion: matrix.matrixVersion,
+  errraHeuristicVersion: ERRA_HEURISTIC_VERSION,
+  primaryAnalysis: {
+    scenario: L.PRIMARY_SCENARIO,
+    comparison: L.PRIMARY_COMPARISON,
+    outcome: L.PRIMARY_OUTCOME,
+    keySecondaryOutcomes: L.KEY_SECONDARY_OUTCOMES,
+    midWorstRegionFillPP: L.MID_WORST_REGION_FILL_PP,
+  },
   matrixSha256: L.sha256File(L.MATRIX_PATH),
   seedsSha256: L.sha256File(L.SEEDS_PATH),
   gitCommit: getGitCommitHash(),
   gitCommitSource: getCommitSource(),
   node: process.version,
+  nodeMajor: Number(process.versions.node.split('.')[0]),
   quick: QUICK,
   seedsUsed: { calibration: SEEDS.calibration.length, test: SEEDS.test.length, sensitivity: SEEDS.sensitivity.length },
   bootstrap: { resamples: 2000, seed: BOOTSTRAP_SEED },
@@ -763,4 +791,4 @@ L.writeJson(manifestPath, {
   stageSeconds: { ...(prev.stageSeconds || {}), ...timings },
   generatedAt: new Date().toISOString(),
 });
-console.log(`\nAll requested stages finished in ${((Date.now() - t0) / 1000).toFixed(1)}s → ${path.relative(L.ROOT, OUT)}; ${L.auditCount()} runs passed the inventory audit`);
+console.log(`\nAll requested stages finished in ${(Number(process.hrtime.bigint() - t0) / 1e9).toFixed(1)}s → ${path.relative(L.ROOT, OUT)}; ${L.auditCount()} runs passed the inventory audit`);

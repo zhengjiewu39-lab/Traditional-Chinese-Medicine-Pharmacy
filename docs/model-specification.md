@@ -95,7 +95,7 @@ Defaults: \(\text{capacityInStandardUnits}_w = \max(\text{initial total}, \text{
 
 ## 7. Lateral emergency transfers [`lateralTransfers.js`]
 
-These run between pharmacies of the same region type, for essential SKUs only, once per day before replenishment. For a line with warehouse lag \(L_i\) and \(\tau_i = L_i + 1\), let \(\mu_i = \hat\mu_i\tau_i\) and \(\sigma_i = \hat\sigma_i\sqrt{\tau_i}\), and \(ES_i(x) = E[(D - x)^+]\) with \(D \sim N(\mu_i, \sigma_i^2)\).
+These run between pharmacies within the same synthetic regional stratum (region type), not via a geographic adjacency graph. Essential SKUs only; once per day before replenishment. For a line with warehouse lag \(L_i\) and \(\tau_i = L_i + 1\), let \(\mu_i = \hat\mu_i\tau_i\) and \(\sigma_i = \hat\sigma_i\sqrt{\tau_i}\), and \(ES_i(x) = E[(D - x)^+]\) with \(D \sim N(\mu_i, \sigma_i^2)\).
 
 - **Recipient:** \(IP_i < \mu_i\), and it has not donated this SKU within `cooldownDays` (7).
 - **Donor:** no backlog, not a recipient today, has not received this SKU within `cooldownDays`, and surplus \(\lfloor I_j - (\mu_j + z_d\sigma_j)\rfloor > 0\) with \(z_d = 1.65\). The donor with the largest surplus is chosen.

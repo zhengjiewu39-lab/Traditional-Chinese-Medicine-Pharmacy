@@ -75,12 +75,26 @@ The method is LHS + PRCC only; no second global method is run.
 
 ## 5. Statistics
 
+### Pre-registered primary analysis
+
+| Item | Value |
+|---|---|
+| Primary scenario | **M5-compound** |
+| Primary comparison | **ERRRA** (`equity-constrained-rolling-horizon`) **vs cost-only** (`cost-first`) |
+| Primary outcome | **`worstRegionEssentialFillRate`** |
+| Key secondary outcomes | `totalCost`, `cumulativeUnmetDemand`, `p95WaitingTime` |
+| Minimum important difference (worst-region fill) | **1.0 percentage point** |
+
+Only this comparison on the primary outcome in M5 is labelled **primary inference** in `tables/main.md` (* = 95% bootstrap CI excludes 0). Gains below 1 pp with a CI excluding 0 are reported as exploratory / below MID.
+
+### Exploratory comparisons
+
 - **Per cell:** mean, SD and a 95% t-interval over the 100 test seeds.
-- **Policy comparisons:** paired differences over common seeds (A − B, same seed) for every pair of the five policies and all 15 primary metrics. The 95% CI is a paired percentile bootstrap with 2000 resamples and fixed bootstrap seed 20240901. Counts of seeds where A is higher, lower or tied are also reported. A difference is called significant only when its 95% CI excludes 0; no multiplicity correction is applied, and the tables state this.
+- **All other policy pairs, scenarios and metrics** are **exploratory**. Paired differences use the same bootstrap (2000 resamples, seed 20240901). Holm step-down adjusted p-values are computed across exploratory pairs only († in tables when adjusted p ≤ 0.05). Effect sizes and 95% CIs are always reported.
 - **Price of Equity** relative to cost-only: \(\text{PoE} = \overline{(C_A - C_{\text{cost-only}})/C_{\text{cost-only}}}\) (paired per seed, bootstrap CI).
 - **Cost per percentage point** of worst-region essential fill gained: \(\Delta C / (100\,\Delta\text{worst})\), reported only when both the gain and the extra cost are positive.
 - **Pareto efficiency** on (mean cost ↓, mean worst-region essential fill ↑, mean cumulative unmet ↓) within a scenario.
-- **Recovery times** are right-censored at the horizon (60 days after shock end). The share of runs that recovered to 95% is reported with them.
+- **Recovery times:** sustained 7-day smoothed essential fill at \(p \cdot B\) starting only after shock end; `timeToRecovery{p}` is null if censored; `restrictedRecoveryTime{p}` uses the horizon cap for censored runs. Report `recovered{p}Share`, Kaplan–Meier median and RMTR where applicable.
 
 ## 6. Integrity rules
 

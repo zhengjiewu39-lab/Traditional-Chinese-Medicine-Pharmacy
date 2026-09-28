@@ -27,13 +27,17 @@
 
 **Reproduce.**
 
+Requires **Node 20** (see `.nvmrc` and `package.json` `engines`).
+
 ```bash
 cd chinese-medicine-pharmacy
 npm ci
 npm run simulation:test   # unit, hand-calculated, extreme, conservation, cross-model tests
-npm run paper:all         # all tables and figures → paper/tables, paper/figures (about 6 min, 29,500 audited runs)
+SOURCE_COMMIT=<frozen-source-sha> npm run paper:all   # full tables (about 6 min, ~29,500 audited runs)
 npm run paper:quick       # fast smoke run (used in CI)
 ```
+
+**Production (Docker):** set a strong `TCM_JWT_SECRET` and `TCM_USERS_JSON` (bcrypt `passwordHash`); leave `ALLOW_DEMO_AUTH=false` (default). Demo accounts work only when `ALLOW_DEMO_AUTH=true` (local dev).
 
 Main outputs:
 - `paper/tables/main.md`, `ablation.md`, `sensitivity.md`, `stress.md`, `ci-stability.md`, `cross-model.md`, `calibration.md`, `scenarios.md`, `parameters.md`

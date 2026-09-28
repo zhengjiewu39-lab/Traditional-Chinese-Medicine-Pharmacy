@@ -5,9 +5,12 @@ const base = process.env.API_BASE || 'http://localhost:3002/api';
 async function main() {
   const health = await fetch(`${base.replace(/\/api$/, '')}/api/health`.replace('//api', '/api'));
   const healthJson = await health.json();
-  if (!healthJson.features?.includes('supply-simulation-v1')) {
+  if (!healthJson.features?.includes('supply-simulation-research')) {
     console.error('FAIL: Old server — restart with: npm run restart:server');
     process.exit(1);
+  }
+  if (healthJson.release !== '1.0.0-research') {
+    console.warn(`WARN: release ${healthJson.release} (expected 1.0.0-research)`);
   }
   if ((healthJson.simulationRouteVersion ?? 1) < 2) {
     console.error('FAIL: Simulation API v1 only (missing presets/run-group). Run: npm run restart:server');

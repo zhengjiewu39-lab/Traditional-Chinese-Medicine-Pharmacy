@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.0.0-research — 2026-09-28 (research release patch)
+
+Software release tag aligned with frozen paper results (`v1.0.0-research`). Simulation engine remains **4.0.0**; scenario matrix **2.0.0**; ERRRA heuristic **2.0.0**.
+
+### Correctness and inference
+- **Recovery metrics:** sustained 7-day smoothed essential fill only after shock end; right-censored `timeToRecovery*`; `restrictedRecoveryTime*` for horizon-capped summaries; `recovered*Share`, Kaplan–Meier median and RMTR in paper outputs.
+- **Population:** regional pharmacy populations conserved exactly (±5% jitter, largest-remainder integers); optional `networkSeed` separate from `randomSeed`.
+- **Statistics:** pre-registered primary analysis (M5, ERRRA vs cost-only, worst-region essential fill); exploratory cells with Holm adjustment; 1 pp minimum important difference for worst-region fill.
+
+### Deployment and versions
+- Production Docker defaults: `ALLOW_DEMO_AUTH=false`, required `TCM_JWT_SECRET`, `npm ci --omit=dev` only.
+- `/api/health` reports `release`, `simulationEngine`, `scenarioMatrix`, `errraHeuristic`.
+- Node **20** (`.nvmrc`, `engines`, CI, Docker); pipeline `stageSeconds` use monotonic clock.
+- Removed fake change-password success; removed `DANGEROUSLY_DISABLE_HOST_CHECK` from dev env.
+
 ## 4.0.0 — 2026-09-28 (engine v4, matrix v2.0.0, research-quality revision)
 
 The full report is in [FINAL_VALIDATION_REPORT.md](FINAL_VALIDATION_REPORT.md). All data remain synthetic.

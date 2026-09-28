@@ -9,7 +9,9 @@ const crypto = require('crypto');
 
 const ROOT = path.join(__dirname, '../..');
 const { runSimulation } = require(path.join(ROOT, 'server/simulation/simulationEngine'));
-const { stats, pairedBootstrap } = require(path.join(ROOT, 'server/simulation/metricsEngine'));
+const {
+  stats, pairedBootstrap, kaplanMeierMedianRecovery, restrictedMeanRecovery,
+} = require(path.join(ROOT, 'server/simulation/metricsEngine'));
 const { ENGINE_VERSION } = require(path.join(ROOT, 'server/simulation/simulationConstants'));
 
 const MATRIX_PATH = path.join(ROOT, 'paper/config/scenario-matrix.json');
@@ -42,10 +44,17 @@ const POLICY_LABEL = {
   'errra-no-supplier-redundancy': 'ERRRA − supplier redundancy',
 };
 
-/** Recovery times are right-censored at (horizon − disruption end); see docs/metrics.md. */
-function recoveryValue(res, key, censorAt) {
-  const v = res?.[key];
-  return v == null ? censorAt : v;
+/** Pre-registered primary analysis (see docs/experiment-protocol.md). */
+const PRIMARY_SCENARIO = 'M5-compound';
+const PRIMARY_COMPARISON = { policyA: 'equity-constrained-rolling-horizon', policyB: 'cost-first' };
+const PRIMARY_OUTCOME = 'worstRegionEssentialFillRate';
+const KEY_SECONDARY_OUTCOMES = ['totalCost', 'cumulativeUnmetDemand', 'p95WaitingTime'];
+const MID_WORST_REGION_FILL_PP = 1.0;
+
+function isPrimaryComparison(scenario, policyA, policyB, metric) {
+  const policies = [policyA, policyB].sort();
+  const primary = [PRIMARY_COMPARISON.policyA, PRIMARY_COMPARISON.policyB].sort();
+  return scenario === PRIMARY_SCENARIO && policies[0] === primary[0] && policies[1] === primary[1] && metric === PRIMARY_OUTCOME;
 }
 
 let auditedRuns = 0;
@@ -57,7 +66,6 @@ function runRecord({ scenario, scenarioKey, policyId, seed, policyParams, keepDa
   const m = r.metrics;
   const res = m.resilience || {};
   const hasDisruption = res.firstDisruptionStartDay != null && res.lastDisruptionEndDay != null && res.lastDisruptionEndDay >= 0;
-  const censorAt = hasDisruption ? Math.max(0, scenario.simulationDays - res.lastDisruptionEndDay) : null;
   const rec = {
     scenario: scenarioKey,
     policy: policyId,
@@ -73,10 +81,15 @@ function runRecord({ scenario, scenarioKey, policyId, seed, policyParams, keepDa
     lateFilledRate: m.lateFilledRate,
     meanWaitingTime: m.meanWaitingTime,
     p95WaitingTime: m.p95WaitingTime,
-    recoveryTime90: hasDisruption ? recoveryValue(res, 'timeToRecovery90', censorAt) : null,
-    recoveryTime95: hasDisruption ? recoveryValue(res, 'timeToRecovery95', censorAt) : null,
-    recoveryTime99: hasDisruption ? recoveryValue(res, 'timeToRecovery99', censorAt) : null,
+    recoveryTime90: hasDisruption ? res.timeToRecovery90 : null,
+    recoveryTime95: hasDisruption ? res.timeToRecovery95 : null,
+    recoveryTime99: hasDisruption ? res.timeToRecovery99 : null,
+    restrictedRecoveryTime90: hasDisruption ? res.restrictedRecoveryTime90 : null,
+    restrictedRecoveryTime95: hasDisruption ? res.restrictedRecoveryTime95 : null,
+    restrictedRecoveryTime99: hasDisruption ? res.restrictedRecoveryTime99 : null,
+    recovered90: hasDisruption ? (res.recoveredWithinHorizon?.timeToRecovery90 ? 1 : 0) : null,
     recovered95: hasDisruption ? (res.recoveredWithinHorizon?.timeToRecovery95 ? 1 : 0) : null,
+    recovered99: hasDisruption ? (res.recoveredWithinHorizon?.timeToRecovery99 ? 1 : 0) : null,
     serviceLossAUC: m.serviceLossAUC,
     totalCost: m.totalCost,
     procurementCost: m.costs.procurement,
@@ -106,9 +119,8 @@ const METRICS = [
   { key: 'horizonEndUnmetRate', label: 'Horizon-end unmet rate', unit: 'fraction of demand', better: 'lower', digits: 4 },
   { key: 'meanWaitingTime', label: 'Mean waiting time', unit: 'days', better: 'lower', digits: 2 },
   { key: 'p95WaitingTime', label: 'P95 waiting time', unit: 'days', better: 'lower', digits: 1 },
-  { key: 'recoveryTime90', label: 'Recovery time 90%', unit: 'days after shock end (censored)', better: 'lower', digits: 1 },
-  { key: 'recoveryTime95', label: 'Recovery time 95%', unit: 'days after shock end (censored)', better: 'lower', digits: 1 },
-  { key: 'recoveryTime99', label: 'Recovery time 99%', unit: 'days after shock end (censored)', better: 'lower', digits: 1 },
+  { key: 'recoveryTime95', label: 'Recovery time 95% (observed)', unit: 'days after shock end; null if censored', better: 'lower', digits: 1 },
+  { key: 'restrictedRecoveryTime95', label: 'Restricted recovery time 95%', unit: 'days after shock end; horizon cap if censored', better: 'lower', digits: 1 },
   { key: 'serviceLossAUC', label: 'Service-loss AUC', unit: 'fill-rate·days', better: 'lower', digits: 2 },
   { key: 'totalCost', label: 'Total cost', unit: 'synthetic currency', better: 'lower', digits: 0 },
 ];
@@ -185,6 +197,24 @@ function progress(label, i, n) {
   if (i === n && process.stdout.isTTY) process.stdout.write('\n');
 }
 
+/** Holm step-down adjusted p-values from two-sided normal approximations of bootstrap CIs. */
+function holmAdjust(comparisons) {
+  const m = comparisons.length;
+  const sorted = [...comparisons].sort((a, b) => a.pRaw - b.pRaw);
+  const out = new Map();
+  for (let i = 0; i < sorted.length; i += 1) {
+    out.set(sorted[i].id, Math.min(1, sorted[i].pRaw * (m - i)));
+  }
+  return out;
+}
+
+function bootstrapPValue(d) {
+  if (!d || !d.n) return 1;
+  const z = Math.abs(d.mean) / (d.std / Math.sqrt(d.n) || 1e-12);
+  const { cdf } = require(path.join(ROOT, 'server/simulation/normalDist'));
+  return 2 * (1 - cdf(z));
+}
+
 module.exports = {
   ROOT,
   ENGINE_VERSION,
@@ -192,6 +222,16 @@ module.exports = {
   SEEDS_PATH,
   POLICY_LABEL,
   METRICS,
+  PRIMARY_SCENARIO,
+  PRIMARY_COMPARISON,
+  PRIMARY_OUTCOME,
+  KEY_SECONDARY_OUTCOMES,
+  MID_WORST_REGION_FILL_PP,
+  isPrimaryComparison,
+  holmAdjust,
+  bootstrapPValue,
+  kaplanMeierMedianRecovery,
+  restrictedMeanRecovery,
   loadMatrix,
   loadSeeds,
   sha256File,

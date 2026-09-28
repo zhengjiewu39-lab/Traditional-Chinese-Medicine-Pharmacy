@@ -7,7 +7,7 @@ All numbers come from `paper/tables/*.md` (100 common-random-number test seeds; 
 - **A difference counts only when its paired 95% CI excludes 0** (marked *). With 100 seeds, even differences that are tiny in practice (for example 0.001 in fill rate) can be significant. Always check the size of the effect as well.
 - **No multiplicity correction** is applied across the 9 scenarios × 10 pairs × 15 metrics. Treat isolated significant results with care.
 - **Direction:** every metric has a stated better direction. A positive Δ is an improvement only for "higher better" metrics.
-- **Recovery times** are censored at 60 days. A value of 60 means "did not recover", not "recovered on day 60".
+- **Recovery times:** `timeToRecovery95` is null when sustained post-shock recovery did not occur; `restrictedRecoveryTime95` uses the 60-day horizon cap for censored runs only. Never read a censored cap as “recovered on day 60”.
 - **Waiting times** include censored waits for units still backordered at the horizon, so they are lower bounds when horizon-end unmet > 0. That is the case only for fixed-allocation in M5 and in the harder scenarios.
 - **Same-day unfilled ≠ never served.** `cumulativeUnmetDemand` counts units not available on the day demanded. Most of them are filled later (late-filled); horizon-end unmet is the part never served within the horizon.
 
