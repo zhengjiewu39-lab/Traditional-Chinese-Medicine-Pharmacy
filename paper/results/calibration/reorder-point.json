@@ -50,23 +50,23 @@
       "z": 0.5,
       "qScale": 0.5,
       "perLine": null,
-      "uniformObjective": 278515.4990705882,
-      "perLineObjective": 279596.60894117644,
+      "uniformObjective": 278918.1149058823,
+      "perLineObjective": 280833.41976764705,
       "chosen": "uniform (per-line did not improve)",
       "atGridBoundary": false,
       "extensions": 0,
       "pointsEvaluated": 64,
       "perLineCandidate": {
         "D1|urban": {
-          "z": 0.5,
-          "qScale": 1
-        },
-        "D1|suburban": {
-          "z": 0.5,
+          "z": 1.65,
           "qScale": 0.5
         },
-        "D1|rural": {
+        "D1|suburban": {
           "z": 1,
+          "qScale": 1
+        },
+        "D1|rural": {
+          "z": 1.65,
           "qScale": 0.5
         },
         "D2|urban": {
@@ -78,7 +78,7 @@
           "qScale": 0.5
         },
         "D2|rural": {
-          "z": 1.65,
+          "z": 1,
           "qScale": 0.5
         },
         "D3|urban": {
@@ -94,7 +94,7 @@
           "qScale": 1
         },
         "D4|urban": {
-          "z": 0.5,
+          "z": 1.65,
           "qScale": 1
         },
         "D4|suburban": {
@@ -118,7 +118,7 @@
           "qScale": 0.5
         },
         "D6|urban": {
-          "z": 1,
+          "z": 0.5,
           "qScale": 1
         },
         "D6|suburban": {
@@ -130,7 +130,7 @@
           "qScale": 0.5
         },
         "D7|urban": {
-          "z": 0.5,
+          "z": 1,
           "qScale": 1
         },
         "D7|suburban": {
@@ -146,17 +146,17 @@
           "qScale": 1
         },
         "D8|suburban": {
-          "z": 1,
+          "z": 0.5,
           "qScale": 1
         },
         "D8|rural": {
           "z": 0.5,
-          "qScale": 1
+          "qScale": 0.5
         }
       }
     },
     "M2-demand-surge": {
-      "z": 1,
+      "z": 0.5,
       "qScale": 1,
       "perLine": {
         "D1|urban": {
@@ -164,11 +164,11 @@
           "qScale": 1
         },
         "D1|suburban": {
-          "z": 1,
+          "z": 1.65,
           "qScale": 1
         },
         "D1|rural": {
-          "z": 1.65,
+          "z": 2.5,
           "qScale": 1
         },
         "D2|urban": {
@@ -176,23 +176,23 @@
           "qScale": 1
         },
         "D2|suburban": {
-          "z": 1,
+          "z": 0.5,
           "qScale": 1
         },
         "D2|rural": {
-          "z": 2.5,
+          "z": 1.65,
           "qScale": 1
         },
         "D3|urban": {
-          "z": 1,
+          "z": 0.5,
           "qScale": 1
         },
         "D3|suburban": {
-          "z": 1,
+          "z": 0.5,
           "qScale": 1
         },
         "D3|rural": {
-          "z": 1.65,
+          "z": 1,
           "qScale": 1
         },
         "D4|urban": {
@@ -216,7 +216,7 @@
           "qScale": 1
         },
         "D5|rural": {
-          "z": 1,
+          "z": 2.5,
           "qScale": 1
         },
         "D6|urban": {
@@ -228,23 +228,23 @@
           "qScale": 1
         },
         "D6|rural": {
-          "z": 0.5,
+          "z": 1,
           "qScale": 1
         },
         "D7|urban": {
-          "z": 0.5,
-          "qScale": 2
+          "z": 1,
+          "qScale": 3
         },
         "D7|suburban": {
-          "z": 1,
+          "z": 0.5,
           "qScale": 1
         },
         "D7|rural": {
-          "z": 1.65,
+          "z": 1,
           "qScale": 1
         },
         "D8|urban": {
-          "z": 1,
+          "z": 0.5,
           "qScale": 1
         },
         "D8|suburban": {
@@ -252,12 +252,12 @@
           "qScale": 1
         },
         "D8|rural": {
-          "z": 1,
+          "z": 0.5,
           "qScale": 1
         }
       },
-      "uniformObjective": 326343.52001176466,
-      "perLineObjective": 325614.80462941166,
+      "uniformObjective": 328024.73546470597,
+      "perLineObjective": 326759.2031117647,
       "chosen": "per SKU × region",
       "atGridBoundary": false,
       "extensions": 0,
@@ -268,11 +268,11 @@
           "qScale": 1
         },
         "D1|suburban": {
-          "z": 1,
+          "z": 1.65,
           "qScale": 1
         },
         "D1|rural": {
-          "z": 1.65,
+          "z": 2.5,
           "qScale": 1
         },
         "D2|urban": {
@@ -280,23 +280,23 @@
           "qScale": 1
         },
         "D2|suburban": {
-          "z": 1,
+          "z": 0.5,
           "qScale": 1
         },
         "D2|rural": {
-          "z": 2.5,
+          "z": 1.65,
           "qScale": 1
         },
         "D3|urban": {
-          "z": 1,
+          "z": 0.5,
           "qScale": 1
         },
         "D3|suburban": {
-          "z": 1,
+          "z": 0.5,
           "qScale": 1
         },
         "D3|rural": {
-          "z": 1.65,
+          "z": 1,
           "qScale": 1
         },
         "D4|urban": {
@@ -320,7 +320,7 @@
           "qScale": 1
         },
         "D5|rural": {
-          "z": 1,
+          "z": 2.5,
           "qScale": 1
         },
         "D6|urban": {
@@ -332,23 +332,23 @@
           "qScale": 1
         },
         "D6|rural": {
-          "z": 0.5,
+          "z": 1,
           "qScale": 1
         },
         "D7|urban": {
-          "z": 0.5,
-          "qScale": 2
+          "z": 1,
+          "qScale": 3
         },
         "D7|suburban": {
-          "z": 1,
+          "z": 0.5,
           "qScale": 1
         },
         "D7|rural": {
-          "z": 1.65,
+          "z": 1,
           "qScale": 1
         },
         "D8|urban": {
-          "z": 1,
+          "z": 0.5,
           "qScale": 1
         },
         "D8|suburban": {
@@ -356,7 +356,7 @@
           "qScale": 1
         },
         "D8|rural": {
-          "z": 1,
+          "z": 0.5,
           "qScale": 1
         }
       }
@@ -367,11 +367,11 @@
       "perLine": {
         "D1|urban": {
           "z": 33.75,
-          "qScale": 3
+          "qScale": 2
         },
         "D1|suburban": {
-          "z": 7,
-          "qScale": 2
+          "z": 5,
+          "qScale": 3
         },
         "D1|rural": {
           "z": 1,
@@ -379,46 +379,46 @@
         },
         "D2|urban": {
           "z": 33.75,
-          "qScale": 2
+          "qScale": 8
         },
         "D2|suburban": {
-          "z": 1,
-          "qScale": 3
+          "z": 7,
+          "qScale": 2
         },
         "D2|rural": {
           "z": 2.5,
-          "qScale": 2
+          "qScale": 1
         },
         "D3|urban": {
           "z": 33.75,
-          "qScale": 2
+          "qScale": 1
         },
         "D3|suburban": {
           "z": 7,
           "qScale": 2
         },
         "D3|rural": {
-          "z": 1,
+          "z": 1.65,
           "qScale": 2
         },
         "D4|urban": {
           "z": 33.75,
-          "qScale": 2
+          "qScale": 1
         },
         "D4|suburban": {
-          "z": 5,
+          "z": 10,
           "qScale": 2
         },
         "D4|rural": {
-          "z": 1.65,
-          "qScale": 2
+          "z": 2.5,
+          "qScale": 1
         },
         "D5|urban": {
-          "z": 10,
-          "qScale": 5
+          "z": 15,
+          "qScale": 1
         },
         "D5|suburban": {
-          "z": 3.5,
+          "z": 2.5,
           "qScale": 2
         },
         "D5|rural": {
@@ -426,7 +426,7 @@
           "qScale": 1
         },
         "D6|urban": {
-          "z": 7,
+          "z": 15,
           "qScale": 2
         },
         "D6|suburban": {
@@ -438,32 +438,32 @@
           "qScale": 1
         },
         "D7|urban": {
-          "z": 15,
+          "z": 7,
           "qScale": 2
         },
         "D7|suburban": {
-          "z": 1.65,
-          "qScale": 2
-        },
-        "D7|rural": {
           "z": 1,
           "qScale": 2
         },
-        "D8|urban": {
-          "z": 10,
+        "D7|rural": {
+          "z": 0.5,
           "qScale": 2
         },
+        "D8|urban": {
+          "z": 7,
+          "qScale": 3
+        },
         "D8|suburban": {
-          "z": 0.5,
+          "z": 1.65,
           "qScale": 2
         },
         "D8|rural": {
           "z": 0.5,
-          "qScale": 2
+          "qScale": 1
         }
       },
-      "uniformObjective": 387905.49950588244,
-      "perLineObjective": 336263.7378617649,
+      "uniformObjective": 380302.4739705884,
+      "perLineObjective": 339913.98158235307,
       "chosen": "per SKU × region",
       "atGridBoundary": false,
       "extensions": 3,
@@ -471,11 +471,11 @@
       "perLineCandidate": {
         "D1|urban": {
           "z": 33.75,
-          "qScale": 3
+          "qScale": 2
         },
         "D1|suburban": {
-          "z": 7,
-          "qScale": 2
+          "z": 5,
+          "qScale": 3
         },
         "D1|rural": {
           "z": 1,
@@ -483,46 +483,46 @@
         },
         "D2|urban": {
           "z": 33.75,
-          "qScale": 2
+          "qScale": 8
         },
         "D2|suburban": {
-          "z": 1,
-          "qScale": 3
+          "z": 7,
+          "qScale": 2
         },
         "D2|rural": {
           "z": 2.5,
-          "qScale": 2
+          "qScale": 1
         },
         "D3|urban": {
           "z": 33.75,
-          "qScale": 2
+          "qScale": 1
         },
         "D3|suburban": {
           "z": 7,
           "qScale": 2
         },
         "D3|rural": {
-          "z": 1,
+          "z": 1.65,
           "qScale": 2
         },
         "D4|urban": {
           "z": 33.75,
-          "qScale": 2
+          "qScale": 1
         },
         "D4|suburban": {
-          "z": 5,
+          "z": 10,
           "qScale": 2
         },
         "D4|rural": {
-          "z": 1.65,
-          "qScale": 2
+          "z": 2.5,
+          "qScale": 1
         },
         "D5|urban": {
-          "z": 10,
-          "qScale": 5
+          "z": 15,
+          "qScale": 1
         },
         "D5|suburban": {
-          "z": 3.5,
+          "z": 2.5,
           "qScale": 2
         },
         "D5|rural": {
@@ -530,7 +530,7 @@
           "qScale": 1
         },
         "D6|urban": {
-          "z": 7,
+          "z": 15,
           "qScale": 2
         },
         "D6|suburban": {
@@ -542,28 +542,28 @@
           "qScale": 1
         },
         "D7|urban": {
-          "z": 15,
+          "z": 7,
           "qScale": 2
         },
         "D7|suburban": {
-          "z": 1.65,
-          "qScale": 2
-        },
-        "D7|rural": {
           "z": 1,
           "qScale": 2
         },
-        "D8|urban": {
-          "z": 10,
+        "D7|rural": {
+          "z": 0.5,
           "qScale": 2
         },
+        "D8|urban": {
+          "z": 7,
+          "qScale": 3
+        },
         "D8|suburban": {
-          "z": 0.5,
+          "z": 1.65,
           "qScale": 2
         },
         "D8|rural": {
           "z": 0.5,
-          "qScale": 2
+          "qScale": 1
         }
       }
     },
@@ -572,12 +572,12 @@
       "qScale": 0.5,
       "perLine": {
         "D1|urban": {
-          "z": 0.5,
+          "z": 1,
           "qScale": 1
         },
         "D1|suburban": {
-          "z": 0.5,
-          "qScale": 0.5
+          "z": 1.65,
+          "qScale": 1
         },
         "D1|rural": {
           "z": 10,
@@ -585,22 +585,22 @@
         },
         "D2|urban": {
           "z": 0.5,
-          "qScale": 0.5
+          "qScale": 1
         },
         "D2|suburban": {
-          "z": 0.5,
+          "z": 1,
           "qScale": 0.5
         },
         "D2|rural": {
-          "z": 15,
-          "qScale": 0.5
+          "z": 10,
+          "qScale": 1
         },
         "D3|urban": {
           "z": 0.5,
-          "qScale": 1
+          "qScale": 0.5
         },
         "D3|suburban": {
-          "z": 0.5,
+          "z": 1,
           "qScale": 1
         },
         "D3|rural": {
@@ -608,16 +608,16 @@
           "qScale": 0.5
         },
         "D4|urban": {
-          "z": 0.5,
+          "z": 1,
           "qScale": 1
         },
         "D4|suburban": {
-          "z": 1.65,
+          "z": 1,
           "qScale": 0.5
         },
         "D4|rural": {
           "z": 10,
-          "qScale": 0.5
+          "qScale": 1
         },
         "D5|urban": {
           "z": 0.5,
@@ -632,11 +632,11 @@
           "qScale": 1
         },
         "D6|urban": {
-          "z": 1.65,
+          "z": 0.5,
           "qScale": 1
         },
         "D6|suburban": {
-          "z": 0.5,
+          "z": 1,
           "qScale": 1
         },
         "D6|rural": {
@@ -648,7 +648,7 @@
           "qScale": 1
         },
         "D7|suburban": {
-          "z": 1.65,
+          "z": 2.5,
           "qScale": 1
         },
         "D7|rural": {
@@ -656,32 +656,32 @@
           "qScale": 1
         },
         "D8|urban": {
-          "z": 1.65,
+          "z": 0.5,
           "qScale": 1
         },
         "D8|suburban": {
-          "z": 1.65,
+          "z": 0.5,
           "qScale": 1
         },
         "D8|rural": {
-          "z": 1.65,
+          "z": 0.5,
           "qScale": 1
         }
       },
-      "uniformObjective": 288342.2245029412,
-      "perLineObjective": 282482.0937323529,
+      "uniformObjective": 288980.4321852941,
+      "perLineObjective": 283202.99665882357,
       "chosen": "per SKU × region",
       "atGridBoundary": false,
       "extensions": 1,
       "pointsEvaluated": 72,
       "perLineCandidate": {
         "D1|urban": {
-          "z": 0.5,
+          "z": 1,
           "qScale": 1
         },
         "D1|suburban": {
-          "z": 0.5,
-          "qScale": 0.5
+          "z": 1.65,
+          "qScale": 1
         },
         "D1|rural": {
           "z": 10,
@@ -689,22 +689,22 @@
         },
         "D2|urban": {
           "z": 0.5,
-          "qScale": 0.5
+          "qScale": 1
         },
         "D2|suburban": {
-          "z": 0.5,
+          "z": 1,
           "qScale": 0.5
         },
         "D2|rural": {
-          "z": 15,
-          "qScale": 0.5
+          "z": 10,
+          "qScale": 1
         },
         "D3|urban": {
           "z": 0.5,
-          "qScale": 1
+          "qScale": 0.5
         },
         "D3|suburban": {
-          "z": 0.5,
+          "z": 1,
           "qScale": 1
         },
         "D3|rural": {
@@ -712,16 +712,16 @@
           "qScale": 0.5
         },
         "D4|urban": {
-          "z": 0.5,
+          "z": 1,
           "qScale": 1
         },
         "D4|suburban": {
-          "z": 1.65,
+          "z": 1,
           "qScale": 0.5
         },
         "D4|rural": {
           "z": 10,
-          "qScale": 0.5
+          "qScale": 1
         },
         "D5|urban": {
           "z": 0.5,
@@ -736,11 +736,11 @@
           "qScale": 1
         },
         "D6|urban": {
-          "z": 1.65,
+          "z": 0.5,
           "qScale": 1
         },
         "D6|suburban": {
-          "z": 0.5,
+          "z": 1,
           "qScale": 1
         },
         "D6|rural": {
@@ -752,7 +752,7 @@
           "qScale": 1
         },
         "D7|suburban": {
-          "z": 1.65,
+          "z": 2.5,
           "qScale": 1
         },
         "D7|rural": {
@@ -760,48 +760,48 @@
           "qScale": 1
         },
         "D8|urban": {
-          "z": 1.65,
+          "z": 0.5,
           "qScale": 1
         },
         "D8|suburban": {
-          "z": 1.65,
+          "z": 0.5,
           "qScale": 1
         },
         "D8|rural": {
-          "z": 1.65,
+          "z": 0.5,
           "qScale": 1
         }
       }
     },
     "M5-compound": {
       "z": 7,
-      "qScale": 12,
+      "qScale": 18,
       "perLine": null,
-      "uniformObjective": 455150.0793117647,
-      "perLineObjective": 472043.02425000025,
+      "uniformObjective": 442783.8993088235,
+      "perLineObjective": 516241.6146764707,
       "chosen": "uniform (per-line did not improve)",
       "atGridBoundary": false,
-      "extensions": 0,
-      "pointsEvaluated": 64,
+      "extensions": 1,
+      "pointsEvaluated": 72,
       "perLineCandidate": {
         "D1|urban": {
           "z": 10,
-          "qScale": 12
+          "qScale": 18
         },
         "D1|suburban": {
-          "z": 1,
-          "qScale": 8
+          "z": 0.5,
+          "qScale": 2
         },
         "D1|rural": {
           "z": 10,
           "qScale": 2
         },
         "D2|urban": {
-          "z": 7,
-          "qScale": 12
+          "z": 10,
+          "qScale": 5
         },
         "D2|suburban": {
-          "z": 3.5,
+          "z": 1,
           "qScale": 2
         },
         "D2|rural": {
@@ -809,11 +809,11 @@
           "qScale": 2
         },
         "D3|urban": {
-          "z": 7,
-          "qScale": 12
+          "z": 10,
+          "qScale": 5
         },
         "D3|suburban": {
-          "z": 0.5,
+          "z": 3.5,
           "qScale": 2
         },
         "D3|rural": {
@@ -822,7 +822,7 @@
         },
         "D4|urban": {
           "z": 7,
-          "qScale": 18
+          "qScale": 12
         },
         "D4|suburban": {
           "z": 1,
@@ -830,18 +830,18 @@
         },
         "D4|rural": {
           "z": 10,
-          "qScale": 3
+          "qScale": 2
         },
         "D5|urban": {
           "z": 10,
-          "qScale": 5
+          "qScale": 3
         },
         "D5|suburban": {
-          "z": 1,
+          "z": 1.65,
           "qScale": 2
         },
         "D5|rural": {
-          "z": 1,
+          "z": 1.65,
           "qScale": 2
         },
         "D6|urban": {
@@ -853,238 +853,238 @@
           "qScale": 2
         },
         "D6|rural": {
-          "z": 0.5,
+          "z": 2.5,
           "qScale": 2
         },
         "D7|urban": {
-          "z": 10,
+          "z": 5,
           "qScale": 3
         },
         "D7|suburban": {
-          "z": 1,
-          "qScale": 2
+          "z": 0.5,
+          "qScale": 27
         },
         "D7|rural": {
-          "z": 2.5,
-          "qScale": 2
+          "z": 3.5,
+          "qScale": 3
         },
         "D8|urban": {
           "z": 7,
           "qScale": 3
         },
         "D8|suburban": {
-          "z": 1,
-          "qScale": 2
+          "z": 0.5,
+          "qScale": 3
         },
         "D8|rural": {
-          "z": 1.65,
+          "z": 2.5,
           "qScale": 2
         }
       }
     },
     "M6-long-lead": {
       "z": 7,
-      "qScale": 18,
+      "qScale": 8,
       "perLine": {
         "D1|urban": {
           "z": 7,
-          "qScale": 27
+          "qScale": 18
         },
         "D1|suburban": {
-          "z": 5,
-          "qScale": 3
+          "z": 7,
+          "qScale": 12
         },
         "D1|rural": {
-          "z": 7,
-          "qScale": 5
+          "z": 10,
+          "qScale": 18
         },
         "D2|urban": {
-          "z": 7,
+          "z": 10,
           "qScale": 8
         },
         "D2|suburban": {
-          "z": 5,
-          "qScale": 5
+          "z": 2.5,
+          "qScale": 3
         },
         "D2|rural": {
           "z": 10,
-          "qScale": 8
+          "qScale": 5
         },
         "D3|urban": {
           "z": 10,
-          "qScale": 3
+          "qScale": 2
         },
         "D3|suburban": {
-          "z": 10,
-          "qScale": 3
+          "z": 7,
+          "qScale": 2
         },
         "D3|rural": {
           "z": 10,
-          "qScale": 5
+          "qScale": 3
         },
         "D4|urban": {
-          "z": 5,
-          "qScale": 5
+          "z": 10,
+          "qScale": 2
         },
         "D4|suburban": {
           "z": 5,
-          "qScale": 5
+          "qScale": 12
         },
         "D4|rural": {
           "z": 10,
-          "qScale": 3
+          "qScale": 2
         },
         "D5|urban": {
-          "z": 0.5,
+          "z": 7,
           "qScale": 2
         },
         "D5|suburban": {
-          "z": 0.5,
+          "z": 1.65,
           "qScale": 2
         },
         "D5|rural": {
           "z": 1,
-          "qScale": 27
+          "qScale": 2
         },
         "D6|urban": {
-          "z": 2.5,
+          "z": 7,
           "qScale": 2
         },
         "D6|suburban": {
-          "z": 2.5,
+          "z": 1.65,
           "qScale": 2
         },
         "D6|rural": {
-          "z": 2.5,
+          "z": 0.5,
           "qScale": 2
         },
         "D7|urban": {
           "z": 1,
-          "qScale": 2
+          "qScale": 3
         },
         "D7|suburban": {
+          "z": 2.5,
+          "qScale": 5
+        },
+        "D7|rural": {
           "z": 1.65,
           "qScale": 3
         },
-        "D7|rural": {
-          "z": 0.5,
-          "qScale": 2
-        },
         "D8|urban": {
-          "z": 2.5,
-          "qScale": 2
+          "z": 1,
+          "qScale": 3
         },
         "D8|suburban": {
-          "z": 2.5,
-          "qScale": 2
+          "z": 1,
+          "qScale": 3
         },
         "D8|rural": {
-          "z": 0.5,
-          "qScale": 2
+          "z": 1,
+          "qScale": 3
         }
       },
-      "uniformObjective": 1328865.2410264702,
-      "perLineObjective": 1244388.7015058822,
+      "uniformObjective": 1321160.924152941,
+      "perLineObjective": 1292960.0013000004,
       "chosen": "per SKU × region",
       "atGridBoundary": false,
-      "extensions": 1,
-      "pointsEvaluated": 72,
+      "extensions": 0,
+      "pointsEvaluated": 64,
       "perLineCandidate": {
         "D1|urban": {
           "z": 7,
-          "qScale": 27
+          "qScale": 18
         },
         "D1|suburban": {
-          "z": 5,
-          "qScale": 3
+          "z": 7,
+          "qScale": 12
         },
         "D1|rural": {
-          "z": 7,
-          "qScale": 5
+          "z": 10,
+          "qScale": 18
         },
         "D2|urban": {
-          "z": 7,
+          "z": 10,
           "qScale": 8
         },
         "D2|suburban": {
-          "z": 5,
-          "qScale": 5
+          "z": 2.5,
+          "qScale": 3
         },
         "D2|rural": {
           "z": 10,
-          "qScale": 8
+          "qScale": 5
         },
         "D3|urban": {
           "z": 10,
-          "qScale": 3
+          "qScale": 2
         },
         "D3|suburban": {
-          "z": 10,
-          "qScale": 3
+          "z": 7,
+          "qScale": 2
         },
         "D3|rural": {
           "z": 10,
-          "qScale": 5
+          "qScale": 3
         },
         "D4|urban": {
-          "z": 5,
-          "qScale": 5
+          "z": 10,
+          "qScale": 2
         },
         "D4|suburban": {
           "z": 5,
-          "qScale": 5
+          "qScale": 12
         },
         "D4|rural": {
           "z": 10,
-          "qScale": 3
+          "qScale": 2
         },
         "D5|urban": {
-          "z": 0.5,
+          "z": 7,
           "qScale": 2
         },
         "D5|suburban": {
-          "z": 0.5,
+          "z": 1.65,
           "qScale": 2
         },
         "D5|rural": {
           "z": 1,
-          "qScale": 27
+          "qScale": 2
         },
         "D6|urban": {
-          "z": 2.5,
+          "z": 7,
           "qScale": 2
         },
         "D6|suburban": {
-          "z": 2.5,
+          "z": 1.65,
           "qScale": 2
         },
         "D6|rural": {
-          "z": 2.5,
+          "z": 0.5,
           "qScale": 2
         },
         "D7|urban": {
           "z": 1,
-          "qScale": 2
+          "qScale": 3
         },
         "D7|suburban": {
+          "z": 2.5,
+          "qScale": 5
+        },
+        "D7|rural": {
           "z": 1.65,
           "qScale": 3
         },
-        "D7|rural": {
-          "z": 0.5,
-          "qScale": 2
-        },
         "D8|urban": {
-          "z": 2.5,
-          "qScale": 2
+          "z": 1,
+          "qScale": 3
         },
         "D8|suburban": {
-          "z": 2.5,
-          "qScale": 2
+          "z": 1,
+          "qScale": 3
         },
         "D8|rural": {
-          "z": 0.5,
-          "qScale": 2
+          "z": 1,
+          "qScale": 3
         }
       }
     },
@@ -1097,36 +1097,36 @@
           "qScale": 0.5
         },
         "D1|suburban": {
-          "z": 15,
-          "qScale": 3
+          "z": 10,
+          "qScale": 5
         },
         "D1|rural": {
-          "z": 10,
-          "qScale": 2
+          "z": 7,
+          "qScale": 5
         },
         "D2|urban": {
           "z": 50.63,
           "qScale": 0.5
         },
         "D2|suburban": {
-          "z": 10,
-          "qScale": 2
+          "z": 15,
+          "qScale": 12
         },
         "D2|rural": {
           "z": 10,
-          "qScale": 2
+          "qScale": 3
         },
         "D3|urban": {
           "z": 50.63,
           "qScale": 0.5
         },
         "D3|suburban": {
-          "z": 15,
+          "z": 10,
           "qScale": 3
         },
         "D3|rural": {
-          "z": 15,
-          "qScale": 3
+          "z": 10,
+          "qScale": 5
         },
         "D4|urban": {
           "z": 50.63,
@@ -1134,11 +1134,11 @@
         },
         "D4|suburban": {
           "z": 15,
-          "qScale": 27
+          "qScale": 8
         },
         "D4|rural": {
           "z": 15,
-          "qScale": 18
+          "qScale": 3
         },
         "D5|urban": {
           "z": 50.63,
@@ -1146,11 +1146,11 @@
         },
         "D5|suburban": {
           "z": 7,
-          "qScale": 2
+          "qScale": 18
         },
         "D5|rural": {
           "z": 7,
-          "qScale": 2
+          "qScale": 12
         },
         "D6|urban": {
           "z": 33.75,
@@ -1158,79 +1158,79 @@
         },
         "D6|suburban": {
           "z": 10,
-          "qScale": 2
+          "qScale": 18
         },
         "D6|rural": {
           "z": 7,
-          "qScale": 3
-        },
-        "D7|urban": {
-          "z": 33.75,
-          "qScale": 0.5
-        },
-        "D7|suburban": {
-          "z": 10,
-          "qScale": 3
-        },
-        "D7|rural": {
-          "z": 7,
           "qScale": 2
         },
-        "D8|urban": {
+        "D7|urban": {
           "z": 50.63,
           "qScale": 0.5
         },
-        "D8|suburban": {
+        "D7|suburban": {
           "z": 7,
+          "qScale": 2
+        },
+        "D7|rural": {
+          "z": 7,
+          "qScale": 5
+        },
+        "D8|urban": {
+          "z": 33.75,
+          "qScale": 0.5
+        },
+        "D8|suburban": {
+          "z": 10,
           "qScale": 2
         },
         "D8|rural": {
           "z": 7,
-          "qScale": 5
+          "qScale": 12
         }
       },
-      "uniformObjective": 1247181.804867648,
-      "perLineObjective": 1160044.788823529,
+      "uniformObjective": 1234389.2206970598,
+      "perLineObjective": 1206078.9594823525,
       "chosen": "per SKU × region",
       "atGridBoundary": true,
       "extensions": 4,
-      "pointsEvaluated": 108,
+      "pointsEvaluated": 96,
       "perLineCandidate": {
         "D1|urban": {
           "z": 50.63,
           "qScale": 0.5
         },
         "D1|suburban": {
-          "z": 15,
-          "qScale": 3
+          "z": 10,
+          "qScale": 5
         },
         "D1|rural": {
-          "z": 10,
-          "qScale": 2
+          "z": 7,
+          "qScale": 5
         },
         "D2|urban": {
           "z": 50.63,
           "qScale": 0.5
         },
         "D2|suburban": {
-          "z": 10,
-          "qScale": 2
+          "z": 15,
+          "qScale": 12
         },
         "D2|rural": {
           "z": 10,
-          "qScale": 2
+          "qScale": 3
         },
         "D3|urban": {
           "z": 50.63,
           "qScale": 0.5
         },
         "D3|suburban": {
-          "z": 15,
+          "z": 10,
           "qScale": 3
         },
         "D3|rural": {
-          "z": 15,
-          "qScale": 3
+          "z": 10,
+          "qScale": 5
         },
         "D4|urban": {
           "z": 50.63,
@@ -1238,11 +1238,11 @@
         },
         "D4|suburban": {
           "z": 15,
-          "qScale": 27
+          "qScale": 8
         },
         "D4|rural": {
           "z": 15,
-          "qScale": 18
+          "qScale": 3
         },
         "D5|urban": {
           "z": 50.63,
@@ -1250,11 +1250,11 @@
         },
         "D5|suburban": {
           "z": 7,
-          "qScale": 2
+          "qScale": 18
         },
         "D5|rural": {
           "z": 7,
-          "qScale": 2
+          "qScale": 12
         },
         "D6|urban": {
           "z": 33.75,
@@ -1262,69 +1262,69 @@
         },
         "D6|suburban": {
           "z": 10,
-          "qScale": 2
+          "qScale": 18
         },
         "D6|rural": {
           "z": 7,
-          "qScale": 3
-        },
-        "D7|urban": {
-          "z": 33.75,
-          "qScale": 0.5
-        },
-        "D7|suburban": {
-          "z": 10,
-          "qScale": 3
-        },
-        "D7|rural": {
-          "z": 7,
           "qScale": 2
         },
-        "D8|urban": {
+        "D7|urban": {
           "z": 50.63,
           "qScale": 0.5
         },
-        "D8|suburban": {
+        "D7|suburban": {
           "z": 7,
+          "qScale": 2
+        },
+        "D7|rural": {
+          "z": 7,
+          "qScale": 5
+        },
+        "D8|urban": {
+          "z": 33.75,
+          "qScale": 0.5
+        },
+        "D8|suburban": {
+          "z": 10,
           "qScale": 2
         },
         "D8|rural": {
           "z": 7,
-          "qScale": 5
+          "qScale": 12
         }
       }
     },
     "M8-tight-transport": {
-      "z": 7,
-      "qScale": 18,
+      "z": 10,
+      "qScale": 3,
       "perLine": {
         "D1|urban": {
-          "z": 7,
-          "qScale": 18
-        },
-        "D1|suburban": {
-          "z": 3.5,
-          "qScale": 5
-        },
-        "D1|rural": {
-          "z": 10,
-          "qScale": 27
-        },
-        "D2|urban": {
-          "z": 10,
-          "qScale": 12
-        },
-        "D2|suburban": {
-          "z": 3.5,
-          "qScale": 5
-        },
-        "D2|rural": {
           "z": 10,
           "qScale": 8
         },
+        "D1|suburban": {
+          "z": 3.5,
+          "qScale": 12
+        },
+        "D1|rural": {
+          "z": 10,
+          "qScale": 8
+        },
+        "D2|urban": {
+          "z": 10,
+          "qScale": 3
+        },
+        "D2|suburban": {
+          "z": 5,
+          "qScale": 18
+        },
+        "D2|rural": {
+          "z": 10,
+          "qScale": 18
+        },
         "D3|urban": {
           "z": 7,
-          "qScale": 3
+          "qScale": 5
         },
         "D3|suburban": {
           "z": 3.5,
@@ -1332,11 +1332,11 @@
         },
         "D3|rural": {
           "z": 10,
-          "qScale": 8
+          "qScale": 5
         },
         "D4|urban": {
-          "z": 7,
-          "qScale": 5
+          "z": 10,
+          "qScale": 18
         },
         "D4|suburban": {
           "z": 5,
@@ -1344,91 +1344,91 @@
         },
         "D4|rural": {
           "z": 10,
-          "qScale": 18
+          "qScale": 8
         },
         "D5|urban": {
           "z": 7,
-          "qScale": 27
+          "qScale": 3
         },
         "D5|suburban": {
-          "z": 2.5,
+          "z": 5,
           "qScale": 3
         },
         "D5|rural": {
           "z": 7,
-          "qScale": 27
+          "qScale": 5
         },
         "D6|urban": {
-          "z": 10,
-          "qScale": 3
+          "z": 7,
+          "qScale": 2
         },
         "D6|suburban": {
-          "z": 0.5,
-          "qScale": 2
+          "z": 7,
+          "qScale": 3
         },
         "D6|rural": {
           "z": 7,
-          "qScale": 8
+          "qScale": 5
         },
         "D7|urban": {
-          "z": 7,
+          "z": 5,
           "qScale": 3
         },
         "D7|suburban": {
-          "z": 2.5,
-          "qScale": 2
+          "z": 5,
+          "qScale": 3
         },
         "D7|rural": {
           "z": 7,
-          "qScale": 5
+          "qScale": 3
         },
         "D8|urban": {
-          "z": 7,
+          "z": 10,
           "qScale": 2
         },
         "D8|suburban": {
-          "z": 2.5,
+          "z": 3.5,
           "qScale": 3
         },
         "D8|rural": {
           "z": 7,
-          "qScale": 18
+          "qScale": 8
         }
       },
-      "uniformObjective": 2672284.589614705,
-      "perLineObjective": 2286429.3482323526,
+      "uniformObjective": 2701385.050914705,
+      "perLineObjective": 2699167.9358117646,
       "chosen": "per SKU × region",
       "atGridBoundary": false,
       "extensions": 1,
       "pointsEvaluated": 72,
       "perLineCandidate": {
         "D1|urban": {
-          "z": 7,
-          "qScale": 18
-        },
-        "D1|suburban": {
-          "z": 3.5,
-          "qScale": 5
-        },
-        "D1|rural": {
-          "z": 10,
-          "qScale": 27
-        },
-        "D2|urban": {
-          "z": 10,
-          "qScale": 12
-        },
-        "D2|suburban": {
-          "z": 3.5,
-          "qScale": 5
-        },
-        "D2|rural": {
           "z": 10,
           "qScale": 8
         },
+        "D1|suburban": {
+          "z": 3.5,
+          "qScale": 12
+        },
+        "D1|rural": {
+          "z": 10,
+          "qScale": 8
+        },
+        "D2|urban": {
+          "z": 10,
+          "qScale": 3
+        },
+        "D2|suburban": {
+          "z": 5,
+          "qScale": 18
+        },
+        "D2|rural": {
+          "z": 10,
+          "qScale": 18
+        },
         "D3|urban": {
           "z": 7,
-          "qScale": 3
+          "qScale": 5
         },
         "D3|suburban": {
           "z": 3.5,
@@ -1436,11 +1436,11 @@
         },
         "D3|rural": {
           "z": 10,
-          "qScale": 8
+          "qScale": 5
         },
         "D4|urban": {
-          "z": 7,
-          "qScale": 5
+          "z": 10,
+          "qScale": 18
         },
         "D4|suburban": {
           "z": 5,
@@ -1448,96 +1448,96 @@
         },
         "D4|rural": {
           "z": 10,
-          "qScale": 18
+          "qScale": 8
         },
         "D5|urban": {
           "z": 7,
-          "qScale": 27
+          "qScale": 3
         },
         "D5|suburban": {
-          "z": 2.5,
+          "z": 5,
           "qScale": 3
         },
         "D5|rural": {
           "z": 7,
-          "qScale": 27
+          "qScale": 5
         },
         "D6|urban": {
-          "z": 10,
-          "qScale": 3
+          "z": 7,
+          "qScale": 2
         },
         "D6|suburban": {
-          "z": 0.5,
-          "qScale": 2
+          "z": 7,
+          "qScale": 3
         },
         "D6|rural": {
           "z": 7,
-          "qScale": 8
+          "qScale": 5
         },
         "D7|urban": {
-          "z": 7,
+          "z": 5,
           "qScale": 3
         },
         "D7|suburban": {
-          "z": 2.5,
-          "qScale": 2
+          "z": 5,
+          "qScale": 3
         },
         "D7|rural": {
           "z": 7,
-          "qScale": 5
+          "qScale": 3
         },
         "D8|urban": {
-          "z": 7,
+          "z": 10,
           "qScale": 2
         },
         "D8|suburban": {
-          "z": 2.5,
+          "z": 3.5,
           "qScale": 3
         },
         "D8|rural": {
           "z": 7,
-          "qScale": 18
+          "qScale": 8
         }
       }
     },
     "M9-extreme": {
-      "z": 15,
-      "qScale": 5,
+      "z": 22.5,
+      "qScale": 8,
       "perLine": {
         "D1|urban": {
-          "z": 22.5,
-          "qScale": 1
+          "z": 33.75,
+          "qScale": 2
         },
         "D1|suburban": {
-          "z": 15,
+          "z": 10,
           "qScale": 8
         },
         "D1|rural": {
-          "z": 22.5,
-          "qScale": 18
+          "z": 33.75,
+          "qScale": 12
         },
         "D2|urban": {
-          "z": 22.5,
-          "qScale": 0.5
+          "z": 33.75,
+          "qScale": 2
         },
         "D2|suburban": {
-          "z": 15,
+          "z": 10,
           "qScale": 5
         },
         "D2|rural": {
-          "z": 22.5,
-          "qScale": 8
+          "z": 33.75,
+          "qScale": 18
         },
         "D3|urban": {
-          "z": 22.5,
-          "qScale": 1
+          "z": 7,
+          "qScale": 3
         },
         "D3|suburban": {
-          "z": 22.5,
+          "z": 7,
           "qScale": 8
         },
         "D3|rural": {
-          "z": 22.5,
+          "z": 33.75,
           "qScale": 8
         },
         "D4|urban": {
@@ -1545,12 +1545,12 @@
           "qScale": 1
         },
         "D4|suburban": {
-          "z": 15,
-          "qScale": 5
+          "z": 10,
+          "qScale": 8
         },
         "D4|rural": {
-          "z": 22.5,
-          "qScale": 18
+          "z": 33.75,
+          "qScale": 8
         },
         "D5|urban": {
           "z": 10,
@@ -1558,38 +1558,38 @@
         },
         "D5|suburban": {
           "z": 15,
-          "qScale": 8
+          "qScale": 5
         },
         "D5|rural": {
           "z": 10,
-          "qScale": 18
+          "qScale": 5
         },
         "D6|urban": {
-          "z": 5,
-          "qScale": 2
+          "z": 3.5,
+          "qScale": 3
         },
         "D6|suburban": {
-          "z": 10,
-          "qScale": 8
+          "z": 15,
+          "qScale": 18
         },
         "D6|rural": {
-          "z": 7,
+          "z": 15,
           "qScale": 5
         },
         "D7|urban": {
           "z": 7,
-          "qScale": 2
+          "qScale": 5
         },
         "D7|suburban": {
-          "z": 7,
-          "qScale": 3
-        },
-        "D7|rural": {
           "z": 10,
           "qScale": 5
         },
-        "D8|urban": {
+        "D7|rural": {
           "z": 7,
+          "qScale": 12
+        },
+        "D8|urban": {
+          "z": 10,
           "qScale": 2
         },
         "D8|suburban": {
@@ -1597,51 +1597,51 @@
           "qScale": 5
         },
         "D8|rural": {
-          "z": 15,
-          "qScale": 8
+          "z": 10,
+          "qScale": 5
         }
       },
-      "uniformObjective": 3906188.884320586,
-      "perLineObjective": 3596725.9229205893,
+      "uniformObjective": 3936529.4277176447,
+      "perLineObjective": 3686796.328388235,
       "chosen": "per SKU × region",
       "atGridBoundary": false,
-      "extensions": 2,
-      "pointsEvaluated": 80,
+      "extensions": 3,
+      "pointsEvaluated": 99,
       "perLineCandidate": {
         "D1|urban": {
-          "z": 22.5,
-          "qScale": 1
+          "z": 33.75,
+          "qScale": 2
         },
         "D1|suburban": {
-          "z": 15,
+          "z": 10,
           "qScale": 8
         },
         "D1|rural": {
-          "z": 22.5,
-          "qScale": 18
+          "z": 33.75,
+          "qScale": 12
         },
         "D2|urban": {
-          "z": 22.5,
-          "qScale": 0.5
+          "z": 33.75,
+          "qScale": 2
         },
         "D2|suburban": {
-          "z": 15,
+          "z": 10,
           "qScale": 5
         },
         "D2|rural": {
-          "z": 22.5,
-          "qScale": 8
+          "z": 33.75,
+          "qScale": 18
         },
         "D3|urban": {
-          "z": 22.5,
-          "qScale": 1
+          "z": 7,
+          "qScale": 3
         },
         "D3|suburban": {
-          "z": 22.5,
+          "z": 7,
           "qScale": 8
         },
         "D3|rural": {
-          "z": 22.5,
+          "z": 33.75,
           "qScale": 8
         },
         "D4|urban": {
@@ -1649,12 +1649,12 @@
           "qScale": 1
         },
         "D4|suburban": {
-          "z": 15,
-          "qScale": 5
+          "z": 10,
+          "qScale": 8
         },
         "D4|rural": {
-          "z": 22.5,
-          "qScale": 18
+          "z": 33.75,
+          "qScale": 8
         },
         "D5|urban": {
           "z": 10,
@@ -1662,38 +1662,38 @@
         },
         "D5|suburban": {
           "z": 15,
-          "qScale": 8
+          "qScale": 5
         },
         "D5|rural": {
           "z": 10,
-          "qScale": 18
+          "qScale": 5
         },
         "D6|urban": {
-          "z": 5,
-          "qScale": 2
+          "z": 3.5,
+          "qScale": 3
         },
         "D6|suburban": {
-          "z": 10,
-          "qScale": 8
+          "z": 15,
+          "qScale": 18
         },
         "D6|rural": {
-          "z": 7,
+          "z": 15,
           "qScale": 5
         },
         "D7|urban": {
           "z": 7,
-          "qScale": 2
+          "qScale": 5
         },
         "D7|suburban": {
-          "z": 7,
-          "qScale": 3
-        },
-        "D7|rural": {
           "z": 10,
           "qScale": 5
         },
-        "D8|urban": {
+        "D7|rural": {
           "z": 7,
+          "qScale": 12
+        },
+        "D8|urban": {
+          "z": 10,
           "qScale": 2
         },
         "D8|suburban": {
@@ -1701,8 +1701,8 @@
           "qScale": 5
         },
         "D8|rural": {
-          "z": 15,
-          "qScale": 8
+          "z": 10,
+          "qScale": 5
         }
       }
     }

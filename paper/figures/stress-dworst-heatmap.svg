@@ -3,59 +3,59 @@
 <text x="20" y="22" font-size="14" font-weight="bold">Δ worst-region essential fill, ERRRA − cost-only (M5-compound structure)</text>
 <text x="84" y="69" text-anchor="end">1</text>
 <rect x="90" y="45" width="78" height="38" fill="rgb(254,255,254)"/>
-<text x="130" y="69" text-anchor="middle">+0.002</text>
-<rect x="170" y="45" width="78" height="38" fill="rgb(251,253,251)"/>
-<text x="210" y="69" text-anchor="middle">+0.008</text>
-<rect x="250" y="45" width="78" height="38" fill="rgb(248,252,248)"/>
-<text x="290" y="69" text-anchor="middle">+0.013</text>
-<rect x="330" y="45" width="78" height="38" fill="rgb(242,250,242)"/>
-<text x="370" y="69" text-anchor="middle">+0.024</text>
-<rect x="410" y="45" width="78" height="38" fill="rgb(161,220,161)"/>
-<text x="450" y="69" text-anchor="middle">+0.169</text>
+<text x="130" y="69" text-anchor="middle">+0.001</text>
+<rect x="170" y="45" width="78" height="38" fill="rgb(252,254,252)"/>
+<text x="210" y="69" text-anchor="middle">+0.006</text>
+<rect x="250" y="45" width="78" height="38" fill="rgb(249,253,249)"/>
+<text x="290" y="69" text-anchor="middle">+0.011</text>
+<rect x="330" y="45" width="78" height="38" fill="rgb(247,252,247)"/>
+<text x="370" y="69" text-anchor="middle">+0.015</text>
+<rect x="410" y="45" width="78" height="38" fill="rgb(166,222,166)"/>
+<text x="450" y="69" text-anchor="middle">+0.166</text>
 <text x="84" y="109" text-anchor="end">0.7</text>
 <rect x="90" y="85" width="78" height="38" fill="rgb(254,255,254)"/>
-<text x="130" y="109" text-anchor="middle">+0.002</text>
-<rect x="170" y="85" width="78" height="38" fill="rgb(251,253,251)"/>
-<text x="210" y="109" text-anchor="middle">+0.008</text>
-<rect x="250" y="85" width="78" height="38" fill="rgb(194,232,194)"/>
-<text x="290" y="109" text-anchor="middle">+0.109</text>
+<text x="130" y="109" text-anchor="middle">+0.001</text>
+<rect x="170" y="85" width="78" height="38" fill="rgb(252,254,252)"/>
+<text x="210" y="109" text-anchor="middle">+0.006</text>
+<rect x="250" y="85" width="78" height="38" fill="rgb(206,236,206)"/>
+<text x="290" y="109" text-anchor="middle">+0.092</text>
 <rect x="330" y="85" width="78" height="38" fill="rgb(95,195,95)"/>
-<text x="370" y="109" text-anchor="middle">+0.287</text>
-<rect x="410" y="85" width="78" height="38" fill="rgb(141,212,141)"/>
-<text x="450" y="109" text-anchor="middle">+0.205</text>
+<text x="370" y="109" text-anchor="middle">+0.298</text>
+<rect x="410" y="85" width="78" height="38" fill="rgb(135,210,135)"/>
+<text x="450" y="109" text-anchor="middle">+0.223</text>
 <text x="84" y="149" text-anchor="end">0.5</text>
 <rect x="90" y="125" width="78" height="38" fill="rgb(254,255,254)"/>
-<text x="130" y="149" text-anchor="middle">+0.002</text>
-<rect x="170" y="125" width="78" height="38" fill="rgb(215,240,215)"/>
-<text x="210" y="149" text-anchor="middle">+0.072</text>
-<rect x="250" y="125" width="78" height="38" fill="rgb(173,224,173)"/>
-<text x="290" y="149" text-anchor="middle">+0.147</text>
-<rect x="330" y="125" width="78" height="38" fill="rgb(151,216,151)"/>
-<text x="370" y="149" text-anchor="middle">+0.187</text>
-<rect x="410" y="125" width="78" height="38" fill="rgb(186,229,186)"/>
-<text x="450" y="149" text-anchor="middle">+0.124</text>
+<text x="130" y="149" text-anchor="middle">+0.001</text>
+<rect x="170" y="125" width="78" height="38" fill="rgb(218,241,218)"/>
+<text x="210" y="149" text-anchor="middle">+0.069</text>
+<rect x="250" y="125" width="78" height="38" fill="rgb(175,225,175)"/>
+<text x="290" y="149" text-anchor="middle">+0.150</text>
+<rect x="330" y="125" width="78" height="38" fill="rgb(153,217,153)"/>
+<text x="370" y="149" text-anchor="middle">+0.190</text>
+<rect x="410" y="125" width="78" height="38" fill="rgb(185,229,185)"/>
+<text x="450" y="149" text-anchor="middle">+0.131</text>
 <text x="84" y="189" text-anchor="end">0.3</text>
 <rect x="90" y="165" width="78" height="38" fill="rgb(254,255,254)"/>
-<text x="130" y="189" text-anchor="middle">+0.002</text>
-<rect x="170" y="165" width="78" height="38" fill="rgb(195,233,195)"/>
-<text x="210" y="189" text-anchor="middle">+0.107</text>
-<rect x="250" y="165" width="78" height="38" fill="rgb(192,232,192)"/>
-<text x="290" y="189" text-anchor="middle">+0.112</text>
-<rect x="330" y="165" width="78" height="38" fill="rgb(183,228,183)"/>
-<text x="370" y="189" text-anchor="middle">+0.129</text>
-<rect x="410" y="165" width="78" height="38" fill="rgb(217,241,217)"/>
-<text x="450" y="189" text-anchor="middle">+0.069</text>
+<text x="130" y="189" text-anchor="middle">+0.001</text>
+<rect x="170" y="165" width="78" height="38" fill="rgb(193,232,193)"/>
+<text x="210" y="189" text-anchor="middle">+0.115</text>
+<rect x="250" y="165" width="78" height="38" fill="rgb(198,234,198)"/>
+<text x="290" y="189" text-anchor="middle">+0.107</text>
+<rect x="330" y="165" width="78" height="38" fill="rgb(184,229,184)"/>
+<text x="370" y="189" text-anchor="middle">+0.132</text>
+<rect x="410" y="165" width="78" height="38" fill="rgb(219,242,219)"/>
+<text x="450" y="189" text-anchor="middle">+0.067</text>
 <text x="84" y="229" text-anchor="end">0</text>
-<rect x="90" y="205" width="78" height="38" fill="rgb(214,239,214)"/>
-<text x="130" y="229" text-anchor="middle">+0.074</text>
+<rect x="90" y="205" width="78" height="38" fill="rgb(215,240,215)"/>
+<text x="130" y="229" text-anchor="middle">+0.075</text>
 <rect x="170" y="205" width="78" height="38" fill="rgb(217,241,217)"/>
-<text x="210" y="229" text-anchor="middle">+0.068</text>
-<rect x="250" y="205" width="78" height="38" fill="rgb(217,241,217)"/>
-<text x="290" y="229" text-anchor="middle">+0.068</text>
-<rect x="330" y="205" width="78" height="38" fill="rgb(226,244,226)"/>
-<text x="370" y="229" text-anchor="middle">+0.051</text>
-<rect x="410" y="205" width="78" height="38" fill="rgb(242,250,242)"/>
-<text x="450" y="229" text-anchor="middle">+0.023</text>
+<text x="210" y="229" text-anchor="middle">+0.070</text>
+<rect x="250" y="205" width="78" height="38" fill="rgb(221,242,221)"/>
+<text x="290" y="229" text-anchor="middle">+0.063</text>
+<rect x="330" y="205" width="78" height="38" fill="rgb(229,245,229)"/>
+<text x="370" y="229" text-anchor="middle">+0.048</text>
+<rect x="410" y="205" width="78" height="38" fill="rgb(245,251,245)"/>
+<text x="450" y="229" text-anchor="middle">+0.019</text>
 <text x="130" y="259" text-anchor="middle">×1</text>
 <text x="210" y="259" text-anchor="middle">×1.5</text>
 <text x="290" y="259" text-anchor="middle">×2</text>

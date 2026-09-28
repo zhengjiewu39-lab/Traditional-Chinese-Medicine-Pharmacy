@@ -1,14 +1,36 @@
-# Final validation report — research-quality revision (engine v4.0.0, matrix v2.0.0)
+# Final validation report — software release 1.0.0-research
 
 > All data are **synthetic**. Every parameter is a synthetic scenario assumption (合成场景假设). No real patient, prescription, pharmacy, supplier or epidemic data are used, and nothing here can be used to infer the effect of a real policy. All results hold only within the predefined simulation scenarios (在预定义仿真场景中). ERRRA is an allocation heuristic, not an optimizer, not proven optimal, and not AI.
 
-Results come from `npm run paper:all`:
+## Frozen release lineage
 
-- git commit `3874880` plus the uncommitted changes in this revision
-- Node v24.17.0
-- 29,500 simulation runs, about 5.5 minutes on one core
+| Item | Value |
+|---|---|
+| Software release | **1.0.0-research** (git tag `v1.0.0-research`) |
+| Source commit **A** | `e0de8aac4658bc5b8160600d4028d36e150f95b3` |
+| Results commit **B** | git tag **`v1.0.0-research`** (contains `paper/results`, `paper/tables`, `paper/figures`, this report) |
+| Simulation engine | `simulation-engine-v4.0.0` |
+| Scenario matrix | `2.0.0` |
+| ERRRA heuristic | `2.0.0` |
+| Node (toolchain) | **20** (`.nvmrc`, `engines`, CI, Docker); manifest records the runner used for commit B |
+| Matrix SHA-256 | `668c4a1fa54ba5d70ef63c7757cb9747fbaf9a0837dcec3c9381707fe1a864db` |
+| Seeds SHA-256 | `75bb0232d7025f6034921ec5782f5d424902a987978a48aa616e7327649823c7` |
+| Inventory audits | **29,640** runs, **0** failures (`paper/results/manifest.json`) |
 
-Hashes and timings are in `paper/results/manifest.json`. Full tables are in `paper/tables/`; interpretation is in [docs/result-interpretation.md](docs/result-interpretation.md).
+Regenerate results on a clean tree at commit A:
+
+```bash
+SOURCE_COMMIT=e0de8aac4658bc5b8160600d4028d36e150f95b3 npm run paper:all
+```
+
+### Release patch (commit A) — correctness and inference
+
+- **Recovery:** sustained 7-day trailing-mean essential fill at \(p \cdot B\) only after `lastDisruptionEndDay`; `timeToRecovery{p}` null if censored; `restrictedRecoveryTime{p}` for horizon-capped summaries; `recovered{p}Share`, Kaplan–Meier median and RMTR in tables.
+- **Population:** regional sums conserved exactly; optional `networkSeed` vs `randomSeed`.
+- **Inference:** primary = M5, ERRRA vs cost-only, worst-region essential fill (1 pp MID); exploratory cells with Holm adjustment.
+- **Deploy:** production Docker requires `TCM_JWT_SECRET`; demo auth off by default; `/api/health` version fields unified.
+
+Full tables: `paper/tables/`; interpretation: [docs/result-interpretation.md](docs/result-interpretation.md).
 
 ## 1. Modified files
 
@@ -61,7 +83,7 @@ Security fixes:
 
 ## 3. New tests
 
-The suite now has 141 tests, all passing. 40 test cases were added (static count 84 → 124; loops expand them to 141 at runtime). The full list with purpose is in [docs/verification-validation.md](docs/verification-validation.md).
+The suite now has **148** tests, all passing, including `recoveryMetrics.test.js` and `populationConservation.test.js`. The full list with purpose is in [docs/verification-validation.md](docs/verification-validation.md).
 
 **`researchQuality.test.js`** (30):
 
@@ -327,7 +349,7 @@ There were **0 failures**. Every run checks five residuals per SKU (pharmacy, wa
 |---|---|
 | `CI=true npm run build` | Compiled successfully, **0 errors, 0 warnings** (no `DISABLE_ESLINT_PLUGIN`) |
 | `npm run lint` (`--max-warnings 0`, src + server + scripts/paper) | clean |
-| `npm run simulation:test` | **141 / 141 pass** |
+| `npm run simulation:test` | **148 / 148 pass** |
 | `REPLICATES=10 npm run research:reproduce` and `-- --latest` | exact match of every metric |
 | `npm audit --omit=dev` | **0 vulnerabilities** |
 | `npm audit` (including dev) | 14 low or moderate, 0 high, 0 critical, all in the `react-scripts` toolchain |
@@ -339,7 +361,7 @@ There were **0 failures**. Every run checks five residuals per SKU (pharmacy, wa
 | Criterion | Status | Evidence |
 |---|---|---|
 | Strict build: zero errors and warnings | met | §10 |
-| All tests pass | met | 141 / 141 |
+| All tests pass | met | 148 / 148 |
 | A nested scenario field change changes the hash | met | `researchQuality.test.js` › scenario hash |
 | Same seed → identical results | met | tests; `research:reproduce` exact match; the main stage re-run reproduced every table exactly |
 | Policies differ interpretably under stress | met | §6: e.g. M8, where tuned-sQ collapses and ERRRA holds the floor, and M5 |
@@ -359,7 +381,7 @@ These are stated so that the main conclusions are read with their scope. The mai
 2. **tuned-sQ calibration boundary in M7** (z ≈ 50.6 still at the grid edge). tuned-sQ already beats ERRRA on worst-region fill in M7, so a further extension could only widen that gap. The reported conclusion ("ERRRA does not dominate tuned-sQ in M2–M7") would not change.
 3. **Capacity in standard units** (no volume or cold chain), no expiry, no lost sales. These apply equally to all policies.
 4. **Waiting times and recovery times are censored lower bounds** when backlog remains at the horizon. Only fixed-allocation leaves horizon-end unmet in M5, so the comparisons among the other four policies are unaffected.
-5. **No multiplicity correction.** The main effects (for example +11.4 pp [10.9, 11.8] in M5) are far from the CI boundaries.
+5. **Multiplicity:** one pre-registered primary comparison (M5, ERRRA vs cost-only, worst-region fill); exploratory cells use Holm adjustment. Sub-1 pp gains are labelled below MID even if the CI excludes 0.
 6. **Vulnerability tilt has a null effect.** Reported as null; the conclusions do not rely on it.
 7. **The v2.0.0 warehouse buffer** was set on non-reporting seeds, before any calibration or test run, and identically for all policies (revision log in the matrix).
 8. **Frontend on Create React App**, and 14 low or moderate dev-toolchain audit findings. These do not affect the simulation.

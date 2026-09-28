@@ -4,27 +4,27 @@
 <text x="204" y="59" text-anchor="end">Demand surge magnitude</text>
 <rect x="410" y="48" width="200" height="16" fill="#2ca02c"/>
 <text x="614" y="59" text-anchor="start" font-size="10">0.69</text>
-<text x="204" y="81" text-anchor="end">Warehouse initial stock (days)</text>
-<rect x="277.5370038465362" y="70" width="132.4629961534638" height="16" fill="#d62728"/>
-<text x="273.5370038465362" y="81" text-anchor="end" font-size="10">-0.46</text>
-<text x="204" y="103" text-anchor="end">Disruption duration (days)</text>
-<rect x="410" y="92" width="126.80520111396777" height="16" fill="#2ca02c"/>
-<text x="540.8052011139678" y="103" text-anchor="start" font-size="10">0.44</text>
+<text x="204" y="81" text-anchor="end">Disruption duration (days)</text>
+<rect x="410" y="70" width="128.80269609503068" height="16" fill="#2ca02c"/>
+<text x="542.8026960950307" y="81" text-anchor="start" font-size="10">0.44</text>
+<text x="204" y="103" text-anchor="end">Warehouse initial stock (days)</text>
+<rect x="285.0686817719418" y="92" width="124.93131822805822" height="16" fill="#d62728"/>
+<text x="281.0686817719418" y="103" text-anchor="end" font-size="10">-0.43</text>
 <text x="204" y="125" text-anchor="end">Transport capacity (× baseline demand)</text>
-<rect x="410" y="114" width="58.77822824601395" height="16" fill="#2ca02c"/>
-<text x="472.77822824601395" y="125" text-anchor="start" font-size="10">0.20</text>
+<rect x="410" y="114" width="46.21949815227151" height="16" fill="#2ca02c"/>
+<text x="460.2194981522715" y="125" text-anchor="start" font-size="10">0.16</text>
 <text x="204" y="147" text-anchor="end">Primary supplier lead time (days)</text>
-<rect x="410" y="136" width="24.261789711891026" height="16" fill="#2ca02c"/>
-<text x="438.261789711891" y="147" text-anchor="start" font-size="10">0.08</text>
+<rect x="410" y="136" width="25.819390316764725" height="16" fill="#2ca02c"/>
+<text x="439.8193903167647" y="147" text-anchor="start" font-size="10">0.09</text>
 <text x="204" y="169" text-anchor="end">Rural vulnerability weight</text>
-<rect x="410" y="158" width="13.497754740849928" height="16" fill="#2ca02c"/>
-<text x="427.4977547408499" y="169" text-anchor="start" font-size="10">0.05</text>
+<rect x="410" y="158" width="17.424566019552117" height="16" fill="#2ca02c"/>
+<text x="431.4245660195521" y="169" text-anchor="start" font-size="10">0.06</text>
 <text x="204" y="191" text-anchor="end">Lateral transfer cost per unit</text>
-<rect x="410" y="180" width="11.20327153737253" height="16" fill="#2ca02c"/>
-<text x="425.20327153737253" y="191" text-anchor="start" font-size="10">0.04</text>
+<rect x="410" y="180" width="13.095874378524513" height="16" fill="#2ca02c"/>
+<text x="427.0958743785245" y="191" text-anchor="start" font-size="10">0.05</text>
 <text x="204" y="213" text-anchor="end">ERRRA minimum service floor φ</text>
-<rect x="410" y="202" width="7.897009359590868" height="16" fill="#2ca02c"/>
-<text x="421.89700935959087" y="213" text-anchor="start" font-size="10">0.03</text>
+<rect x="410" y="202" width="1.1468573363118253" height="16" fill="#2ca02c"/>
+<text x="415.1468573363118" y="213" text-anchor="start" font-size="10">0.00</text>
 <line x1="410" y1="40" x2="410" y2="221" stroke="#333"/>
 <text x="410" y="246" text-anchor="middle">Partial rank correlation (LHS, N = 256, 5 seeds per sample)</text>
 </svg>

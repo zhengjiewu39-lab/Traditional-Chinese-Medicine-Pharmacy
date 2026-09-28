@@ -9,9 +9,9 @@
     500005
   ],
   "tolerance": 0.01,
-  "betterCount": 132,
+  "betterCount": 133,
   "worseCount": 0,
-  "tieCount": 124,
+  "tieCount": 123,
   "factors": [
     {
       "key": "surge",

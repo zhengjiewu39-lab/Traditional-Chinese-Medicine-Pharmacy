@@ -3,28 +3,28 @@
 <text x="20" y="22" font-size="14" font-weight="bold">PRCC of Δ cost (ERRRA − cost-only)</text>
 <text x="204" y="59" text-anchor="end">Warehouse initial stock (days)</text>
 <rect x="210" y="48" width="200" height="16" fill="#d62728"/>
-<text x="206" y="59" text-anchor="end" font-size="10">-0.68</text>
+<text x="206" y="59" text-anchor="end" font-size="10">-0.69</text>
 <text x="204" y="81" text-anchor="end">Demand surge magnitude</text>
-<rect x="410" y="70" width="181.5598687661187" height="16" fill="#2ca02c"/>
-<text x="595.5598687661187" y="81" text-anchor="start" font-size="10">0.62</text>
+<rect x="410" y="70" width="177.1062413183472" height="16" fill="#2ca02c"/>
+<text x="591.1062413183472" y="81" text-anchor="start" font-size="10">0.61</text>
 <text x="204" y="103" text-anchor="end">Disruption duration (days)</text>
-<rect x="410" y="92" width="161.9719550405557" height="16" fill="#2ca02c"/>
-<text x="575.9719550405557" y="103" text-anchor="start" font-size="10">0.55</text>
+<rect x="410" y="92" width="164.24164692878458" height="16" fill="#2ca02c"/>
+<text x="578.2416469287846" y="103" text-anchor="start" font-size="10">0.57</text>
 <text x="204" y="125" text-anchor="end">Transport capacity (× baseline demand)</text>
-<rect x="410" y="114" width="129.55941825537184" height="16" fill="#2ca02c"/>
-<text x="543.5594182553718" y="125" text-anchor="start" font-size="10">0.44</text>
+<rect x="410" y="114" width="133.80887217759494" height="16" fill="#2ca02c"/>
+<text x="547.8088721775949" y="125" text-anchor="start" font-size="10">0.46</text>
 <text x="204" y="147" text-anchor="end">Primary supplier lead time (days)</text>
-<rect x="410" y="136" width="82.99297912761733" height="16" fill="#2ca02c"/>
-<text x="496.99297912761733" y="147" text-anchor="start" font-size="10">0.28</text>
+<rect x="410" y="136" width="90.08046962327609" height="16" fill="#2ca02c"/>
+<text x="504.0804696232761" y="147" text-anchor="start" font-size="10">0.31</text>
 <text x="204" y="169" text-anchor="end">Rural vulnerability weight</text>
-<rect x="410" y="158" width="31.807766309646354" height="16" fill="#2ca02c"/>
-<text x="445.80776630964635" y="169" text-anchor="start" font-size="10">0.11</text>
-<text x="204" y="191" text-anchor="end">Lateral transfer cost per unit</text>
-<rect x="386.7575044035797" y="180" width="23.242495596420326" height="16" fill="#d62728"/>
-<text x="382.7575044035797" y="191" text-anchor="end" font-size="10">-0.08</text>
-<text x="204" y="213" text-anchor="end">ERRRA minimum service floor φ</text>
-<rect x="410" y="202" width="19.192084101065518" height="16" fill="#2ca02c"/>
-<text x="433.1920841010655" y="213" text-anchor="start" font-size="10">0.07</text>
+<rect x="410" y="158" width="19.792998418716024" height="16" fill="#2ca02c"/>
+<text x="433.792998418716" y="169" text-anchor="start" font-size="10">0.07</text>
+<text x="204" y="191" text-anchor="end">ERRRA minimum service floor φ</text>
+<rect x="410" y="180" width="10.708044211263655" height="16" fill="#2ca02c"/>
+<text x="424.70804421126365" y="191" text-anchor="start" font-size="10">0.04</text>
+<text x="204" y="213" text-anchor="end">Lateral transfer cost per unit</text>
+<rect x="402.77998302026845" y="202" width="7.220016979731554" height="16" fill="#d62728"/>
+<text x="398.77998302026845" y="213" text-anchor="end" font-size="10">-0.03</text>
 <line x1="410" y1="40" x2="410" y2="221" stroke="#333"/>
 <text x="410" y="246" text-anchor="middle">Partial rank correlation (LHS, N = 256)</text>
 </svg>
