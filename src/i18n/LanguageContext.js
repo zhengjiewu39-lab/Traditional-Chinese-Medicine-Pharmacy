@@ -1,13 +1,7 @@
 import React, { createContext, useContext, useMemo, useState, useCallback, useEffect } from 'react';
-import en from './locales/en';
-import zh from './locales/zh';
+import { translate } from './lookup';
 
 const STORAGE_KEY = 'app_lang';
-const locales = { en, zh };
-
-function getByPath(obj, path) {
-  return path.split('.').reduce((o, k) => (o && o[k] != null ? o[k] : undefined), obj);
-}
 
 const LanguageContext = createContext(null);
 
@@ -20,6 +14,7 @@ export function LanguageProvider({ children }) {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, lang);
     document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+    document.title = translate(lang, 'app.title');
   }, [lang]);
 
   const setLang = useCallback((next) => {
@@ -27,15 +22,7 @@ export function LanguageProvider({ children }) {
   }, []);
 
   const t = useCallback(
-    (key, vars) => {
-      let str = getByPath(locales[lang], key) ?? getByPath(locales.en, key) ?? key;
-      if (vars && typeof str === 'string') {
-        Object.entries(vars).forEach(([k, v]) => {
-          str = str.replace(new RegExp(`\\{${k}\\}`, 'g'), String(v));
-        });
-      }
-      return str;
-    },
+    (key, vars) => translate(lang, key, vars),
     [lang]
   );
 

@@ -21,7 +21,7 @@ Prescribe; add herbs; change doses; pick substitutes; override hard rules; chang
 
 Schema failure; no evidence; citation to a missing `sourceId`; hard-rule vs model conflict; missing critical fields; provider timeout; diagnosis or autonomous prescription in the model output; suspected prompt injection.
 
-Do not present model self-reported confidence as a calibrated probability. Use `evidenceStrength`, `missingInformation`, `disagreements`, `abstain`, `abstainReasons`.
+Do not present numeric suggestion scores as calibrated probabilities. Suggestions carry `heuristicReliabilityLevel` (`high`/`medium`/`low`) and `uncertainty`, plus `evidenceStrength`, `missingInformation`, `disagreements`, `abstain`, `abstainReasons`. Connecting a provider starts in **shadow**; live requires a shadow evaluation report, performance gates, and dual pharmacist/governance approval. The learning registry stores metadata only and does not train weights.
 
 ## Kill switch and production
 

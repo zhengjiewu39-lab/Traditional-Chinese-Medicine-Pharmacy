@@ -30,10 +30,13 @@ function loadRuntimeProvider() {
 
 function saveRuntimeProvider(body) {
   const preset = PRESETS[body.preset] || {};
+  if (body.aiMode === 'live') {
+    throw new ServiceError(409, 'live_requires_promotion', 'Connecting a provider starts in shadow. Promote to live only after a shadow evaluation report, pharmacist approval, and governance sign-off.');
+  }
   const next = {
     AI_PROVIDER: 'openai-compatible',
-    AI_MODE: 'live',
-    AI_TIMEOUT_MS: String(body.timeoutMs || 30000),
+    AI_MODE: 'shadow',
+    AI_TIMEOUT_MS: String(body.timeoutMs || 45000),
     AI_BASE_URL: normalizeBaseUrl(body.baseUrl || preset.AI_BASE_URL || ''),
     AI_MODEL: String(body.model || preset.AI_MODEL || ''),
     AI_DATA_RESIDENCY: body.dataResidency === 'on-prem' ? 'on-prem' : 'external',
@@ -51,6 +54,15 @@ function saveRuntimeProvider(body) {
   return publicView(next);
 }
 
+function promoteRuntimeToLive() {
+  const existing = loadRuntimeProvider();
+  if (!existing) throw new ServiceError(409, 'provider_not_configured', 'Configure a provider before promoting to live');
+  existing.AI_MODE = 'live';
+  existing.promotedAt = new Date().toISOString();
+  fs.writeFileSync(FILE(), `${JSON.stringify(existing, null, 2)}\n`);
+  return publicView(existing);
+}
+
 function clearRuntimeProvider() {
   const p = FILE();
   if (fs.existsSync(p)) fs.unlinkSync(p);
@@ -65,7 +77,7 @@ function publicView(cfg = loadRuntimeProvider()) {
     baseUrl: cfg.AI_BASE_URL,
     endpointHost: (() => { try { return new URL(cfg.AI_BASE_URL).host; } catch { return null; } })(),
     apiKeyConfigured: Boolean(cfg.AI_API_KEY),
-    aiMode: cfg.AI_MODE || 'live',
+    aiMode: cfg.AI_MODE || 'shadow',
     dataResidency: cfg.AI_DATA_RESIDENCY || null,
     timeoutMs: Number(cfg.AI_TIMEOUT_MS) || 30000,
     updatedAt: cfg.updatedAt || null,
@@ -80,5 +92,5 @@ function effectiveEnv(env = process.env) {
 }
 
 module.exports = {
-  PRESETS, loadRuntimeProvider, saveRuntimeProvider, clearRuntimeProvider, publicView, effectiveEnv,
+  PRESETS, loadRuntimeProvider, saveRuntimeProvider, promoteRuntimeToLive, clearRuntimeProvider, publicView, effectiveEnv,
 };

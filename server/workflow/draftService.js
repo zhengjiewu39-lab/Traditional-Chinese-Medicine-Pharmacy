@@ -8,6 +8,7 @@ const { getDataMode, isSyntheticMode } = require('../config/dataMode');
 const { ServiceError } = require('./errors');
 const { createCase, analyze } = require('./workflowService');
 const suggestions = require('./suggestionService');
+const { prescriberFields } = require('../security/prescriberLicense');
 
 function parseHerbText(text) {
   if (!text) return [];
@@ -75,8 +76,13 @@ function patchDraft(id, body, actor) {
   if (d.status !== 'draft') throw new ServiceError(409, 'draft_submitted', 'Submitted drafts cannot be edited; create a new draft from the returned case');
   const before = d.contentHash;
   if (body.patient) d.patient = { ...d.patient, ...body.patient };
-  if (body.clinical || body.diagnosisText || body.diagnosis) {
-    d.clinical = { ...d.clinical, ...(body.clinical || {}), ...(body.diagnosisText || body.diagnosis ? { diagnosisText: body.diagnosisText || body.diagnosis } : {}) };
+  if (body.clinical || body.diagnosisText || body.diagnosis || body.notes != null) {
+    d.clinical = {
+      ...d.clinical,
+      ...(body.clinical || {}),
+      ...(body.diagnosisText || body.diagnosis ? { diagnosisText: body.diagnosisText || body.diagnosis } : {}),
+      ...(body.notes != null ? { notes: body.notes } : {}),
+    };
   }
   if (body.prescription || body.prescriptionText) {
     const prescription = { ...d.prescription, ...(body.prescription || {}) };
@@ -98,13 +104,18 @@ function patchDraft(id, body, actor) {
   return { draft: d, changed: true };
 }
 
-function asCaseRecord(d) {
+function asCaseRecord(d, actor) {
   return {
     caseId: d.draftId,
     source: { channel: 'prescriber_draft' },
     patient: d.patient,
-    prescriber: { name: d.createdBy.name, userId: d.createdBy.id, licenseVerified: true },
-    prescription: { ...d.prescription, diagnosisText: d.clinical.diagnosisText },
+    prescriber: prescriberFields(actor || d.createdBy),
+    prescription: {
+      ...d.prescription,
+      diagnosisText: d.clinical.diagnosisText,
+      clinicalNotes: d.clinical.notes || d.prescription.clinicalNotes || '',
+    },
+    clinical: d.clinical,
   };
 }
 
@@ -113,7 +124,7 @@ async function analyzeDraft(id, actor) {
   assertOwner(d, actor);
   if (d.status !== 'draft') throw new ServiceError(409, 'draft_submitted', 'Cannot analyse a submitted draft');
   const provider = runtime.getProvider();
-  const output = await analyzeCase(asCaseRecord(d), {
+  const output = await analyzeCase(asCaseRecord(d, actor), {
     provider, aiEnabled: runtime.isAiEnabled(), timeoutMs: runtime.timeoutMs(),
   });
   const analysis = { analysisId: output.analysisId, contentHash: d.contentHash, at: output.generatedAt, output, stale: false };
@@ -175,8 +186,12 @@ async function submitDraft(id, actor) {
   const created = createCase({
     source: { channel: 'prescriber_draft', draftId: d.draftId },
     patient: d.patient,
-    prescriber: { name: d.createdBy.name, userId: d.createdBy.id, licenseVerified: true },
-    prescription: { ...d.prescription, diagnosisText: d.clinical.diagnosisText },
+    prescriber: prescriberFields(actor),
+    prescription: {
+      ...d.prescription,
+      diagnosisText: d.clinical.diagnosisText,
+      clinicalNotes: d.clinical.notes || '',
+    },
   }, actor);
   const screened = await analyze(created.caseId);
   d.status = 'submitted';

@@ -32,6 +32,7 @@ function suggestionsFromAnalysis({ draftId, caseId, analysis, inputHash }) {
     pharmacistAcknowledged: null,
     retainedInFinal: null,
     caseFinalState: null,
+    // heuristicReliabilityLevel is not a calibrated model probability.
   };
 
   const items = [];
@@ -48,7 +49,7 @@ function suggestionsFromAnalysis({ draftId, caseId, analysis, inputHash }) {
       evidenceStrength: (h.evidenceIds || []).length ? out.evidenceStrength : 'none',
       uncertainty: out.abstain ? 'high' : 'low',
       ruleIds: h.ruleId ? [h.ruleId] : [],
-      confidence: (h.evidenceIds || []).length ? 0.9 : 0.3,
+      heuristicReliabilityLevel: (h.evidenceIds || []).length ? 'high' : 'low',
     });
   }
   for (const a of out.alerts || []) {
@@ -64,7 +65,7 @@ function suggestionsFromAnalysis({ draftId, caseId, analysis, inputHash }) {
       evidenceStrength: (a.evidenceIds || []).length ? 'moderate' : 'none',
       uncertainty: a.source === 'ai' ? 'medium' : 'low',
       ruleIds: a.ruleId ? [a.ruleId] : [],
-      confidence: a.source === 'ai' ? 0.6 : 0.85,
+      heuristicReliabilityLevel: a.source === 'ai' ? 'medium' : 'high',
     });
   }
   for (const m of out.missingInformation || []) {
@@ -80,7 +81,7 @@ function suggestionsFromAnalysis({ draftId, caseId, analysis, inputHash }) {
       evidenceStrength: 'none',
       uncertainty: 'high',
       ruleIds: [],
-      confidence: 0.7,
+      heuristicReliabilityLevel: 'medium',
     });
   }
   for (const q of out.counterfactuals || []) {
@@ -96,7 +97,7 @@ function suggestionsFromAnalysis({ draftId, caseId, analysis, inputHash }) {
       evidenceStrength: 'limited',
       uncertainty: 'medium',
       ruleIds: q.code ? [q.code] : [],
-      confidence: 0.5,
+      heuristicReliabilityLevel: 'medium',
     });
   }
   for (const s of out.substitutionCandidates || []) {
@@ -112,7 +113,7 @@ function suggestionsFromAnalysis({ draftId, caseId, analysis, inputHash }) {
       evidenceStrength: 'moderate',
       uncertainty: 'medium',
       ruleIds: s.ruleId ? [s.ruleId] : [],
-      confidence: 0.4,
+      heuristicReliabilityLevel: 'low',
     });
   }
   if (out.abstain || out.disagreements?.length) {
@@ -130,7 +131,7 @@ function suggestionsFromAnalysis({ draftId, caseId, analysis, inputHash }) {
       evidenceStrength: out.evidenceStrength || 'limited',
       uncertainty: 'high',
       ruleIds: [],
-      confidence: 0.5,
+      heuristicReliabilityLevel: 'low',
     });
   }
   return items.map(persist);

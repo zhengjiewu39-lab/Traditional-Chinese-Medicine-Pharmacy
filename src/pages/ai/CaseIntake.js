@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Box, Paper, Typography, TextField, Grid, MenuItem, Button, Alert, Stack, Divider, FormControlLabel, Switch,
+  Box, Paper, Typography, TextField, Grid, MenuItem, Button, Alert, Stack, Divider,
 } from '@mui/material';
 import { aiCasesApi } from '../../services/aiApi';
 import { formatApiError } from '../../config/httpClient';
+import { useLanguage } from '../../i18n/LanguageContext';
+import { meansNoAllergy } from '../../i18n/lookup';
 
 const splitList = (s) => s.split(/[，,、;；\n]+/).map((x) => x.trim()).filter(Boolean);
 
@@ -16,17 +18,19 @@ function parseHerbLines(text) {
 }
 
 const EXAMPLES = {
-  routine: { herbs: '黄芪15g，白术10g，茯苓12g，陈皮6g，甘草6g', age: '45', sex: 'male', allergies: '无', meds: '' },
-  hardStop: { herbs: '甘草6g，甘遂1g，大枣10g', age: '52', sex: 'female', allergies: '无', meds: '' },
-  interaction: { herbs: '丹参15g，当归10g，川芎9g，黄芪15g', age: '68', sex: 'male', allergies: '无', meds: '华法林' },
+  routine: { herbs: '黄芪15g，白术10g，茯苓12g，陈皮6g，甘草6g', age: '45', sex: 'male', allergies: 'none', meds: '' },
+  hardStop: { herbs: '甘草6g，甘遂1g，大枣10g', age: '52', sex: 'female', allergies: 'none', meds: '' },
+  interaction: { herbs: '丹参15g，当归10g，川芎9g，黄芪15g', age: '68', sex: 'male', allergies: 'none', meds: '' },
   missing: { herbs: '附子9g，干姜6g，甘草6g', age: '', sex: 'female', allergies: '', meds: '' },
 };
 
 export default function CaseIntake() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [form, setForm] = useState({
     herbs: '', rawText: '', age: '', sex: 'unknown', pregnancy: 'unknown', lactation: 'unknown', allergies: '', meds: '',
-    doseCount: '7', usage: '水煎服，日一剂，分两次温服', form: 'decoction', decoctionNotes: '', doctor: '', licenseVerified: true, patientRef: '', name: '',
+    doseCount: '7', usage: '', form: 'decoction', decoctionNotes: '',
+    doctor: '', patientRef: '', name: '', diagnosis: '', weightKg: '', allergySeverity: 'unknown', clinicalNotes: '',
   });
   const [legacyId, setLegacyId] = useState('');
   const [error, setError] = useState('');
@@ -35,7 +39,17 @@ export default function CaseIntake() {
 
   const loadExample = (key) => {
     const ex = EXAMPLES[key];
-    setForm((f) => ({ ...f, herbs: ex.herbs, age: ex.age, sex: ex.sex, allergies: ex.allergies, meds: ex.meds, doctor: '合成医师', patientRef: 'P1', name: '合成患者' }));
+    setForm((f) => ({
+      ...f,
+      herbs: ex.herbs,
+      age: ex.age,
+      sex: ex.sex,
+      allergies: ex.allergies,
+      meds: key === 'interaction' ? t('ai.intake.exWarfarin') : ex.meds,
+      doctor: t('ai.intake.demoDoctor'),
+      patientRef: 'P1',
+      name: t('ai.intake.demoPatient'),
+    }));
   };
 
   const submit = async (body) => {
@@ -54,26 +68,30 @@ export default function CaseIntake() {
   };
 
   const submitForm = () => {
-    const allergies = form.allergies.trim() === '' ? undefined : (form.allergies.trim() === '无' ? [] : splitList(form.allergies));
+    const allergies = form.allergies.trim() === '' ? undefined : (meansNoAllergy(form.allergies) ? [] : splitList(form.allergies));
     submit({
       source: { channel: 'counter', ...(form.rawText ? { rawText: form.rawText } : {}) },
       patient: {
         ...(form.patientRef ? { patientRef: form.patientRef } : {}),
         ...(form.name ? { name: form.name } : {}),
         ...(form.age !== '' ? { ageYears: Number(form.age) } : {}),
+        ...(Number.isFinite(Number(form.weightKg)) && String(form.weightKg).trim() !== '' ? { weightKg: Number(form.weightKg) } : {}),
         sex: form.sex,
         pregnancy: form.pregnancy,
         lactation: form.lactation,
+        allergySeverity: form.allergySeverity,
         ...(allergies !== undefined ? { allergies } : {}),
         currentMedications: splitList(form.meds),
       },
-      prescriber: form.doctor ? { name: form.doctor, licenseVerified: form.licenseVerified } : {},
+      prescriber: form.doctor ? { name: form.doctor } : {},
       prescription: {
         ...(form.herbs ? { herbs: parseHerbLines(form.herbs) } : {}),
         doseCount: Number(form.doseCount) || undefined,
-        usage: form.usage || undefined,
+        usage: form.usage || t('ai.intake.defaultUsage'),
         form: form.form,
+        ...(form.diagnosis ? { diagnosisText: form.diagnosis } : {}),
         ...(form.decoctionNotes ? { decoctionNotes: form.decoctionNotes } : {}),
+        ...(form.clinicalNotes ? { clinicalNotes: form.clinicalNotes } : {}),
         issuedAt: new Date().toISOString().slice(0, 10),
       },
     });
@@ -81,68 +99,79 @@ export default function CaseIntake() {
 
   return (
     <Box>
-      <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>患者与处方接收</Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        录入处方后系统自动进行规则筛查、证据检索和AI解释生成，然后进入药师审核队列。AI不会批准处方。
-      </Typography>
+      <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>{t('ai.intake.title')}</Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>{t('ai.intake.intro')}</Typography>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       <Paper sx={{ p: 2, mb: 2 }}>
-        <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>从已有处方记录导入</Typography>
+        <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>{t('ai.intake.importTitle')}</Typography>
         <Stack direction="row" spacing={1}>
-          <TextField size="small" label="处方编号" value={legacyId} onChange={(e) => setLegacyId(e.target.value)} />
-          <Button variant="outlined" disabled={busy || !Number(legacyId)} onClick={() => submit({ fromPrescriptionId: Number(legacyId) })}>导入并筛查</Button>
+          <TextField size="small" label={t('ai.intake.rxId')} value={legacyId} onChange={(e) => setLegacyId(e.target.value)} />
+          <Button variant="outlined" disabled={busy || !Number(legacyId)} onClick={() => submit({ fromPrescriptionId: Number(legacyId) })}>{t('ai.intake.import')}</Button>
         </Stack>
       </Paper>
       <Paper sx={{ p: 2 }}>
         <Stack direction="row" spacing={1} sx={{ mb: 2 }} flexWrap="wrap" useFlexGap>
-          <Typography variant="subtitle1" sx={{ fontWeight: 600, mr: 1 }}>手工录入</Typography>
-          <Button size="small" onClick={() => loadExample('routine')}>示例：常规</Button>
-          <Button size="small" onClick={() => loadExample('hardStop')}>示例：十八反</Button>
-          <Button size="small" onClick={() => loadExample('interaction')}>示例：药物相互作用</Button>
-          <Button size="small" onClick={() => loadExample('missing')}>示例：信息缺失</Button>
+          <Typography variant="subtitle1" sx={{ fontWeight: 600, mr: 1 }}>{t('ai.intake.manual')}</Typography>
+          <Button size="small" onClick={() => loadExample('routine')}>{t('ai.intake.exRoutine')}</Button>
+          <Button size="small" onClick={() => loadExample('hardStop')}>{t('ai.intake.exHard')}</Button>
+          <Button size="small" onClick={() => loadExample('interaction')}>{t('ai.intake.exInteract')}</Button>
+          <Button size="small" onClick={() => loadExample('missing')}>{t('ai.intake.exMissing')}</Button>
         </Stack>
         <Grid container spacing={2}>
           <Grid item xs={12}>
-            <TextField fullWidth multiline minRows={2} label="药味与剂量（如：黄芪15g，白术10g）" value={form.herbs} onChange={set('herbs')} />
+            <TextField fullWidth multiline minRows={2} label={t('ai.intake.herbs')} value={form.herbs} onChange={set('herbs')} />
           </Grid>
           <Grid item xs={12}>
-            <TextField fullWidth multiline minRows={2} label="原始处方文字（可选，作为数据而非指令处理）" value={form.rawText} onChange={set('rawText')} />
+            <TextField fullWidth multiline minRows={2} label={t('ai.intake.rawText')} value={form.rawText} onChange={set('rawText')} />
           </Grid>
-          <Grid item xs={6} md={2}><TextField fullWidth label="患者编号" value={form.patientRef} onChange={set('patientRef')} /></Grid>
-          <Grid item xs={6} md={2}><TextField fullWidth label="姓名" value={form.name} onChange={set('name')} /></Grid>
-          <Grid item xs={4} md={2}><TextField fullWidth label="年龄" type="number" value={form.age} onChange={set('age')} /></Grid>
+          <Grid item xs={6} md={2}><TextField fullWidth label={t('ai.intake.patientRef')} value={form.patientRef} onChange={set('patientRef')} /></Grid>
+          <Grid item xs={6} md={2}><TextField fullWidth label={t('ai.intake.name')} value={form.name} onChange={set('name')} /></Grid>
+          <Grid item xs={12} md={6}><TextField fullWidth label={t('ai.intake.diagnosis')} value={form.diagnosis} onChange={set('diagnosis')} /></Grid>
+          <Grid item xs={4} md={2}><TextField fullWidth label={t('ai.intake.age')} type="number" value={form.age} onChange={set('age')} /></Grid>
+          <Grid item xs={4} md={2}><TextField fullWidth label={t('ai.intake.weight')} type="number" value={form.weightKg} onChange={set('weightKg')} /></Grid>
           <Grid item xs={4} md={2}>
-            <TextField select fullWidth label="性别" value={form.sex} onChange={set('sex')}>
-              <MenuItem value="male">男</MenuItem><MenuItem value="female">女</MenuItem><MenuItem value="unknown">未知</MenuItem>
+            <TextField select fullWidth label={t('ai.intake.allergySeverity')} value={form.allergySeverity} onChange={set('allergySeverity')}>
+              <MenuItem value="unknown">{t('ai.allergySeverity.unknown')}</MenuItem>
+              <MenuItem value="mild">{t('ai.allergySeverity.mild')}</MenuItem>
+              <MenuItem value="severe">{t('ai.allergySeverity.severe')}</MenuItem>
             </TextField>
           </Grid>
           <Grid item xs={4} md={2}>
-            <TextField select fullWidth label="妊娠" value={form.pregnancy} onChange={set('pregnancy')}>
-              <MenuItem value="no">否</MenuItem><MenuItem value="yes">是</MenuItem><MenuItem value="unknown">未确认</MenuItem>
+            <TextField select fullWidth label={t('ai.intake.sex')} value={form.sex} onChange={set('sex')}>
+              <MenuItem value="male">{t('ai.sex.male')}</MenuItem>
+              <MenuItem value="female">{t('ai.sex.female')}</MenuItem>
+              <MenuItem value="unknown">{t('ai.sex.unknown')}</MenuItem>
             </TextField>
           </Grid>
           <Grid item xs={4} md={2}>
-            <TextField select fullWidth label="哺乳" value={form.lactation} onChange={set('lactation')}>
-              <MenuItem value="no">否</MenuItem><MenuItem value="yes">是</MenuItem><MenuItem value="unknown">未确认</MenuItem>
+            <TextField select fullWidth label={t('ai.intake.pregnancy')} value={form.pregnancy} onChange={set('pregnancy')}>
+              <MenuItem value="no">{t('ai.tri.no')}</MenuItem>
+              <MenuItem value="yes">{t('ai.tri.yes')}</MenuItem>
+              <MenuItem value="unknown">{t('ai.tri.unknown')}</MenuItem>
             </TextField>
           </Grid>
-          <Grid item xs={12} md={6}><TextField fullWidth label="过敏史（填“无”表示无过敏；留空表示未记录）" value={form.allergies} onChange={set('allergies')} /></Grid>
-          <Grid item xs={12} md={6}><TextField fullWidth label="当前合并用药（逗号分隔）" value={form.meds} onChange={set('meds')} /></Grid>
-          <Grid item xs={4} md={2}><TextField fullWidth label="剂数" type="number" value={form.doseCount} onChange={set('doseCount')} /></Grid>
-          <Grid item xs={8} md={4}><TextField fullWidth label="用法用量" value={form.usage} onChange={set('usage')} /></Grid>
+          <Grid item xs={4} md={2}>
+            <TextField select fullWidth label={t('ai.intake.lactation')} value={form.lactation} onChange={set('lactation')}>
+              <MenuItem value="no">{t('ai.tri.no')}</MenuItem>
+              <MenuItem value="yes">{t('ai.tri.yes')}</MenuItem>
+              <MenuItem value="unknown">{t('ai.tri.unknown')}</MenuItem>
+            </TextField>
+          </Grid>
+          <Grid item xs={12} md={6}><TextField fullWidth label={t('ai.intake.allergies')} value={form.allergies} onChange={set('allergies')} /></Grid>
+          <Grid item xs={12} md={6}><TextField fullWidth label={t('ai.intake.meds')} value={form.meds} onChange={set('meds')} /></Grid>
+          <Grid item xs={4} md={2}><TextField fullWidth label={t('ai.intake.doseCount')} type="number" value={form.doseCount} onChange={set('doseCount')} /></Grid>
+          <Grid item xs={8} md={4}><TextField fullWidth label={t('ai.intake.usage')} value={form.usage} placeholder={t('ai.intake.defaultUsage')} onChange={set('usage')} /></Grid>
           <Grid item xs={6} md={2}>
-            <TextField select fullWidth label="剂型" value={form.form} onChange={set('form')}>
-              <MenuItem value="decoction">汤剂</MenuItem><MenuItem value="granule">颗粒</MenuItem><MenuItem value="pill">丸剂</MenuItem><MenuItem value="powder">散剂</MenuItem><MenuItem value="other">其他</MenuItem>
+            <TextField select fullWidth label={t('ai.intake.form')} value={form.form} onChange={set('form')}>
+              {['decoction', 'granule', 'pill', 'powder', 'other'].map((v) => <MenuItem key={v} value={v}>{t(`ai.form.${v}`)}</MenuItem>)}
             </TextField>
           </Grid>
-          <Grid item xs={6} md={4}><TextField fullWidth label="煎煮说明（如：附子先煎）" value={form.decoctionNotes} onChange={set('decoctionNotes')} /></Grid>
-          <Grid item xs={6} md={3}><TextField fullWidth label="处方医师" value={form.doctor} onChange={set('doctor')} /></Grid>
-          <Grid item xs={6} md={3}>
-            <FormControlLabel control={<Switch checked={form.licenseVerified} onChange={set('licenseVerified')} />} label="医师资质已核验" />
-          </Grid>
+          <Grid item xs={6} md={4}><TextField fullWidth label={t('ai.intake.decoctionNotes')} value={form.decoctionNotes} onChange={set('decoctionNotes')} /></Grid>
+          <Grid item xs={12}><TextField fullWidth label={t('ai.intake.clinicalNotes')} value={form.clinicalNotes} onChange={set('clinicalNotes')} /></Grid>
+          <Grid item xs={12} md={6}><TextField fullWidth label={t('ai.intake.doctor')} value={form.doctor} onChange={set('doctor')} helperText={t('ai.license.helper')} /></Grid>
         </Grid>
         <Divider sx={{ my: 2 }} />
-        <Button variant="contained" disabled={busy || !form.herbs} onClick={submitForm}>提交并进行AI筛查</Button>
+        <Button variant="contained" disabled={busy || !form.herbs} onClick={submitForm}>{t('ai.intake.submit')}</Button>
       </Paper>
     </Box>
   );

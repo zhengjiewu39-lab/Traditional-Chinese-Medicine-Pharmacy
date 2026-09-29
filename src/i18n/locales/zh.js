@@ -1,3 +1,5 @@
+import ai from './ai.zh';
+
 const zh = {
   lang: { zh: '中文', en: 'English', label: '语言' },
   app: {
@@ -8,7 +10,9 @@ const zh = {
     legacyPageTitle: 'Legacy演示功能',
   },
   roles: {
-    admin: '管理员', pharmacist: '药师', prescriber: '医师', technician: '调剂员', researcher: '研究员', patient: '患者',
+    admin: '管理员',     pharmacist: '药师',
+    pharmacist2: '药师二',
+    prescriber: '医师', technician: '调剂员', researcher: '研究员', patient: '患者',
     adminMode: '管理模式', pharmacistMode: '药师模式', prescriberMode: '医师模式', technicianMode: '调剂模式', researcherMode: '研究模式', patientMode: '患者模式',
   },
   auth: { logout: '退出登录', login: '登录', loggingIn: '登录中…', loginFailed: '登录失败，请检查用户名和密码' },
@@ -24,6 +28,12 @@ const zh = {
     ports: '（需同时启动 3002 与 3000）。',
   },
   nav: {
+    sectionPathPrescriber: '1. 医师开方',
+    sectionPathPharmacist: '2. 药师审核',
+    sectionRecords: '病历与筛查',
+    sectionPathPatient: '3. 患者确认',
+    sectionPathDispense: '调剂（患者确认之后）',
+    sectionSupportOps: '辅助运营',
     sectionStudy: '仿真研究',
     sectionLegacy: 'Legacy演示功能',
     sectionWorkbench: '智能工作台',
@@ -79,12 +89,14 @@ const zh = {
   },
   login: {
     title: '智能中药药房平台',
-    subtitle: '药师监管、患者参与、AI编排的研究原型（合成演示数据）',
+    subtitle: '临床路径：医师开方 → 药师审核 → 需要时药师二复核 → 患者确认。调剂员、管理员、研究员只辅助，不代替药师签署。',
     username: '用户名',
     password: '密码',
     demoAdmin: '演示管理员：admin / admin123',
     demoPharm: '演示药师：pharmacist / pharm123',
-    demoAccounts: '演示账号（仅开发模式）：admin/admin123 · pharmacist/pharm123 · pharmacist2/pharm456 · technician/tech123 · researcher/research123 · patient/patient123',
+    clinicalGroup: '临床路径',
+    supportGroup: '辅助角色（不批准处方）',
+    demoAccounts: '临床：prescriber/doc123 · pharmacist/pharm123 · pharmacist2/pharm456 · patient/patient123。辅助：technician/tech123 · admin/admin123 · researcher/research123',
   },
   overview: {
     title: '总览',
@@ -340,9 +352,19 @@ const zh = {
   },
   roleGuard: {
     title: '当前角色无权访问此页面',
-    body: '页面访问按角色控制：药师负责审核放行，调剂员执行调剂，研究员仅查看合成与汇总数据，患者仅查看本人记录。',
+    body: '各角色只打开自己的工作。临床路径：医师开方，药师（及药师二）审核，患者确认。调剂员、管理员、研究员辅助系统，不能代替药师签署。',
     back: '返回首页',
   },
+  workflow: {
+    title: '临床路径：医师 → 药师 → 药师二 → 患者',
+    prescriber: '1 医师开方',
+    pharmacist: '2 药师审核',
+    pharmacist2: '3 药师二复核',
+    patient: '4 患者确认',
+    support: '调剂员、管理员、研究员辅助这条路径。他们不批准处方，也不做会员促销。',
+    auxiliary: '{role}：辅助角色。不能代替「医师—药师—患者」路径，没有药师资质也不能签署处方。',
+  },
+  ai,
 };
 
 export default zh;

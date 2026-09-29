@@ -9,14 +9,16 @@ import { getHomeForRole } from '../config/navigation';
 import { useLanguage } from '../i18n/LanguageContext';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 
-const DEMO_ACCOUNTS = [
+const CLINICAL_ACCOUNTS = [
   { username: 'prescriber', password: 'doc123', role: 'prescriber', Icon: MedicalServices },
   { username: 'pharmacist', password: 'pharm123', role: 'pharmacist', Icon: LocalPharmacy },
   { username: 'pharmacist2', password: 'pharm456', role: 'pharmacist', Icon: LocalPharmacy },
+  { username: 'patient', password: 'patient123', role: 'patient', Icon: Person },
+];
+const SUPPORT_ACCOUNTS = [
   { username: 'technician', password: 'tech123', role: 'technician', Icon: Handyman },
   { username: 'admin', password: 'admin123', role: 'admin', Icon: AdminPanelSettings },
   { username: 'researcher', password: 'research123', role: 'researcher', Icon: Science },
-  { username: 'patient', password: 'patient123', role: 'patient', Icon: Person },
 ];
 
 function Login() {
@@ -28,12 +30,11 @@ function Login() {
   const { login } = useAuth();
   const { t } = useLanguage();
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const signIn = async (u, p) => {
     try {
       setError('');
       setLoading(true);
-      const loggedIn = await login(username, password);
+      const loggedIn = await login(u, p);
       navigate(getHomeForRole(loggedIn?.role));
     } catch {
       setError(t('auth.loginFailed'));
@@ -41,6 +42,24 @@ function Login() {
       setLoading(false);
     }
   };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    signIn(username, password);
+  };
+
+  const accountButton = ({ username: u, password: p, role, Icon }) => (
+    <Button
+      key={u}
+      size="small"
+      variant="outlined"
+      startIcon={<Icon />}
+      disabled={loading}
+      onClick={() => signIn(u, p)}
+    >
+      {u === 'pharmacist2' ? t('roles.pharmacist2') : t(`roles.${role}`)}
+    </Button>
+  );
 
   return (
     <Container component="main" maxWidth="xs">
@@ -81,25 +100,13 @@ function Login() {
               {loading ? t('auth.loggingIn') : t('auth.login')}
             </Button>
           </Box>
-          <Stack direction="row" spacing={1} justifyContent="center" flexWrap="wrap" useFlexGap sx={{ mt: 1 }}>
-            {DEMO_ACCOUNTS.map(({ username: u, password: p, role, Icon }) => (
-              <Button
-                key={u}
-                size="small"
-                variant="outlined"
-                startIcon={<Icon />}
-                disabled={loading}
-                onClick={async () => {
-                  try {
-                    setLoading(true);
-                    const loggedIn = await login(u, p);
-                    navigate(getHomeForRole(loggedIn?.role));
-                  } catch { setError(t('auth.loginFailed')); } finally { setLoading(false); }
-                }}
-              >
-                {u === 'pharmacist2' ? `${t('roles.pharmacist')}2` : t(`roles.${role}`)}
-              </Button>
-            ))}
+          <Typography variant="caption" color="text.secondary" sx={{ mt: 1, mb: 0.5 }}>{t('login.clinicalGroup')}</Typography>
+          <Stack direction="row" spacing={1} justifyContent="center" flexWrap="wrap" useFlexGap>
+            {CLINICAL_ACCOUNTS.map(accountButton)}
+          </Stack>
+          <Typography variant="caption" color="text.secondary" sx={{ mt: 1.5, mb: 0.5 }}>{t('login.supportGroup')}</Typography>
+          <Stack direction="row" spacing={1} justifyContent="center" flexWrap="wrap" useFlexGap>
+            {SUPPORT_ACCOUNTS.map(accountButton)}
           </Stack>
           <Typography variant="caption" color="text.secondary" display="block" textAlign="center" sx={{ mt: 1 }}>
             {t('login.demoAccounts')}

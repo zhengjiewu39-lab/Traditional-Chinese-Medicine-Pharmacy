@@ -61,7 +61,7 @@ Append-only store. `verifyChain` fails on payload edit, re-hash, deletion, or re
 
 ## Synthetic standardized evaluation (`npm run ai:evaluate`)
 
-From `benchmarks/ai-review/results/latest.md` (64 cases, mock-deterministic-v1):
+From `benchmarks/ai-review/results/latest.md` (64 **synthetic** cases, **mock-deterministic-v1**, p50 latency 1.21 ms). This is an **implementation-fidelity** check: cases and rules come from the same table. It is **not** a live-LLM result (`results-live/` has no committed report) and **must not** be cited as “100% AI accuracy” or as sensitivity to unseen prescriptions.
 
 | Metric | Value |
 |---|---|
@@ -75,7 +75,7 @@ From `benchmarks/ai-review/results/latest.md` (64 cases, mock-deterministic-v1):
 | Audit completeness / chain | 100% / valid |
 | Latency p50 / p95 | 1.21 ms / 3.46 ms |
 
-These numbers measure **implementation fidelity on cases written from the same rules**, not clinical sensitivity and not a real LLM.
+These numbers measure **implementation fidelity on cases written from the same rules**, not clinical sensitivity and not a real LLM. `npm run ai:evaluate:live` exists; until a `results-live` report is independently produced and reviewed, the product may be described as **supporting live-model connection (default: shadow)**, not as **having validated real-AI performance**. Suggestion `heuristicReliabilityLevel` values are coded heuristics, not calibrated probabilities. The registry does not train weights.
 
 ## Digital-twin bridge
 

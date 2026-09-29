@@ -5,8 +5,10 @@ import {
 import { QrCode2, Search } from '@mui/icons-material';
 import { pickupApi } from '../services/aiApi';
 import { formatApiError } from '../config/httpClient';
+import { useLanguage } from '../i18n/LanguageContext';
 
 function PatientPickup() {
+  const { t } = useLanguage();
   const [code, setCode] = useState('');
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
@@ -21,7 +23,7 @@ function PatientPickup() {
       const res = await pickupApi.redeem(code.trim());
       setData(res.data);
     } catch (e) {
-      setError(e.response?.data?.error?.message || formatApiError(e) || '取药令牌无效');
+      setError(formatApiError(e) || t('ai.pickup.invalid'));
     } finally {
       setLoading(false);
     }
@@ -31,9 +33,9 @@ function PatientPickup() {
     <Box sx={{ maxWidth: 720, mx: 'auto' }}>
       <Box sx={{ textAlign: 'center', mb: 4 }}>
         <QrCode2 sx={{ fontSize: 48, color: 'primary.main', mb: 1 }} />
-        <Typography variant="h5" fontWeight={700}>取药核验</Typography>
+        <Typography variant="h5" fontWeight={700}>{t('ai.pickup.title')}</Typography>
         <Typography variant="body2" color="text.secondary">
-          使用药师签发的短时一次性令牌。接口不返回完整患者或完整处方。
+          {t('ai.pickup.intro')}
         </Typography>
       </Box>
 
@@ -41,12 +43,12 @@ function PatientPickup() {
         <Box sx={{ display: 'flex', gap: 1 }}>
           <TextField
             fullWidth
-            label="取药令牌"
+            label={t('ai.pickup.token')}
             value={code}
             onChange={(e) => setCode(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && lookup()}
           />
-          <Button variant="contained" startIcon={<Search />} onClick={lookup} disabled={loading}>核验</Button>
+          <Button variant="contained" startIcon={<Search />} onClick={lookup} disabled={loading}>{t('ai.pickup.check')}</Button>
         </Box>
       </Paper>
 
@@ -54,12 +56,12 @@ function PatientPickup() {
 
       {data && (
         <Paper sx={{ p: 3 }}>
-          <Chip label={data.ready ? '可取药' : '未就绪'} color={data.ready ? 'success' : 'warning'} sx={{ mb: 2 }} />
-          <Typography variant="body2">病例尾号：{data.caseRef}</Typography>
+          <Chip label={data.ready ? t('ai.pickup.ready') : t('ai.pickup.notReady')} color={data.ready ? 'success' : 'warning'} sx={{ mb: 2 }} />
+          <Typography variant="body2">{t('ai.pickup.caseRef', { ref: data.caseRef })}</Typography>
           <Typography variant="body2" sx={{ mt: 1 }}>
-            {(data.herbs || []).map((h) => `${h.name} ${h.dosage}${h.unit || 'g'}`).join('，') || '—'}
+            {(data.herbs || []).map((h) => `${h.name} ${h.dosage}${h.unit || 'g'}`).join(', ') || t('ai.dash')}
           </Typography>
-          {data.synthetic && <Alert severity="warning" sx={{ mt: 2 }}>合成演示数据，不得当作真实患者处方。</Alert>}
+          {data.synthetic && <Alert severity="warning" sx={{ mt: 2 }}>{t('ai.pickup.synthetic')}</Alert>}
         </Paper>
       )}
     </Box>

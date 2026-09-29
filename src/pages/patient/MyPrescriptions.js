@@ -5,17 +5,10 @@ import {
 import { patientPortalApi } from '../../services/aiApi';
 import { formatApiError } from '../../config/httpClient';
 import { STATE_LABELS } from '../../config/aiLabels';
-
-const EVENT_LABELS = {
-  case_received: '处方已接收',
-  state_transition: '状态更新',
-  patient_confirmation_requested: '请您确认信息',
-  patient_confirmed: '您已确认',
-  patient_declined: '您已拒绝服务',
-  patient_feedback_submitted: '反馈已提交',
-};
+import { useLanguage } from '../../i18n/LanguageContext';
 
 export default function MyPrescriptions() {
+  const { t } = useLanguage();
   const [cases, setCases] = useState(null);
   const [error, setError] = useState('');
   useEffect(() => {
@@ -23,21 +16,24 @@ export default function MyPrescriptions() {
   }, []);
   return (
     <Box>
-      <Typography variant="h5" sx={{ fontWeight: 700, mb: 2 }}>我的处方</Typography>
+      <Typography variant="h5" sx={{ fontWeight: 700, mb: 2 }}>{t('ai.mine.title')}</Typography>
       {error && <Alert severity="error">{error}</Alert>}
-      {cases && !cases.length && <Alert severity="info">暂无处方记录</Alert>}
+      {cases && !cases.length && <Alert severity="info">{t('ai.mine.empty')}</Alert>}
       {cases?.map((c) => (
         <Paper key={c.caseRef} sx={{ p: 2, mb: 2 }}>
           <Stack direction="row" spacing={1} alignItems="center">
             <Typography variant="subtitle1" sx={{ fontFamily: 'monospace' }}>{c.caseRef}</Typography>
-            <Chip size="small" label={STATE_LABELS[c.state] || c.state} />
+            <Chip size="small" label={t(STATE_LABELS[c.state] || c.state)} />
           </Stack>
-          <Typography variant="body2" sx={{ mt: 1 }}>{c.prescription.herbs.map((h) => `${h.name}${h.dosage ?? ''}${h.unit}`).join('、')}</Typography>
+          <Typography variant="body2" sx={{ mt: 1 }}>{c.prescription.herbs.map((h) => `${h.name}${h.dosage ?? ''}${h.unit}`).join(', ')}</Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>{c.explanation.text}</Typography>
           <List dense>
             {c.events.map((e, i) => (
               <ListItem key={i} disableGutters>
-                <ListItemText primary={`${EVENT_LABELS[e.eventType] || e.eventType}${e.summary && e.eventType === 'state_transition' ? `：${STATE_LABELS[e.summary] || e.summary}` : ''}`} secondary={new Date(e.timestamp).toLocaleString()} />
+                <ListItemText
+                  primary={`${(() => { const k = `ai.event.${e.eventType}`; const lab = t(k); return lab === k ? e.eventType : lab; })()}${e.summary && e.eventType === 'state_transition' ? `: ${t(STATE_LABELS[e.summary] || e.summary)}` : ''}`}
+                  secondary={new Date(e.timestamp).toLocaleString()}
+                />
               </ListItem>
             ))}
           </List>

@@ -55,35 +55,53 @@ function ageBand(age) {
   return '80+';
 }
 
+function weightKgRounded(kg) {
+  if (typeof kg !== 'number' || !Number.isFinite(kg)) return null;
+  return Math.round(kg);
+}
+
 /**
  * Minimum clinical context for the semantic track: no name, phone, address or ID;
  * age reduced to a band; free text scrubbed of phone and ID patterns.
  */
 function minimiseCaseForModel(c) {
   const p = c.patient || {};
+  const rx = c.prescription || {};
+  const clinical = c.clinical || {};
   return {
     caseRef: c.caseId,
     patient: {
       ageBand: ageBand(p.ageYears),
+      weightKg: weightKgRounded(p.weightKg),
       sex: p.sex || 'unknown',
       pregnancy: p.pregnancy ?? 'unknown',
       lactation: p.lactation ?? 'unknown',
       allergies: (p.allergies || []).map(scrubText),
+      allergySeverity: p.allergySeverity || 'unknown',
       liverImpairment: Boolean(p.liverImpairment),
       renalImpairment: Boolean(p.renalImpairment),
       currentMedications: (p.currentMedications || []).map(scrubText),
     },
+    diagnosisText: scrubText(rx.diagnosisText || clinical.diagnosisText || ''),
+    clinicalNotes: scrubText(rx.clinicalNotes || clinical.notes || ''),
     prescription: {
-      herbs: (c.prescription?.herbs || []).map((h) => ({ name: h.name, dosage: h.dosage, unit: h.unit })),
-      doseCount: c.prescription?.doseCount ?? null,
-      frequency: c.prescription?.frequency ?? null,
-      usage: c.prescription?.usage ?? null,
-      form: c.prescription?.form ?? null,
+      herbs: (rx.herbs || []).map((h) => ({
+        name: h.name,
+        dosage: h.dosage,
+        unit: h.unit,
+        processing: h.processing || null,
+        decoctionTiming: h.decoctionTiming || null,
+      })),
+      doseCount: rx.doseCount ?? null,
+      frequency: rx.frequency ?? null,
+      usage: rx.usage ?? null,
+      form: rx.form ?? null,
+      decoctionNotes: rx.decoctionNotes ? scrubText(rx.decoctionNotes) : null,
     },
     freeText: c.source?.rawText ? scrubText(c.source.rawText) : '',
   };
 }
 
 module.exports = {
-  redactForLog, minimiseCaseForModel, scrubText, fingerprint, ageBand,
+  redactForLog, minimiseCaseForModel, scrubText, fingerprint, ageBand, weightKgRounded,
 };

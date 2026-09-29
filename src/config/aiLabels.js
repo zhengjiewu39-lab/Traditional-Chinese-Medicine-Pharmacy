@@ -1,21 +1,23 @@
-export const AI_LABEL = 'AI生成，需药师审核';
-export const SYNTHETIC_LABEL = '合成演示数据，不代表真实患者';
+/** Label maps store i18n keys. Render with t(STATE_LABELS[state]). */
+
+export const AI_LABEL = 'ai.generated';
+export const SYNTHETIC_LABEL = 'ai.synthetic';
 
 export const STATE_LABELS = {
-  received: '已接收',
-  information_incomplete: '信息不完整',
-  ai_screening: 'AI筛查中',
-  pharmacist_review_required: '待药师审核',
-  pharmacist_approved: '药师已批准',
-  pharmacist_rejected: '药师已驳回',
-  returned_to_prescriber: '已退回医师',
-  patient_confirmation_required: '待患者确认',
-  patient_confirmed: '患者已确认',
-  patient_declined: '患者已拒绝',
-  dispensing: '调剂中',
-  pharmacist_final_check: '待药师复核',
-  ready_for_pickup: '待取药/配送',
-  completed: '已完成',
+  received: 'ai.state.received',
+  information_incomplete: 'ai.state.information_incomplete',
+  ai_screening: 'ai.state.ai_screening',
+  pharmacist_review_required: 'ai.state.pharmacist_review_required',
+  pharmacist_approved: 'ai.state.pharmacist_approved',
+  pharmacist_rejected: 'ai.state.pharmacist_rejected',
+  returned_to_prescriber: 'ai.state.returned_to_prescriber',
+  patient_confirmation_required: 'ai.state.patient_confirmation_required',
+  patient_confirmed: 'ai.state.patient_confirmed',
+  patient_declined: 'ai.state.patient_declined',
+  dispensing: 'ai.state.dispensing',
+  pharmacist_final_check: 'ai.state.pharmacist_final_check',
+  ready_for_pickup: 'ai.state.ready_for_pickup',
+  completed: 'ai.state.completed',
 };
 
 export const STATE_COLORS = {
@@ -32,74 +34,74 @@ export const STATE_COLORS = {
 };
 
 export const TIER_LABELS = {
-  A0: 'A0 自动（仅记录）',
-  A1: 'A1 未见规则风险',
-  A2: 'A2 需药师判断',
-  A3: 'A3 强制阻断',
+  A0: 'ai.tier.A0',
+  A1: 'ai.tier.A1',
+  A2: 'ai.tier.A2',
+  A3: 'ai.tier.A3',
 };
 
 export const TIER_COLORS = { A0: 'default', A1: 'success', A2: 'warning', A3: 'error' };
 
 export const RECOMMENDATION_LABELS = {
-  pass_to_pharmacist: '提交药师审核',
-  clarification_required: '需补充信息',
-  hard_stop: '硬性阻断',
-  refer_to_prescriber: '建议联系处方医师',
+  pass_to_pharmacist: 'ai.recommendation.pass_to_pharmacist',
+  clarification_required: 'ai.recommendation.clarification_required',
+  hard_stop: 'ai.recommendation.hard_stop',
+  refer_to_prescriber: 'ai.recommendation.refer_to_prescriber',
 };
 
 export const OVERRIDE_REASONS = [
-  { value: 'false_positive', label: '误报（规则不适用于本例）' },
-  { value: 'patient_context', label: '患者具体情况已评估' },
-  { value: 'evidence_outdated', label: '证据已过时' },
-  { value: 'rule_not_applicable', label: '规则不适用' },
-  { value: 'model_misinterpretation', label: '模型理解错误' },
-  { value: 'other', label: '其他（需填写说明）' },
+  { value: 'false_positive', labelKey: 'ai.override.false_positive' },
+  { value: 'patient_context', labelKey: 'ai.override.patient_context' },
+  { value: 'evidence_outdated', labelKey: 'ai.override.evidence_outdated' },
+  { value: 'rule_not_applicable', labelKey: 'ai.override.rule_not_applicable' },
+  { value: 'model_misinterpretation', labelKey: 'ai.override.model_misinterpretation' },
+  { value: 'other', labelKey: 'ai.override.other' },
 ];
 
 export const ABSTAIN_REASON_LABELS = {
-  model_unavailable: '模型未启用',
-  ai_disabled_by_kill_switch: 'AI总开关已关闭',
-  model_timeout: '模型超时',
-  model_error: '模型调用失败',
-  schema_invalid: '模型输出不符合结构',
-  prompt_injection_suspected: '疑似指令注入',
-  input_too_long: '输入过长',
-  citation_not_found: '引用了不存在的证据',
-  autonomous_clinical_output: '模型输出包含诊断/开方表述',
-  prescription_modification_attempt: '模型试图修改药味或剂量',
-  key_information_missing: '关键信息缺失',
-  no_evidence: '部分风险项缺少已审核证据',
-  hard_rule_model_conflict: '模型与硬规则冲突',
+  model_unavailable: 'ai.abstain.model_unavailable',
+  ai_disabled_by_kill_switch: 'ai.abstain.ai_disabled_by_kill_switch',
+  model_timeout: 'ai.abstain.model_timeout',
+  model_error: 'ai.abstain.model_error',
+  schema_invalid: 'ai.abstain.schema_invalid',
+  prompt_injection_suspected: 'ai.abstain.prompt_injection_suspected',
+  input_too_long: 'ai.abstain.input_too_long',
+  citation_not_found: 'ai.abstain.citation_not_found',
+  autonomous_clinical_output: 'ai.abstain.autonomous_clinical_output',
+  prescription_modification_attempt: 'ai.abstain.prescription_modification_attempt',
+  key_information_missing: 'ai.abstain.key_information_missing',
+  no_evidence: 'ai.abstain.no_evidence',
+  hard_rule_model_conflict: 'ai.abstain.hard_rule_model_conflict',
 };
 
 export const SEMANTIC_STATUS_LABELS = {
-  ok: '模型输出已通过校验',
-  disabled: '模型未启用（仅规则）',
-  disabled_by_kill_switch: 'AI已关闭（仅规则）',
-  timeout: '模型超时（已回退规则）',
-  error: '模型错误（已回退规则）',
-  schema_invalid: '输出不合规（已回退规则）',
-  policy_violation: '输出违反安全策略（已丢弃）',
-  skipped_injection: '疑似注入（未调用模型）',
-  skipped_input_too_long: '输入过长（未调用模型）',
-  circuit_open: '模型熔断（已回退规则）',
+  ok: 'ai.semantic.ok',
+  disabled: 'ai.semantic.disabled',
+  disabled_by_kill_switch: 'ai.semantic.disabled_by_kill_switch',
+  timeout: 'ai.semantic.timeout',
+  error: 'ai.semantic.error',
+  schema_invalid: 'ai.semantic.schema_invalid',
+  policy_violation: 'ai.semantic.policy_violation',
+  skipped_injection: 'ai.semantic.skipped_injection',
+  skipped_input_too_long: 'ai.semantic.skipped_input_too_long',
+  circuit_open: 'ai.semantic.circuit_open',
 };
 
 export const DISPLAY_SOURCE_LABELS = {
-  rules: '规则结果',
-  live_model: '真实模型结果',
-  mock: '模拟模型结果（非真实AI）',
-  shadow_model: '影子模型结果（不驱动临床决定）',
-  degraded_rules: '降级结果（规则兜底）',
+  rules: 'ai.displaySource.rules',
+  live_model: 'ai.displaySource.live_model',
+  mock: 'ai.displaySource.mock',
+  shadow_model: 'ai.displaySource.shadow_model',
+  degraded_rules: 'ai.displaySource.degraded_rules',
 };
 
 export const DISPOSITION_REASONS = [
-  { value: 'clinically_appropriate', label: '临床适当' },
-  { value: 'patient_specific', label: '患者具体情况' },
-  { value: 'evidence_insufficient', label: '证据不足' },
-  { value: 'wrong_context', label: '情境不符' },
-  { value: 'dose_adjusted_instead', label: '改为调整剂量' },
-  { value: 'already_addressed', label: '已处理' },
-  { value: 'disagrees_with_experience', label: '与经验不符' },
-  { value: 'other', label: '其他' },
+  { value: 'clinically_appropriate', labelKey: 'ai.disposition.clinically_appropriate' },
+  { value: 'patient_specific', labelKey: 'ai.disposition.patient_specific' },
+  { value: 'evidence_insufficient', labelKey: 'ai.disposition.evidence_insufficient' },
+  { value: 'wrong_context', labelKey: 'ai.disposition.wrong_context' },
+  { value: 'dose_adjusted_instead', labelKey: 'ai.disposition.dose_adjusted_instead' },
+  { value: 'already_addressed', labelKey: 'ai.disposition.already_addressed' },
+  { value: 'disagrees_with_experience', labelKey: 'ai.disposition.disagrees_with_experience' },
+  { value: 'other', labelKey: 'ai.disposition.other' },
 ];

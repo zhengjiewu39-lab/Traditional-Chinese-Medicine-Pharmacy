@@ -162,6 +162,7 @@ router.post('/runtime/provider', requirePermission('ai:runtime_configure'), vali
     apiKey: { type: 'string', maxLength: 512 },
     timeoutMs: { type: 'integer', minimum: 3000, maximum: 120000 },
     dataResidency: { type: 'string', enum: ['on-prem', 'external'] },
+    aiMode: { type: 'string', enum: ['shadow', 'live'] },
   },
 }), handle(async (req, res) => {
   const cfg = require('../ai/runtimeConfig');
@@ -180,6 +181,31 @@ router.post('/runtime/provider', requirePermission('ai:runtime_configure'), vali
     },
   });
   res.json({ local: view, runtime: runtime.describeRuntime() });
+}));
+
+router.post('/runtime/promote-live', requirePermission('ai:runtime_configure'), validateBody({
+  type: 'object',
+  additionalProperties: false,
+  required: ['pharmacistApproverId', 'modelId'],
+  properties: {
+    modelId: { type: 'string', minLength: 1, maxLength: 80 },
+    pharmacistApproverId: { type: 'string', minLength: 1, maxLength: 40 },
+    reason: { type: 'string', maxLength: 300 },
+  },
+}), handle(async (req, res) => {
+  const promoted = learning.setModelStatus(req.body.modelId, 'live', actorOf(req), req.body.reason, {
+    pharmacistApproverId: req.body.pharmacistApproverId,
+  });
+  const cfg = require('../ai/runtimeConfig');
+  const view = cfg.promoteRuntimeToLive();
+  runtime.reloadProvider();
+  audit.append({
+    eventType: 'ai_mode_promoted_live',
+    actorType: req.user.role,
+    actorId: req.user.id,
+    payload: { modelId: promoted.modelId, pharmacistApproverId: promoted.pharmacistApproverId },
+  });
+  res.json({ model: promoted, local: view, runtime: runtime.describeRuntime() });
 }));
 
 router.post('/runtime/test', requirePermission('ai:runtime_configure'), handle(async (req, res) => {
@@ -323,9 +349,14 @@ router.get('/review-queue', requirePermission('rx:review_decision'), handle(asyn
 }));
 
 router.post('/governance/sampling', requirePermission('ai:governance_read'), validateBody({
-  type: 'object', additionalProperties: false, properties: { rate: { type: 'number', minimum: 0.01, maximum: 1 } },
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    rate: { type: 'number', minimum: 0.01, maximum: 1 },
+    seed: { type: 'string', maxLength: 80 },
+  },
 }), handle(async (req, res) => {
-  res.json(service.sampleLowRisk(actorOf(req), { rate: req.body.rate || 0.1 }));
+  res.json(service.sampleLowRisk(actorOf(req), { rate: req.body.rate || 0.1, seed: req.body.seed }));
 }));
 
 router.post('/legacy/migrate', requirePermission('ai:kill_switch'), validateBody({
@@ -432,13 +463,36 @@ router.post('/learning/models', requirePermission('ai:model_publish'), validateB
   res.status(201).json(learning.registerModel(req.body, actorOf(req)));
 }));
 
+router.post('/learning/models/:id/shadow-complete', requirePermission('ai:model_publish'), validateBody({
+  type: 'object',
+  additionalProperties: false,
+  required: ['evaluationReportId'],
+  properties: {
+    evaluationReportId: { type: 'string', minLength: 1, maxLength: 80 },
+    metrics: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        schemaPassRate: { type: 'number', minimum: 0, maximum: 1 },
+        hardRiskRecall: { type: 'number', minimum: 0, maximum: 1 },
+        unsafeAutonomousActions: { type: 'integer', minimum: 0 },
+      },
+    },
+  },
+}), handle(async (req, res) => {
+  res.json(learning.recordShadowComplete(req.params.id, req.body, actorOf(req)));
+}));
+
 router.post('/learning/models/:id/status', requirePermission('ai:model_publish'), validateBody({
   type: 'object', additionalProperties: false, required: ['status'], properties: {
     status: { type: 'string', enum: ['shadow', 'live', 'rolled_back', 'candidate'] },
     reason: { type: 'string', maxLength: 300 },
+    pharmacistApproverId: { type: 'string', maxLength: 40 },
   },
 }), handle(async (req, res) => {
-  res.json(learning.setModelStatus(req.params.id, req.body.status, actorOf(req), req.body.reason));
+  res.json(learning.setModelStatus(req.params.id, req.body.status, actorOf(req), req.body.reason, {
+    pharmacistApproverId: req.body.pharmacistApproverId,
+  }));
 }));
 
 module.exports = router;

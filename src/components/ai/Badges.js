@@ -4,21 +4,25 @@ import { SmartToy } from '@mui/icons-material';
 import {
   AI_LABEL, STATE_LABELS, STATE_COLORS, TIER_LABELS, TIER_COLORS,
 } from '../../config/aiLabels';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 export function RiskTierChip({ tier, size = 'small' }) {
-  if (!tier) return <Chip size={size} label="未筛查" variant="outlined" />;
-  return <Chip size={size} color={TIER_COLORS[tier]} label={TIER_LABELS[tier] || tier} />;
+  const { t } = useLanguage();
+  if (!tier) return <Chip size={size} label={t('ai.notScreened')} variant="outlined" />;
+  return <Chip size={size} color={TIER_COLORS[tier]} label={t(TIER_LABELS[tier]) || tier} />;
 }
 
 export function StateChip({ state, size = 'small' }) {
-  return <Chip size={size} variant="outlined" color={STATE_COLORS[state] || 'default'} label={STATE_LABELS[state] || state} />;
+  const { t } = useLanguage();
+  return <Chip size={size} variant="outlined" color={STATE_COLORS[state] || 'default'} label={t(STATE_LABELS[state]) || state} />;
 }
 
 export function AiLabel({ isMock }) {
+  const { t } = useLanguage();
   return (
     <Stack direction="row" spacing={1} component="span">
-      <Chip size="small" icon={<SmartToy />} color="secondary" variant="outlined" label={AI_LABEL} />
-      {isMock && <Chip size="small" color="warning" label="模拟模型输出（非真实AI）" />}
+      <Chip size="small" icon={<SmartToy />} color="secondary" variant="outlined" label={t(AI_LABEL)} />
+      {isMock && <Chip size="small" color="warning" label={t('ai.mockOutput')} />}
     </Stack>
   );
 }

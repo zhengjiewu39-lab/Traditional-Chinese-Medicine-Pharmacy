@@ -6,14 +6,27 @@ import { aiOperationsApi } from '../../services/aiApi';
 import { formatApiError } from '../../config/httpClient';
 import { useAuth } from '../../contexts/AuthContext';
 import { AiLabel } from '../../components/ai/Badges';
+import { useLanguage } from '../../i18n/LanguageContext';
 
-const ACTIONS = { purchase: '采购补货', transfer: '库位调拨', expedite: '催办供应商', hold: '暂缓采购' };
-const METRIC_LABELS = {
-  overallFillRate: '总体满足率', essentialMedicineFillRate: '基本药物满足率', worstRegionEssentialFillRate: '最差区域基本药物满足率', p95WaitingTime: 'P95等待天数', recoveryTime95: '恢复时间(95%)', totalCost: '总成本',
+const ACTION_KEYS = { purchase: 'ai.ops.purchase', transfer: 'ai.ops.transfer', expedite: 'ai.ops.expedite', hold: 'ai.ops.hold' };
+const METRIC_KEYS = {
+  overallFillRate: 'ai.ops.overallFillRate',
+  essentialMedicineFillRate: 'ai.ops.essentialMedicineFillRate',
+  worstRegionEssentialFillRate: 'ai.ops.worstRegionEssentialFillRate',
+  p95WaitingTime: 'ai.ops.p95WaitingTime',
+  recoveryTime95: 'ai.ops.recoveryTime95',
+  totalCost: 'ai.ops.totalCost',
+};
+const STATUS_KEYS = {
+  draft: 'ai.ops.statusDraft',
+  simulated: 'ai.ops.statusSimulated',
+  approved: 'ai.ops.statusApproved',
+  rejected: 'ai.ops.statusRejected',
 };
 const fmt = (k, v) => (v == null ? '—' : /Rate$/.test(k) ? `${(v * 100).toFixed(2)}%` : v.toFixed(k === 'totalCost' ? 0 : 2));
 
 export default function OperationsAgent() {
+  const { t } = useLanguage();
   const { user } = useAuth();
   const [analysis, setAnalysis] = useState(null);
   const [proposals, setProposals] = useState({ proposals: [], purchaseDrafts: [] });
@@ -59,20 +72,20 @@ export default function OperationsAgent() {
   return (
     <Box>
       <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
-        <Typography variant="h5" sx={{ fontWeight: 700 }}>AI运营建议</Typography>
+        <Typography variant="h5" sx={{ fontWeight: 700 }}>{t('ai.ops.title')}</Typography>
         <AiLabel />
       </Stack>
-      <Alert severity="info" sx={{ mb: 2 }}>{analysis.label}。数字孪生评估使用合成情景（ERRRA启发式策略，未修改），结果不代表真实药房的预测。批准只生成草稿单据，库存不会被自动修改。</Alert>
+      <Alert severity="info" sx={{ mb: 2 }}>{analysis.label}. {t('ai.ops.twinNote')}</Alert>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       <Grid container spacing={2} sx={{ mb: 2 }}>
-        {[['品规数', s.skuCount], ['低于最低库存', s.lowStock], ['接近最低库存', s.nearMin], ['近效期(90天)', s.nearExpiry], ['需求上升', s.risingDemand], ['基本药物风险', s.essentialAtRisk]].map(([k, v]) => (
-          <Grid item xs={4} md={2} key={k}><Paper sx={{ p: 1.5 }}><Typography variant="caption">{k}</Typography><Typography variant="h5" sx={{ fontWeight: 700 }}>{v}</Typography></Paper></Grid>
+        {[['ai.ops.sku', s.skuCount], ['ai.ops.low', s.lowStock], ['ai.ops.nearMin', s.nearMin], ['ai.ops.expiry', s.nearExpiry], ['ai.ops.rising', s.risingDemand], ['ai.ops.essential', s.essentialAtRisk]].map(([k, v]) => (
+          <Grid item xs={4} md={2} key={k}><Paper sx={{ p: 1.5 }}><Typography variant="caption">{t(k)}</Typography><Typography variant="h5" sx={{ fontWeight: 700 }}>{v}</Typography></Paper></Grid>
         ))}
       </Grid>
       <Paper sx={{ p: 2, mb: 2 }}>
-        <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>缺货风险与需求趋势（参考日 {analysis.trendReferenceDate}）</Typography>
+        <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>{t('ai.ops.riskTitle', { d: analysis.trendReferenceDate })}</Typography>
         <Table size="small">
-          <TableHead><TableRow><TableCell padding="checkbox" /><TableCell>品名</TableCell><TableCell>库存 / 最低</TableCell><TableCell>近30天 / 前30天</TableCell><TableCell>供应商</TableCell><TableCell>效期</TableCell><TableCell>标记</TableCell></TableRow></TableHead>
+          <TableHead><TableRow><TableCell padding="checkbox" /><TableCell>{t('ai.ops.name')}</TableCell><TableCell>{t('ai.ops.stock')}</TableCell><TableCell>{t('ai.ops.trend')}</TableCell><TableCell>{t('ai.ops.supplier')}</TableCell><TableCell>{t('ai.ops.expiryCol')}</TableCell><TableCell>{t('ai.ops.flags')}</TableCell></TableRow></TableHead>
           <TableBody>
             {riskRows.map((r) => (
               <TableRow key={r.inventoryId}>
@@ -84,68 +97,68 @@ export default function OperationsAgent() {
                 <TableCell>{r.expiryDate}</TableCell>
                 <TableCell>
                   <Stack direction="row" spacing={0.5}>
-                    {r.lowStock && <Chip size="small" color="error" label="低库存" />}
-                    {r.nearExpiry && <Chip size="small" color="warning" label="近效期" />}
-                    {r.essential && <Chip size="small" label="基本药物类" />}
+                    {r.lowStock && <Chip size="small" color="error" label={t('ai.ops.lowStockChip')} />}
+                    {r.nearExpiry && <Chip size="small" color="warning" label={t('ai.ops.nearExpiryChip')} />}
+                    {r.essential && <Chip size="small" label={t('ai.ops.essentialChip')} />}
                   </Stack>
                 </TableCell>
               </TableRow>
             ))}
-            {!riskRows.length && <TableRow><TableCell colSpan={7} align="center">当前无缺货或需求上升风险</TableCell></TableRow>}
+            {!riskRows.length && <TableRow><TableCell colSpan={7} align="center">{t('ai.ops.noRisk')}</TableCell></TableRow>}
           </TableBody>
         </Table>
         {canPropose && (
           <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
-            <TextField select size="small" label="建议类型" value={action} onChange={(e) => setAction(e.target.value)} sx={{ minWidth: 160 }}>
-              {Object.entries(ACTIONS).map(([k, v]) => <MenuItem key={k} value={k}>{v}</MenuItem>)}
+            <TextField select size="small" label={t('ai.ops.actionType')} value={action} onChange={(e) => setAction(e.target.value)} sx={{ minWidth: 160 }}>
+              {Object.entries(ACTION_KEYS).map(([k, key]) => <MenuItem key={k} value={k}>{t(key)}</MenuItem>)}
             </TextField>
-            <Button variant="contained" disabled={busy} onClick={() => run(() => aiOperationsApi.propose({ action, ...(picked.length ? { inventoryIds: picked } : {}) }))}>生成建议草稿</Button>
+            <Button variant="contained" disabled={busy} onClick={() => run(() => aiOperationsApi.propose({ action, ...(picked.length ? { inventoryIds: picked } : {}) }))}>{t('ai.ops.generate')}</Button>
           </Stack>
         )}
       </Paper>
       <Paper sx={{ p: 2 }}>
-        <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>建议与审批</Typography>
+        <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>{t('ai.ops.proposals')}</Typography>
         {proposals.proposals.map((p) => {
           const ev = p.digitalTwinEvaluation;
           return (
             <Paper variant="outlined" key={p.proposalId} sx={{ p: 1.5, mb: 1.5 }}>
               <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
                 <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>{p.proposalId.slice(-10)}</Typography>
-                <Chip size="small" label={ACTIONS[p.action]} />
-                <Chip size="small" variant="outlined" label={{ draft: '草稿', simulated: '已孪生评估', approved: '已批准（草稿单据）', rejected: '已拒绝' }[p.status]} />
-                <Typography variant="body2">{p.items.map((i) => `${i.name}${i.quantity ? ` +${i.quantity}` : ''}`).join('、') || '—'}</Typography>
+                <Chip size="small" label={t(ACTION_KEYS[p.action] || p.action)} />
+                <Chip size="small" variant="outlined" label={t(STATUS_KEYS[p.status] || p.status)} />
+                <Typography variant="body2">{p.items.map((i) => `${i.name}${i.quantity ? ` +${i.quantity}` : ''}`).join(', ') || t('ai.dash')}</Typography>
               </Stack>
-              <Typography variant="caption" display="block">理由：{p.reason} · 预期收益：{p.expectedBenefit} · 风险：{p.risk}</Typography>
+              <Typography variant="caption" display="block">{t('ai.ops.reasonLine', { reason: p.reason, benefit: p.expectedBenefit, risk: p.risk })}</Typography>
               {ev && (
                 <Table size="small" sx={{ mt: 1 }}>
-                  <TableHead><TableRow><TableCell>合成指标（{ev.replicates} 次复制，ERRRA）</TableCell><TableCell>基线</TableCell><TableCell>建议方案</TableCell><TableCell>差值</TableCell></TableRow></TableHead>
+                  <TableHead><TableRow><TableCell>{t('ai.ops.metrics', { n: ev.replicates })}</TableCell><TableCell>{t('ai.ops.baseline')}</TableCell><TableCell>{t('ai.ops.proposal')}</TableCell><TableCell>{t('ai.ops.delta')}</TableCell></TableRow></TableHead>
                   <TableBody>
                     {Object.keys(ev.baselineMetrics).map((k) => (
-                      <TableRow key={k}><TableCell>{METRIC_LABELS[k] || k}</TableCell><TableCell>{fmt(k, ev.baselineMetrics[k])}</TableCell><TableCell>{fmt(k, ev.proposalMetrics[k])}</TableCell><TableCell>{fmt(k, ev.difference[k])}</TableCell></TableRow>
+                      <TableRow key={k}><TableCell>{t(METRIC_KEYS[k] || k)}</TableCell><TableCell>{fmt(k, ev.baselineMetrics[k])}</TableCell><TableCell>{fmt(k, ev.proposalMetrics[k])}</TableCell><TableCell>{fmt(k, ev.difference[k])}</TableCell></TableRow>
                     ))}
                     <TableRow><TableCell colSpan={4}><Typography variant="caption">scenarioHash {ev.scenarioHash.slice(0, 16)}… · {ev.label}</Typography></TableCell></TableRow>
                   </TableBody>
                 </Table>
               )}
               <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
-                {['draft', 'simulated'].includes(p.status) && <Button size="small" variant="outlined" disabled={busy} onClick={() => run(() => aiOperationsApi.simulate(p.proposalId, 3))}>数字孪生评估</Button>}
+                {['draft', 'simulated'].includes(p.status) && <Button size="small" variant="outlined" disabled={busy} onClick={() => run(() => aiOperationsApi.simulate(p.proposalId, 3))}>{t('ai.ops.simulate')}</Button>}
                 {p.status === 'simulated' && canApprove && (
                   <>
-                    <TextField size="small" label="审批意见（必填）" value={comment} onChange={(e) => setComment(e.target.value)} />
-                    <Button size="small" variant="contained" disabled={busy || !comment} onClick={() => run(() => aiOperationsApi.approve(p.proposalId, 'approve', comment).then(() => setComment('')))}>批准（生成草稿单据）</Button>
-                    <Button size="small" color="error" disabled={busy || !comment} onClick={() => run(() => aiOperationsApi.approve(p.proposalId, 'reject', comment).then(() => setComment('')))}>拒绝</Button>
+                    <TextField size="small" label={t('ai.ops.comment')} value={comment} onChange={(e) => setComment(e.target.value)} />
+                    <Button size="small" variant="contained" disabled={busy || !comment} onClick={() => run(() => aiOperationsApi.approve(p.proposalId, 'approve', comment).then(() => setComment('')))}>{t('ai.ops.approveDraft')}</Button>
+                    <Button size="small" color="error" disabled={busy || !comment} onClick={() => run(() => aiOperationsApi.approve(p.proposalId, 'reject', comment).then(() => setComment('')))}>{t('ai.ops.reject')}</Button>
                   </>
                 )}
-                {p.status === 'draft' && <Typography variant="caption" color="text.secondary">需先完成数字孪生评估，再由药师或管理员审批</Typography>}
+                {p.status === 'draft' && <Typography variant="caption" color="text.secondary">{t('ai.ops.needSim')}</Typography>}
               </Stack>
             </Paper>
           );
         })}
-        {!proposals.proposals.length && <Typography variant="body2" color="text.secondary">暂无建议</Typography>}
+        {!proposals.proposals.length && <Typography variant="body2" color="text.secondary">{t('ai.ops.empty')}</Typography>}
         {proposals.purchaseDrafts.length > 0 && (
           <>
-            <Typography variant="subtitle2" sx={{ mt: 2 }}>已生成的草稿单据（待员工在库存/采购模块执行）</Typography>
-            {proposals.purchaseDrafts.map((d) => <Typography key={d.docId} variant="body2">{d.docId} · {d.type} · {d.items.length} 项 · 批准人 #{d.approvedBy}</Typography>)}
+            <Typography variant="subtitle2" sx={{ mt: 2 }}>{t('ai.ops.drafts')}</Typography>
+            {proposals.purchaseDrafts.map((d) => <Typography key={d.docId} variant="body2">{t('ai.ops.draftLine', { id: d.docId, type: d.type, n: d.items.length, by: d.approvedBy })}</Typography>)}
           </>
         )}
       </Paper>

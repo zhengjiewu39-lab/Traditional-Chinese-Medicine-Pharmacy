@@ -1,3 +1,5 @@
+import ai from './ai.en';
+
 const en = {
   lang: { zh: '中文', en: 'English', label: 'Language' },
   app: {
@@ -8,7 +10,9 @@ const en = {
     legacyPageTitle: 'Legacy demo',
   },
   roles: {
-    admin: 'Admin', pharmacist: 'Pharmacist', prescriber: 'Prescriber', technician: 'Technician', researcher: 'Researcher', patient: 'Patient',
+    admin: 'Admin',     pharmacist: 'Pharmacist',
+    pharmacist2: 'Pharmacist 2',
+    prescriber: 'Prescriber', technician: 'Technician', researcher: 'Researcher', patient: 'Patient',
     adminMode: 'Admin mode', pharmacistMode: 'Pharmacist mode', prescriberMode: 'Prescriber mode', technicianMode: 'Technician mode', researcherMode: 'Researcher mode', patientMode: 'Patient mode',
   },
   auth: { logout: 'Log out', login: 'Log in', loggingIn: 'Signing in…', loginFailed: 'Login failed. Check username and password.' },
@@ -24,6 +28,12 @@ const en = {
     ports: '(ports 3002 and 3000).',
   },
   nav: {
+    sectionPathPrescriber: '1. Prescriber',
+    sectionPathPharmacist: '2. Pharmacist review',
+    sectionRecords: 'Records & screening',
+    sectionPathPatient: '3. Patient',
+    sectionPathDispense: 'Dispensing (after patient confirms)',
+    sectionSupportOps: 'Support operations',
     sectionStudy: 'Simulation study',
     sectionLegacy: 'Legacy demo',
     sectionWorkbench: 'Workbench',
@@ -79,12 +89,14 @@ const en = {
   },
   login: {
     title: 'Intelligent TCM Pharmacy',
-    subtitle: 'Pharmacist-governed, patient-engaged, AI-orchestrated research prototype (synthetic demo data)',
+    subtitle: 'Clinical path: prescriber writes → pharmacist reviews → pharmacist 2 if needed → patient confirms. Technician, admin, and researcher only support.',
     username: 'Username',
     password: 'Password',
     demoAdmin: 'Demo admin: admin / admin123',
     demoPharm: 'Demo pharmacist: pharmacist / pharm123',
-    demoAccounts: 'Demo accounts (dev only): admin/admin123 · pharmacist/pharm123 · pharmacist2/pharm456 · technician/tech123 · researcher/research123 · patient/patient123',
+    clinicalGroup: 'Clinical path',
+    supportGroup: 'Support (do not approve prescriptions)',
+    demoAccounts: 'Clinical: prescriber/doc123 · pharmacist/pharm123 · pharmacist2/pharm456 · patient/patient123. Support: technician/tech123 · admin/admin123 · researcher/research123',
   },
   overview: {
     title: 'Overview',
@@ -340,9 +352,19 @@ const en = {
   },
   roleGuard: {
     title: 'Your role cannot open this page',
-    body: 'Access is role-based: pharmacists review and release, technicians dispense, researchers see synthetic or aggregate data only, patients see only their own records.',
+    body: 'Each role only opens its own work. Clinical path: prescriber writes, pharmacist (and pharmacist 2) reviews, patient confirms. Technician, admin, and researcher support the system and do not replace pharmacist sign-off.',
     back: 'Back to home',
   },
+  workflow: {
+    title: 'Clinical path: prescriber → pharmacist → pharmacist 2 → patient',
+    prescriber: '1 Prescriber writes',
+    pharmacist: '2 Pharmacist reviews',
+    pharmacist2: '3 Pharmacist 2 (second review)',
+    patient: '4 Patient confirms',
+    support: 'Technician, admin, and researcher support this path. They do not approve prescriptions or run membership promotions.',
+    auxiliary: '{role}: support role. You do not replace the prescriber–pharmacist–patient path, and you cannot sign a prescription unless you hold a pharmacist credential.',
+  },
+  ai,
 };
 
 export default en;

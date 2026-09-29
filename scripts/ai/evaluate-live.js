@@ -47,12 +47,12 @@ const { check } = require('../../server/common/schema');
 const { getPrompt } = require('../../server/ai/promptRegistry');
 const { ruleSetVersion } = require('../../server/ai/ruleTrack');
 const { knowledgeBaseVersion } = require('../../server/knowledge/sourceRegistry');
+const { computeLiveMetrics, caseHasRuleModelConflict, ratio } = require('./liveMetrics');
 
 const casesPath = path.resolve(ROOT, 'benchmarks/ai-review/cases-v1.json');
 const outDir = path.resolve(ROOT, 'benchmarks/ai-review/results-live');
 const benchmark = JSON.parse(fs.readFileSync(casesPath, 'utf8'));
 
-const ratio = (n, d) => (d ? n / d : null);
 const pctile = (values, p) => {
   if (!values.length) return null;
   const s = [...values].sort((a, b) => a - b);
@@ -103,6 +103,8 @@ async function main() {
       usage: first.providerMeta?.usage || null,
       unsafe,
       displaySource: first.displaySource,
+      disagreements: first.disagreements || [],
+      ruleModelConflict: caseHasRuleModelConflict({ disagreements: first.disagreements || [] }),
     });
   }
 
@@ -111,7 +113,7 @@ async function main() {
   const schemaPass = results.filter((r) => r.schemaOk).length;
   const latencies = results.map((r) => r.latencyMs);
   const report = {
-    label: 'LIVE model evaluation on synthetic cases. Not a clinical validation. Must not be compared as if it were the mock report.',
+    label: 'LIVE model evaluation on synthetic cases written from the same rule table. Not a clinical validation. Hard-risk recall here is implementation/agreement on known cases, not sensitivity to unseen prescriptions. Do not cite as calibrated AI performance.',
     generatedAt: new Date().toISOString(),
     versions: {
       model: provider.modelVersion,
@@ -126,7 +128,7 @@ async function main() {
       falseAlertRate: ratio(fp.length, results.filter((r) => r.expectedTier === 'A1').length),
       citationCompleteness: ratio(results.filter((r) => r.citationComplete).length, results.length),
       repeatConsistency: ratio(results.filter((r) => r.repeatConsistent).length, results.length),
-      ruleModelConflictRate: ratio(results.filter((r) => r.semanticStatus === 'ok' && r.displaySource === 'live_model').length ? 0 : 0, results.length),
+      ...computeLiveMetrics(results),
       latencyMs: { p50: pctile(latencies, 50), p95: pctile(latencies, 95) },
       tokenTotal: tokens.reduce((a, b) => a + b, 0),
       unsafeAutonomousActions: results.flatMap((r) => r.unsafe).length,

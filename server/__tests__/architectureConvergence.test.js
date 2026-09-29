@@ -289,6 +289,20 @@ describe('architecture convergence: AI modes and providers', () => {
     assert.strictEqual(save.body.runtime.isMock, false);
     assert.strictEqual(save.body.runtime.provider, 'openai-compatible');
     assert.strictEqual(save.body.runtime.model, 'gpt-4o-mini');
+    assert.strictEqual(save.body.runtime.aiMode, 'shadow');
+    assert.strictEqual(save.body.local.aiMode, 'shadow');
+
+    const forceLive = await call('POST', '/api/ai/runtime/provider', {
+      as: 'admin',
+      body: {
+        preset: 'openai',
+        baseUrl: 'https://api.openai.com/v1',
+        model: 'gpt-4o-mini',
+        apiKey: secret,
+        aiMode: 'live',
+      },
+    });
+    assert.strictEqual(forceLive.status, 409, JSON.stringify(forceLive.body));
 
     const view = await call('GET', '/api/ai/runtime', { as: 'prescriber' });
     assert.strictEqual(view.status, 200, JSON.stringify(view.body));
@@ -354,6 +368,48 @@ describe('architecture convergence: pickup, data mode, learning, queue', () => {
       as: 'admin', body: { status: 'live', reason: 'skip shadow' },
     });
     assert.strictEqual(skip.status, 409);
+    const shadowed = await call('POST', `/api/ai/learning/models/${ok.body.modelId}/status`, {
+      as: 'admin', body: { status: 'shadow', reason: 'enter shadow' },
+    });
+    assert.strictEqual(shadowed.status, 200, JSON.stringify(shadowed.body));
+    const earlyLive = await call('POST', `/api/ai/learning/models/${ok.body.modelId}/status`, {
+      as: 'admin', body: { status: 'live', reason: 'no report', pharmacistApproverId: '2' },
+    });
+    assert.strictEqual(earlyLive.status, 409);
+    assert.strictEqual(earlyLive.body.error.code, 'shadow_incomplete');
+  });
+
+  it('high-risk labels reject a missing, non-pharmacist, or same-person second reviewer', async () => {
+    const missing = await call('POST', '/api/ai/learning/labels', {
+      as: 'pharmacist',
+      body: { suggestionId: 'sug_x', label: 'true_positive', risk: 'high', secondReviewerId: '9999' },
+    });
+    assert.strictEqual(missing.status, 400);
+    const notPharm = await call('POST', '/api/ai/learning/labels', {
+      as: 'pharmacist',
+      body: { suggestionId: 'sug_x', label: 'true_positive', risk: 'high', secondReviewerId: '7' },
+    });
+    assert.strictEqual(notPharm.status, 400);
+    const same = await call('POST', '/api/ai/learning/labels', {
+      as: 'pharmacist',
+      body: { suggestionId: 'sug_x', label: 'true_positive', risk: 'high', secondReviewerId: '2' },
+    });
+    assert.strictEqual(same.status, 400);
+    const ok = await call('POST', '/api/ai/learning/labels', {
+      as: 'pharmacist',
+      body: { suggestionId: 'sug_x', label: 'true_positive', risk: 'high', secondReviewerId: '3' },
+    });
+    assert.strictEqual(ok.status, 201, JSON.stringify(ok.body));
+  });
+
+  it('draft submit copies license status from the roster, not a hardcoded true', async () => {
+    const created = await call('POST', '/api/ai/drafts', {
+      as: 'prescriber', body: { diagnosisText: '气虚', prescriptionText: '黄芪15g，白术10g' },
+    });
+    const submitted = await call('POST', `/api/ai/drafts/${created.body.draft.draftId}/submit`, { as: 'prescriber', body: {} });
+    assert.strictEqual(submitted.status, 201, JSON.stringify(submitted.body));
+    assert.strictEqual(submitted.body.case.prescriber.licenseVerified, true);
+    assert.strictEqual(submitted.body.case.prescriber.licenseSource, 'demo_institution_roster');
   });
 
   it('createCase uses DATA_MODE rather than a hardcoded synthetic flag', async () => {
@@ -362,6 +418,8 @@ describe('architecture convergence: pickup, data mode, learning, queue', () => {
     const created = await call('POST', '/api/ai/cases', { as: 'technician', body: caseInput() });
     assert.strictEqual(created.body.case.synthetic, true);
     assert.strictEqual(created.body.case.dataMode, 'demo');
+    assert.notStrictEqual(created.body.case.prescriber.licenseVerified, true);
+    assert.strictEqual(created.body.case.prescriber.licenseSource, 'not_on_file');
   });
 
   it('synthetic knowledge is unusable when clinical knowledge is required', () => {
@@ -384,6 +442,7 @@ describe('architecture convergence: pickup, data mode, learning, queue', () => {
     const q = await call('GET', '/api/ai/review-queue', { as: 'pharmacist' });
     assert.strictEqual(q.status, 200);
     assert.ok(Array.isArray(q.body.priority));
+    assert.ok(Array.isArray(q.body.secondReview));
     assert.ok(q.body.priority.some((x) => x.riskTier === 'A3'));
     const sample = await call('POST', '/api/ai/governance/sampling', { as: 'pharmacist', body: { rate: 0.1 } });
     assert.strictEqual(sample.status, 200);

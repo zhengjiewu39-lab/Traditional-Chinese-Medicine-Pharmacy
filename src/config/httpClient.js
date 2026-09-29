@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { getApiBaseUrl } from './apiBase';
+import { currentLang, translate, isChineseText } from '../i18n/lookup';
 
 /** Shared axios instance — timeout prevents infinite loading when API is down. */
 export function createApiClient() {
@@ -35,24 +36,18 @@ export function attachAuthInterceptors(client) {
   return client;
 }
 
-function errorMessages(lang) {
-  const zh = {
-    timeout: 'API 请求超时：请确认后端已启动 (cd chinese-medicine-pharmacy && npm run server)',
-    down: '无法连接 API (端口 3002)。请运行: npm run server 或 npm run dev',
-    failed: '请求失败',
-  };
-  const en = {
-    timeout: 'API request timed out. Start backend: npm run server (port 3002).',
-    down: 'Cannot reach API (port 3002). Run: npm run server or npm run dev',
-    failed: 'Request failed',
-  };
-  return lang === 'en' ? en : zh;
-}
-
 export function formatApiError(error, fallback) {
-  const lang = localStorage.getItem('app_lang') === 'en' ? 'en' : 'zh';
-  const msg = errorMessages(lang);
-  if (error.code === 'ECONNABORTED') return msg.timeout;
-  if (!error.response) return msg.down;
-  return error.response?.data?.error?.message || error.response?.data?.message || error.message || fallback || msg.failed;
+  const lang = currentLang();
+  if (error.code === 'ECONNABORTED') return translate(lang, 'errors.apiTimeout');
+  if (!error.response) return translate(lang, 'errors.apiDown');
+  const code = error.response?.data?.error?.code;
+  if (code) {
+    const keyed = translate(lang, `errors.codes.${code}`);
+    if (keyed !== `errors.codes.${code}`) return keyed;
+  }
+  const serverMsg = error.response?.data?.error?.message || error.response?.data?.message;
+  if (lang === 'en' && isChineseText(serverMsg)) {
+    return code ? `${translate(lang, 'errors.requestFailed')} (${code})` : translate(lang, 'errors.requestFailed');
+  }
+  return serverMsg || error.message || fallback || translate(lang, 'errors.requestFailed');
 }

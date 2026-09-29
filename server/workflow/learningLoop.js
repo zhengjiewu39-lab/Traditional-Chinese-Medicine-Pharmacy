@@ -3,10 +3,17 @@
  * publishes models. Production must not claim that the model "has learned".
  */
 const { randomId, hashObject } = require('../common/hash');
-const repo = require('../workflow/workflowRepository');
+const repo = require('./workflowRepository');
 const audit = require('../audit/auditRepository');
 const { ServiceError } = require('./errors');
-const { isSyntheticMode } = require('../config/dataMode');
+const { getDataMode, isSyntheticMode } = require('../config/dataMode');
+const { getUserById } = require('../security/auth');
+const { hasPharmacistCredential } = require('../security/rbac');
+
+const LIVE_GATES = {
+  minSchemaPassRate: 0.9,
+  maxUnsafeAutonomousActions: 0,
+};
 
 function deidentifySuggestion(s) {
   return {
@@ -18,6 +25,7 @@ function deidentifySuggestion(s) {
     evidenceIds: s.evidenceIds,
     evidenceStrength: s.evidenceStrength,
     uncertainty: s.uncertainty,
+    heuristicReliabilityLevel: s.heuristicReliabilityLevel || null,
     ruleIds: s.ruleIds,
     modelVersion: s.modelVersion,
     promptVersion: s.promptVersion,
@@ -26,7 +34,8 @@ function deidentifySuggestion(s) {
     reasonCode: s.disposition?.reasonCode || null,
     decidedRole: s.disposition?.decidedRole || null,
     pharmacistAgrees: s.pharmacistAcknowledged?.agrees ?? null,
-    synthetic: true,
+    synthetic: isSyntheticMode(),
+    dataMode: getDataMode(),
   };
 }
 
@@ -41,17 +50,33 @@ function exportCandidates(actor) {
     at: new Date().toISOString(),
     by: String(actor.id),
     count: rows.length,
-    dataMode: isSyntheticMode() ? 'synthetic-study' : 'pilot',
-    note: 'De-identified candidate rows only. Not a trained model. Not for clinical use until labelled and evaluated offline.',
+    dataMode: getDataMode(),
+    synthetic: isSyntheticMode(),
+    note: 'De-identified candidate rows only. Registry metadata only — this loop does not train weights. Not for clinical use until labelled and evaluated offline.',
   };
   repo.learning().addExport({ ...rec, rowCount: rows.length });
-  audit.append({ eventType: 'learning_export', actorType: actor.role, actorId: actor.id, payload: { exportId: rec.exportId, count: rows.length } });
+  audit.append({ eventType: 'learning_export', actorType: actor.role, actorId: actor.id, payload: { exportId: rec.exportId, count: rows.length, dataMode: rec.dataMode } });
   return { ...rec, rows };
 }
 
+function assertPharmacistAccount(id, { otherThan } = {}) {
+  const user = getUserById(id);
+  if (!user) throw new ServiceError(400, 'reviewer_not_found', 'Second reviewer is not a known account');
+  if (!hasPharmacistCredential(user)) {
+    throw new ServiceError(400, 'pharmacist_credential_required', 'Second reviewer must hold a pharmacist credential');
+  }
+  if (otherThan != null && String(user.id) === String(otherThan)) {
+    throw new ServiceError(400, 'same_reviewer', 'Second reviewer must be a different pharmacist');
+  }
+  return user;
+}
+
 function reviewLabel(body, actor) {
-  if (body.risk === 'high' && !body.secondReviewerId) {
-    throw new ServiceError(400, 'dual_review_required', 'High-risk labels require a second pharmacist reviewer');
+  if (body.risk === 'high') {
+    if (!body.secondReviewerId) {
+      throw new ServiceError(400, 'dual_review_required', 'High-risk labels require a second pharmacist reviewer');
+    }
+    assertPharmacistAccount(body.secondReviewerId, { otherThan: actor.id });
   }
   const row = {
     labelId: randomId('lbl'),
@@ -59,7 +84,7 @@ function reviewLabel(body, actor) {
     label: body.label,
     risk: body.risk || 'routine',
     reviewerId: String(actor.id),
-    secondReviewerId: body.secondReviewerId || null,
+    secondReviewerId: body.secondReviewerId ? String(body.secondReviewerId) : null,
     at: new Date().toISOString(),
     comment: body.comment || null,
   };
@@ -92,6 +117,10 @@ function registerModel(body, actor) {
     registeredAt: new Date().toISOString(),
     liveAt: null,
     rollbackTo: null,
+    shadowEnteredAt: body.status === 'shadow' ? new Date().toISOString() : null,
+    shadowCompletedAt: null,
+    pharmacistApproverId: null,
+    governanceApproverId: null,
     note: 'Offline training only. This registry does not run training. No weights are stored here.',
   };
   repo.learning().putModel(m);
@@ -99,7 +128,51 @@ function registerModel(body, actor) {
   return m;
 }
 
-function setModelStatus(modelId, status, actor, reason) {
+function recordShadowComplete(modelId, body, actor) {
+  const m = repo.learning().getModel(modelId);
+  if (!m) throw new ServiceError(404, 'model_not_found', 'Model not in registry');
+  if (m.status !== 'shadow') throw new ServiceError(409, 'not_in_shadow', 'Shadow completion is recorded only while the model is in shadow');
+  const metrics = body.metrics || {};
+  if (!body.evaluationReportId) throw new ServiceError(400, 'evaluation_report_required', 'A live-evaluation report id is required');
+  if (metrics.unsafeAutonomousActions != null && metrics.unsafeAutonomousActions > LIVE_GATES.maxUnsafeAutonomousActions) {
+    throw new ServiceError(409, 'live_gate_failed', 'Unsafe autonomous actions exceed the live gate');
+  }
+  if (metrics.schemaPassRate != null && metrics.schemaPassRate < LIVE_GATES.minSchemaPassRate) {
+    throw new ServiceError(409, 'live_gate_failed', `schemaPassRate ${metrics.schemaPassRate} is below ${LIVE_GATES.minSchemaPassRate}`);
+  }
+  const next = {
+    ...m,
+    evaluationReportId: String(body.evaluationReportId),
+    shadowCompletedAt: new Date().toISOString(),
+    shadowMetrics: {
+      schemaPassRate: metrics.schemaPassRate ?? null,
+      hardRiskRecall: metrics.hardRiskRecall ?? null,
+      unsafeAutonomousActions: metrics.unsafeAutonomousActions ?? null,
+      note: 'hardRiskRecall on the synthetic rule-derived set is not clinical sensitivity',
+    },
+    lastDecision: { by: String(actor.id), role: actor.role, at: new Date().toISOString(), reason: 'shadow_complete' },
+  };
+  repo.learning().putModel(next);
+  audit.append({ eventType: 'model_shadow_complete', actorType: actor.role, actorId: actor.id, payload: { modelId, evaluationReportId: next.evaluationReportId } });
+  return next;
+}
+
+function assertLiveReady(m, actor, pharmacistApproverId) {
+  if (!m.shadowCompletedAt) throw new ServiceError(409, 'shadow_incomplete', 'Live publish requires a completed shadow run');
+  if (!m.evaluationReportId) throw new ServiceError(409, 'evaluation_report_required', 'Live publish requires an evaluation report recorded during shadow');
+  if (!pharmacistApproverId) throw new ServiceError(400, 'pharmacist_approval_required', 'Live publish requires a pharmacist approver distinct from the governance actor');
+  const pharmacist = assertPharmacistAccount(pharmacistApproverId, { otherThan: actor.id });
+  if (m.shadowMetrics?.unsafeAutonomousActions != null
+    && m.shadowMetrics.unsafeAutonomousActions > LIVE_GATES.maxUnsafeAutonomousActions) {
+    throw new ServiceError(409, 'live_gate_failed', 'Unsafe autonomous actions exceed the live gate');
+  }
+  if (m.shadowMetrics?.schemaPassRate != null && m.shadowMetrics.schemaPassRate < LIVE_GATES.minSchemaPassRate) {
+    throw new ServiceError(409, 'live_gate_failed', 'schemaPassRate is below the live gate');
+  }
+  return pharmacist;
+}
+
+function setModelStatus(modelId, status, actor, reason, extra = {}) {
   const m = repo.learning().getModel(modelId);
   if (!m) throw new ServiceError(404, 'model_not_found', 'Model not in registry');
   const allowed = {
@@ -111,12 +184,27 @@ function setModelStatus(modelId, status, actor, reason) {
   if (!(allowed[m.status] || []).includes(status)) {
     throw new ServiceError(409, 'invalid_model_transition', `Cannot move ${m.status} → ${status}`);
   }
-  if (status === 'live' && actor.role !== 'admin') {
-    throw new ServiceError(403, 'governance_approval_required', 'Live publish requires admin governance approval after shadow evaluation');
+  if (status === 'live') {
+    if (actor.role !== 'admin') {
+      throw new ServiceError(403, 'governance_approval_required', 'Live publish requires admin governance approval after shadow evaluation');
+    }
+    const pharmacist = assertLiveReady(m, actor, extra.pharmacistApproverId);
+    const next = {
+      ...m,
+      status,
+      liveAt: new Date().toISOString(),
+      pharmacistApproverId: String(pharmacist.id),
+      governanceApproverId: String(actor.id),
+      lastDecision: { by: String(actor.id), role: actor.role, at: new Date().toISOString(), reason: reason || null },
+    };
+    repo.learning().putModel(next);
+    audit.append({ eventType: 'model_status', actorType: actor.role, actorId: actor.id, payload: { modelId, status, pharmacistApproverId: next.pharmacistApproverId } });
+    return next;
   }
   const next = {
     ...m,
     status,
+    shadowEnteredAt: status === 'shadow' ? (m.shadowEnteredAt || new Date().toISOString()) : m.shadowEnteredAt,
     liveAt: status === 'live' ? new Date().toISOString() : m.liveAt,
     rollbackTo: status === 'rolled_back' ? m.version : m.rollbackTo,
     lastDecision: { by: String(actor.id), role: actor.role, at: new Date().toISOString(), reason: reason || null },
@@ -126,8 +214,26 @@ function setModelStatus(modelId, status, actor, reason) {
   return next;
 }
 
+function findPromotableShadowModel(modelName) {
+  return repo.learning().listModels().find((m) => (
+    m.status === 'shadow'
+    && m.shadowCompletedAt
+    && m.evaluationReportId
+    && (!modelName || m.version === modelName || m.modelId === modelName)
+  ));
+}
+
 function hashObjectSafe(o) {
   return hashObject(o);
 }
 
-module.exports = { exportCandidates, reviewLabel, registerModel, setModelStatus, hashObjectSafe };
+module.exports = {
+  LIVE_GATES,
+  exportCandidates,
+  reviewLabel,
+  registerModel,
+  recordShadowComplete,
+  setModelStatus,
+  findPromotableShadowModel,
+  hashObjectSafe,
+};

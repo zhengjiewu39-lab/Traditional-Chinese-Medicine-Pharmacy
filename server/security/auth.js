@@ -54,7 +54,18 @@ function loadUsers() {
       },
       prescriber: {
         password: process.env.TCM_PRESCRIBER_PASSWORD || 'doc123',
-        user: { id: 7, username: 'prescriber', name: '周医师', role: 'prescriber' },
+        user: {
+          id: 7,
+          username: 'prescriber',
+          name: '周医师',
+          role: 'prescriber',
+          license: {
+            verified: true,
+            source: 'demo_institution_roster',
+            attestedAt: '2020-01-01',
+            synthetic: true,
+          },
+        },
       },
       technician: {
         password: process.env.TCM_TECHNICIAN_PASSWORD || 'tech123',
@@ -88,6 +99,15 @@ function loadUsers() {
 function getUsers() {
   if (!usersCache) usersCache = loadUsers();
   return usersCache;
+}
+
+function getUserById(id) {
+  if (id == null) return null;
+  const want = String(id);
+  for (const acc of Object.values(getUsers())) {
+    if (acc.user && String(acc.user.id) === want) return acc.user;
+  }
+  return null;
 }
 
 function hmac(data) {
@@ -175,6 +195,7 @@ module.exports = {
   requireAuth,
   authenticate,
   getUsers,
+  getUserById,
   isPublicPath,
   sanitizeProfileUpdate,
   assertProductionAuthConfig,

@@ -17,6 +17,7 @@ const { getDataMode, isSyntheticMode } = require('../config/dataMode');
 const { hasPharmacistCredential } = require('../security/rbac');
 const { ServiceError } = require('./errors');
 const suggestions = require('./suggestionService');
+const { prescriberFields } = require('../security/prescriberLicense');
 
 const SYSTEM = { role: 'system', id: 'workflow' };
 const PATIENT_TOKEN_TTL_MS = () => (Number(process.env.PATIENT_TOKEN_TTL_MINUTES) || 48 * 60) * 60000;
@@ -54,12 +55,38 @@ function contentOf(c) {
   return { patient: c.patient, prescriber: c.prescriber, prescription: c.prescription };
 }
 
+function resolvePrescriberOnCreate(base, incoming, actor) {
+  const named = { ...(base || {}), ...(incoming || {}) };
+  const rosterActor = actor.role === 'prescriber'
+    ? actor
+    : (named.userId ? { id: named.userId, name: named.name } : null);
+  if (rosterActor) {
+    return {
+      name: named.name || rosterActor.name,
+      institution: named.institution,
+      ...prescriberFields(rosterActor),
+    };
+  }
+  const out = {
+    name: named.name,
+    institution: named.institution,
+    licenseSource: 'not_on_file',
+  };
+  // Clients cannot claim verified. An explicit false is a failed check, not an invented pass.
+  if (named.licenseVerified === false) {
+    out.licenseVerified = false;
+    out.licenseSource = named.licenseSource || 'failed_check';
+  }
+  return out;
+}
+
 function normaliseHerbs(herbs) {
   return (herbs || []).map((h) => ({
     name: String(h.name).trim(),
     dosage: h.dosage == null ? null : Number(h.dosage),
     unit: h.unit || 'g',
     ...(h.processing ? { processing: h.processing } : {}),
+    ...(h.decoctionTiming ? { decoctionTiming: h.decoctionTiming } : {}),
     ...(h.note ? { note: h.note } : {}),
   }));
 }
@@ -107,11 +134,7 @@ function createCase(input, actor) {
     legacyPrescriptionId: base.legacyPrescriptionId ?? input.legacyPrescriptionId ?? null,
     source,
     patient: { ...base.patient, ...input.patient },
-    prescriber: {
-      ...base.prescriber,
-      ...input.prescriber,
-      ...(actor.role === 'prescriber' ? { userId: String(actor.id), name: input.prescriber?.name || actor.name } : {}),
-    },
+    prescriber: resolvePrescriberOnCreate(base.prescriber, input.prescriber, actor),
     prescription,
     state: 'received',
     contentVersion: 1,
@@ -239,7 +262,7 @@ async function updateContent(caseId, patch, actor) {
   }
   const before = { hash: c.contentHash, snapshot: structuredClone(contentOf(c)) };
   if (patch.patient) c.patient = { ...c.patient, ...patch.patient };
-  if (patch.prescriber) c.prescriber = { ...c.prescriber, ...patch.prescriber };
+  if (patch.prescriber) c.prescriber = resolvePrescriberOnCreate(c.prescriber, patch.prescriber, actor);
   if (patch.prescription) {
     c.prescription = { ...c.prescription, ...patch.prescription };
     c.prescription.herbs = normaliseHerbs(c.prescription.herbs);
@@ -614,35 +637,42 @@ function reviewQueue() {
     displaySource: c.analyses.at(-1)?.output?.displaySource || null,
     evidenceStrength: c.analyses.at(-1)?.output?.evidenceStrength || null,
     escalateReasons: priorityReason(c),
+    secondReviewPending: Boolean(c.secondReview?.status === 'pending'),
     synthetic: Boolean(c.synthetic),
   });
+  const second = pending.filter((c) => c.secondReview?.status === 'pending');
+  const rest = pending.filter((c) => c.secondReview?.status !== 'pending');
   return {
-    priority: pending.filter(isPriorityReview).map(toItem),
-    batch: pending.filter((c) => !isPriorityReview(c)).map(toItem),
+    secondReview: second.map(toItem),
+    priority: rest.filter(isPriorityReview).map(toItem),
+    batch: rest.filter((c) => !isPriorityReview(c)).map(toItem),
   };
 }
 
-function sampleLowRisk(actor, { rate = 0.1 } = {}) {
+function sampleLowRisk(actor, { rate = 0.1, seed } = {}) {
+  const { stratifiedSample } = require('./sampling');
+  const { randomId } = require('../common/hash');
   const eligible = repo.listCases().filter((c) => {
     const a = c.analyses.at(-1)?.output;
     return a?.riskTier === 'A1' && ['pharmacist_approved', 'patient_confirmed', 'dispensing', 'ready_for_pickup', 'completed'].includes(c.state);
   });
-  const n = eligible.length ? Math.max(1, Math.ceil(eligible.length * rate)) : 0;
-  const shuffled = [...eligible].sort((a, b) => a.caseId.localeCompare(b.caseId));
-  const picked = shuffled.slice(0, n).map((c) => ({
+  const sampleSeed = seed || randomId('samp');
+  const chosen = stratifiedSample(eligible, { rate, seed: sampleSeed, keyFn: (c) => c.state });
+  const picked = chosen.map((c) => ({
     caseId: c.caseId,
     sampledAt: new Date().toISOString(),
     sampledBy: String(actor.id),
     riskTier: 'A1',
     state: c.state,
     purpose: 'low_risk_quality_audit',
+    seed: sampleSeed,
   }));
   picked.forEach((row) => repo.learning().addSample(row));
   audit.append({
     eventType: 'low_risk_sample', actorType: actor.role, actorId: actor.id,
-    payload: { count: picked.length, eligible: eligible.length, rate },
+    payload: { count: picked.length, eligible: eligible.length, rate, seed: sampleSeed, method: 'stratified_by_state' },
   });
-  return { eligible: eligible.length, sampled: picked.length, cases: picked };
+  return { eligible: eligible.length, sampled: picked.length, seed: sampleSeed, method: 'stratified_by_state', cases: picked };
 }
 
 module.exports = {

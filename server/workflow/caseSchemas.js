@@ -13,6 +13,7 @@ const HERB = {
     dosage: { type: ['number', 'null'], minimum: 0, maximum: 1000 },
     unit: { type: 'string', enum: ['g', 'ml', '丸', '片', '袋'] },
     processing: str(40),
+    decoctionTiming: { type: 'string', enum: ['先煎', '后下', '包煎', '烊化', '冲服', '同煎'] },
     note: str(100),
   },
 };
@@ -43,9 +44,11 @@ const PRESCRIBER = {
   additionalProperties: false,
   properties: {
     id: str(40),
+    userId: str(40),
     name: str(40),
     institution: str(80),
     licenseVerified: { type: 'boolean' },
+    licenseSource: str(80),
   },
 };
 
@@ -59,6 +62,7 @@ const PRESCRIPTION = {
     usage: str(120),
     form: { type: 'string', enum: ['decoction', 'granule', 'pill', 'powder', 'other'] },
     decoctionNotes: str(300),
+    clinicalNotes: str(500),
     issuedAt: { type: 'string', format: 'date' },
     diagnosisText: str(200),
     prescriberAttestations: strList(20, 80),
@@ -201,6 +205,7 @@ const PATCH_DRAFT = {
     clinical: { type: 'object', additionalProperties: false, properties: { diagnosisText: str(200), notes: str(500) } },
     diagnosisText: str(200),
     diagnosis: str(200),
+    notes: str(500),
     prescriptionText: str(4000),
     prescription: PRESCRIPTION,
   },

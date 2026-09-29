@@ -29,6 +29,9 @@ const ENTRY_SCHEMA = {
     reviewedBy: { type: ['string', 'null'] },
     reviewedAt: { type: ['string', 'null'] },
     hash: { type: 'string', format: 'sha256' },
+    validFrom: { type: 'string', format: 'date' },
+    validTo: { type: 'string', format: 'date' },
+    issuingAuthority: { type: 'string', minLength: 1 },
   },
 };
 

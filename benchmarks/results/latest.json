@@ -1,7 +1,7 @@
 {
   "dataset": "TCM-Prescription-Review-Expanded-v1",
   "version": "1.1.0",
-  "evaluatedAt": "2026-07-06T13:31:50.590Z",
+  "evaluatedAt": "2026-09-29T20:51:23.383Z",
   "n": 509,
   "engines": {
     "baseline-naive": {
@@ -2852,11 +2852,11 @@
     },
     "rule-engine-v3": {
       "metrics": {
-        "accuracy": 0.9548,
+        "accuracy": 0.9528,
         "macro": {
-          "precision": 0.9378,
-          "recall": 0.8947,
-          "f1": 0.9138
+          "precision": 0.9353,
+          "recall": 0.8852,
+          "f1": 0.9069
         },
         "perClass": {
           "approved": {
@@ -2866,27 +2866,27 @@
             "support": 231
           },
           "review": {
-            "precision": 0.8966,
-            "recall": 0.7429,
-            "f1": 0.8125,
+            "precision": 0.8929,
+            "recall": 0.7143,
+            "f1": 0.7937,
             "support": 35
           },
           "needs_revision": {
-            "precision": 0.9551,
+            "precision": 0.9512,
             "recall": 0.963,
-            "f1": 0.959,
+            "f1": 0.9571,
             "support": 243
           }
         },
         "binaryNeedsRevision": {
-          "precision": 0.9551,
+          "precision": 0.9512,
           "recall": 0.963,
-          "f1": 0.959,
+          "f1": 0.9571,
           "confusion": {
             "tp": 234,
-            "fp": 11,
+            "fp": 12,
             "fn": 9,
-            "tn": 255
+            "tn": 254
           }
         }
       },
@@ -2898,6 +2898,11 @@
         },
         {
           "id": "PR-008",
+          "expected": "review",
+          "predicted": "needs_revision"
+        },
+        {
+          "id": "PR-014",
           "expected": "review",
           "predicted": "needs_revision"
         },
@@ -3014,13 +3019,13 @@
         "macro": {
           "precision": 0.9471,
           "recall": 0.8948,
-          "f1": 0.9174
+          "f1": 0.9175
         },
         "perClass": {
           "approved": {
-            "precision": 0.9538,
+            "precision": 0.9578,
             "recall": 0.9827,
-            "f1": 0.968,
+            "f1": 0.9701,
             "support": 231
           },
           "review": {
@@ -3030,21 +3035,21 @@
             "support": 35
           },
           "needs_revision": {
-            "precision": 0.9588,
+            "precision": 0.9549,
             "recall": 0.9588,
-            "f1": 0.9588,
+            "f1": 0.9569,
             "support": 243
           }
         },
         "binaryNeedsRevision": {
-          "precision": 0.9588,
+          "precision": 0.9549,
           "recall": 0.9588,
-          "f1": 0.9588,
+          "f1": 0.9569,
           "confusion": {
             "tp": 233,
-            "fp": 10,
+            "fp": 11,
             "fn": 10,
-            "tn": 256
+            "tn": 255
           }
         }
       },
@@ -3062,7 +3067,7 @@
         {
           "id": "PR-014",
           "expected": "review",
-          "predicted": "approved"
+          "predicted": "needs_revision"
         },
         {
           "id": "PR-017",
@@ -3168,11 +3173,11 @@
     },
     "cdss-dual-track-v1": {
       "metrics": {
-        "accuracy": 0.9548,
+        "accuracy": 0.9528,
         "macro": {
-          "precision": 0.9378,
-          "recall": 0.8947,
-          "f1": 0.9138
+          "precision": 0.9353,
+          "recall": 0.8852,
+          "f1": 0.9069
         },
         "perClass": {
           "approved": {
@@ -3182,27 +3187,27 @@
             "support": 231
           },
           "review": {
-            "precision": 0.8966,
-            "recall": 0.7429,
-            "f1": 0.8125,
+            "precision": 0.8929,
+            "recall": 0.7143,
+            "f1": 0.7937,
             "support": 35
           },
           "needs_revision": {
-            "precision": 0.9551,
+            "precision": 0.9512,
             "recall": 0.963,
-            "f1": 0.959,
+            "f1": 0.9571,
             "support": 243
           }
         },
         "binaryNeedsRevision": {
-          "precision": 0.9551,
+          "precision": 0.9512,
           "recall": 0.963,
-          "f1": 0.959,
+          "f1": 0.9571,
           "confusion": {
             "tp": 234,
-            "fp": 11,
+            "fp": 12,
             "fn": 9,
-            "tn": 255
+            "tn": 254
           }
         }
       },
@@ -3214,6 +3219,11 @@
         },
         {
           "id": "PR-008",
+          "expected": "review",
+          "predicted": "needs_revision"
+        },
+        {
+          "id": "PR-014",
           "expected": "review",
           "predicted": "needs_revision"
         },
@@ -3329,17 +3339,17 @@
     {
       "engine": "ml-interpretable-v1",
       "accuracy": 0.9548,
-      "macroF1": 0.9174
+      "macroF1": 0.9175
     },
     {
       "engine": "rule-engine-v3",
-      "accuracy": 0.9548,
-      "macroF1": 0.9138
+      "accuracy": 0.9528,
+      "macroF1": 0.9069
     },
     {
       "engine": "cdss-dual-track-v1",
-      "accuracy": 0.9548,
-      "macroF1": 0.9138
+      "accuracy": 0.9528,
+      "macroF1": 0.9069
     },
     {
       "engine": "baseline-keyword",

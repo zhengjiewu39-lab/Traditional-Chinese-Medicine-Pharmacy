@@ -1,6 +1,7 @@
 # AI review offline evaluation
 
 > **Engineering evaluation on synthetic standardized cases. Not a clinical validation.**
+> Mock-deterministic-v1 only (millisecond latency). Cases share the rule table. Do **not** cite 100% figures as live-AI accuracy or unseen-prescription sensitivity. No `results-live` report is committed.
 
 - Benchmark: `tcm-ai-review-synthetic@1.0.0` (64 synthetic cases)
 - Model: `mock-deterministic-v1` (deterministic mock provider), prompt `rx-screening@1.0.0#3ae9d440`

@@ -6,8 +6,10 @@ import {
 import { patientPortalApi } from '../../services/aiApi';
 import { formatApiError } from '../../config/httpClient';
 import { SYNTHETIC_LABEL } from '../../config/aiLabels';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 export default function PatientFeedback() {
+  const { t } = useLanguage();
   const { token } = useParams();
   const [effectiveness, setEffectiveness] = useState(3);
   const [adverse, setAdverse] = useState(false);
@@ -30,19 +32,19 @@ export default function PatientFeedback() {
   return (
     <Container maxWidth="sm" sx={{ py: 4 }}>
       <Paper sx={{ p: 3 }}>
-        <Typography variant="h5" sx={{ fontWeight: 700 }}>用药反馈</Typography>
-        <Alert severity="info" sx={{ my: 2 }}>{SYNTHETIC_LABEL}。如出现严重不适，请立即就医，不要等待线上回复。</Alert>
+        <Typography variant="h5" sx={{ fontWeight: 700 }}>{t('ai.feedback.title')}</Typography>
+        <Alert severity="info" sx={{ my: 2 }}>{t('ai.feedback.intro', { synthetic: t(SYNTHETIC_LABEL) })}</Alert>
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
         {done ? (
-          <Alert severity="success">感谢反馈。{done.pharmacistFollowUp ? '药师将就您报告的不良反应与您联系。' : ''}</Alert>
+          <Alert severity="success">{t('ai.feedback.thanks')}{done.pharmacistFollowUp ? ` ${t('ai.feedback.follow')}` : ''}</Alert>
         ) : (
           <Stack spacing={2}>
-            <Typography variant="body2">服药后的整体感受</Typography>
+            <Typography variant="body2">{t('ai.feedback.feel')}</Typography>
             <Rating value={effectiveness} onChange={(e, v) => setEffectiveness(v || 1)} />
-            <FormControlLabel control={<Switch checked={adverse} onChange={(e) => setAdverse(e.target.checked)} />} label="服药后出现不适或不良反应" />
-            {adverse && <TextField multiline minRows={2} label="请描述症状" value={desc} onChange={(e) => setDesc(e.target.value)} />}
-            <TextField multiline minRows={2} label="其他意见" value={comments} onChange={(e) => setComments(e.target.value)} />
-            <Button variant="contained" onClick={submit}>提交</Button>
+            <FormControlLabel control={<Switch checked={adverse} onChange={(e) => setAdverse(e.target.checked)} />} label={t('ai.feedback.adr')} />
+            {adverse && <TextField multiline minRows={2} label={t('ai.feedback.desc')} value={desc} onChange={(e) => setDesc(e.target.value)} />}
+            <TextField multiline minRows={2} label={t('ai.feedback.other')} value={comments} onChange={(e) => setComments(e.target.value)} />
+            <Button variant="contained" onClick={submit}>{t('ai.feedback.submit')}</Button>
           </Stack>
         )}
       </Paper>

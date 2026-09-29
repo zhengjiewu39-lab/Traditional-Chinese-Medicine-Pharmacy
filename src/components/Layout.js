@@ -45,6 +45,7 @@ import SimulationDisclaimer from './SimulationDisclaimer';
 import SyntheticDataNotice from './ai/SyntheticDataNotice';
 import ApiStatusBanner from './ApiStatusBanner';
 import LanguageSwitcher from './LanguageSwitcher';
+import RoleScopeBanner from './RoleScopeBanner';
 import { useLanguage } from '../i18n/LanguageContext';
 
 const drawerWidth = 260;
@@ -83,6 +84,7 @@ const ICONS = {
 const ROLE_ICONS = {
   admin: AdminPanelSettings,
   pharmacist: LocalPharmacy,
+  prescriber: MedicalServices,
   technician: Handyman,
   researcher: Science,
   patient: Person,
@@ -102,6 +104,7 @@ function Layout({ children }) {
   const { user, logout, isAdmin } = useAuth();
   const { t } = useLanguage();
   const role = user?.role;
+  const roleLabel = user?.username === 'pharmacist2' ? t('roles.pharmacist2') : t(`roles.${role}`);
   const RoleIcon = ROLE_ICONS[role] || AccountCircle;
   const isTwinPage = location.pathname.startsWith('/simulation');
 
@@ -123,7 +126,7 @@ function Layout({ children }) {
         <Chip
           size="small"
           icon={<RoleIcon sx={{ fontSize: 14 }} />}
-          label={t(`roles.${role}`)}
+          label={roleLabel}
           color={isAdmin ? 'primary' : 'secondary'}
           sx={{ mt: 1, height: 22, fontSize: '0.7rem' }}
         />
@@ -207,7 +210,7 @@ function Layout({ children }) {
           </Typography>
           <LanguageSwitcher />
           <Chip
-            label={t(`roles.${role}Mode`)}
+            label={user?.username === 'pharmacist2' ? t('roles.pharmacist2') : t(`roles.${role}Mode`)}
             size="small"
             sx={{ mr: 2, bgcolor: alpha('#fff', 0.15), color: '#fff', fontWeight: 600 }}
           />
@@ -218,7 +221,7 @@ function Layout({ children }) {
           </IconButton>
           <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={() => setAnchorEl(null)}>
             <MenuItem disabled>
-              <Typography variant="body2">{user?.name} · {t(`roles.${role}`)}</Typography>
+              <Typography variant="body2">{user?.name} · {roleLabel}</Typography>
             </MenuItem>
             <Divider />
             <MenuItem onClick={() => { logout(); navigate('/login'); }}>
@@ -239,6 +242,7 @@ function Layout({ children }) {
       <Box component="main" sx={{ flexGrow: 1, p: 3, width: { sm: `calc(100% - ${drawerWidth}px)` }, mt: '64px' }}>
         {isTwinPage && <ApiStatusBanner />}
         {!isTwinPage && <SyntheticDataNotice />}
+        <RoleScopeBanner />
         {children}
         {isTwinPage && <SimulationDisclaimer />}
       </Box>

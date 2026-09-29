@@ -4,22 +4,24 @@ import {
 } from '@mui/material';
 import { aiGovernanceApi } from '../services/aiApi';
 import { formatApiError } from '../config/httpClient';
+import { useLanguage } from '../i18n/LanguageContext';
 
 const PRESETS = [
-  { id: 'openai', label: 'OpenAI', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini', needsKey: true },
-  { id: 'deepseek', label: 'DeepSeek', baseUrl: 'https://api.deepseek.com/v1', model: 'deepseek-chat', needsKey: true },
-  { id: 'ollama', label: '本地 Ollama', baseUrl: 'http://127.0.0.1:11434/v1', model: 'llama3.1', needsKey: false },
-  { id: 'custom', label: '自定义兼容接口', baseUrl: '', model: '', needsKey: true },
+  { id: 'openai', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini', needsKey: true },
+  { id: 'deepseek', baseUrl: 'https://api.deepseek.com/v1', model: 'deepseek-chat', needsKey: true },
+  { id: 'ollama', baseUrl: 'http://127.0.0.1:11434/v1', model: 'llama3.1', needsKey: false },
+  { id: 'custom', baseUrl: '', model: '', needsKey: true },
 ];
 
-function errorText(e) {
+function errorText(e, t) {
   const err = e.response?.data?.error;
   if (!err) return formatApiError(e);
-  if (err.detail && err.detail !== err.message) return `${err.message}（${err.detail}）`;
-  return err.message || formatApiError(e);
+  if (err.detail && err.detail !== err.message) return formatApiError(e);
+  return formatApiError(e) || t('errors.requestFailed');
 }
 
 export default function ConnectRealAi({ onSaved }) {
+  const { t } = useLanguage();
   const [preset, setPreset] = useState('deepseek');
   const [baseUrl, setBaseUrl] = useState(PRESETS[1].baseUrl);
   const [model, setModel] = useState(PRESETS[1].model);
@@ -54,7 +56,7 @@ export default function ConnectRealAi({ onSaved }) {
 
   const save = async () => {
     if (needsKey && !hasKey) {
-      setErr('DeepSeek / OpenAI 必须填写 API Key。请从 platform.deepseek.com 复制完整密钥（以 sk- 开头）。');
+      setErr(t('ai.connect.needKey'));
       return;
     }
     setBusy(true);
@@ -70,20 +72,20 @@ export default function ConnectRealAi({ onSaved }) {
         dataResidency: preset === 'ollama' ? 'on-prem' : 'external',
       });
     } catch (e) {
-      setErr(errorText(e));
+      setErr(errorText(e, t));
       setBusy(false);
       return;
     }
     try {
       const test = await aiGovernanceApi.testProvider();
       setMsg(test.data.isMock
-        ? '已保存，但仍是模拟模型（未通过真实调用）。请确认密钥和地址。'
-        : `真实模型已接通：${test.data.model}，延迟 ${test.data.latencyMs}ms。之后开方会由该模型驱动筛查。`);
+        ? t('ai.connect.savedMock')
+        : t('ai.connect.savedLive', { model: test.data.model, ms: test.data.latencyMs }));
       setApiKey('');
       await load();
       if (onSaved) onSaved();
     } catch (e) {
-      setErr(`配置已保存，但测试调用失败：${errorText(e)}。可检查密钥、余额，以及本机能否访问 ${baseUrl}。`);
+      setErr(t('ai.connect.savedFail', { err: errorText(e, t), url: baseUrl }));
       await load();
     } finally {
       setBusy(false);
@@ -92,33 +94,35 @@ export default function ConnectRealAi({ onSaved }) {
 
   return (
     <Box>
-      <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>接入真实 AI</Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        DeepSeek 选好提供方、粘贴 platform.deepseek.com 的 API Key 即可。密钥只保存在本机，不会出现在页面、日志或审计里。AI 仍不能自己批准或发药。
-      </Typography>
+      <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>{t('ai.connect.title')}</Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>{t('ai.connect.intro')}</Typography>
       {local?.configured && (
         <Alert severity={local.apiKeyConfigured ? 'success' : 'warning'} sx={{ mb: 2 }}>
-          已配置 {local.endpointHost} / {local.model}；密钥{local.apiKeyConfigured ? '已保存' : '尚未填写'}。
+          {t('ai.connect.configured', {
+            host: local.endpointHost,
+            model: local.model,
+            key: local.apiKeyConfigured ? t('ai.connect.keySaved') : t('ai.connect.keyMissing'),
+          })}
         </Alert>
       )}
       {err && <Alert severity="error" sx={{ mb: 2 }}>{err}</Alert>}
       {msg && <Alert severity="info" sx={{ mb: 2 }}>{msg}</Alert>}
       <Stack spacing={2}>
-        <TextField select label="提供方" value={preset} onChange={(e) => applyPreset(e.target.value)}>
-          {PRESETS.map((p) => <MenuItem key={p.id} value={p.id}>{p.label}</MenuItem>)}
+        <TextField select label={t('ai.connect.provider')} value={preset} onChange={(e) => applyPreset(e.target.value)}>
+          {PRESETS.map((p) => <MenuItem key={p.id} value={p.id}>{t(`ai.connect.preset.${p.id}`)}</MenuItem>)}
         </TextField>
-        <TextField label="接口地址" value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder="https://api.deepseek.com/v1" />
-        <TextField label="模型名" value={model} onChange={(e) => setModel(e.target.value)} placeholder="deepseek-chat" />
+        <TextField label={t('ai.connect.baseUrl')} value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder="https://api.deepseek.com/v1" />
+        <TextField label={t('ai.connect.model')} value={model} onChange={(e) => setModel(e.target.value)} placeholder="deepseek-chat" />
         <TextField
-          label={needsKey ? 'API Key' : 'API Key（本地 Ollama 可留空）'}
+          label={needsKey ? t('ai.connect.key') : t('ai.connect.keyOptional')}
           type="password"
           value={apiKey}
           onChange={(e) => setApiKey(e.target.value)}
           autoComplete="off"
-          helperText={preset === 'deepseek' ? '使用 deepseek-chat；不要填完整 /chat/completions 路径。' : ' '}
+          helperText={preset === 'deepseek' ? t('ai.connect.deepseekHint') : ' '}
         />
         <Button variant="contained" disabled={busy || !baseUrl || !model} onClick={save}>
-          {busy ? '正在接通…' : '保存并测试真实模型'}
+          {busy ? t('ai.connect.saving') : t('ai.connect.save')}
         </Button>
       </Stack>
     </Box>
