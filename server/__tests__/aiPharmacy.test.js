@@ -25,7 +25,6 @@ const audit = require('../audit/auditRepository');
 const repo = require('../workflow/workflowRepository');
 const { assertProductionAIConfig, createProvider } = require('../ai/providerAdapter');
 const { loadRegistry, computeEntryHash } = require('../knowledge/sourceRegistry');
-const { getStore } = require('../data/store');
 
 const USERS = {
   admin: { id: 1, username: 'admin', name: '管理员', role: 'admin' },
@@ -79,7 +78,20 @@ function caseInput(overrides = {}) {
   return {
     source: { channel: 'counter' },
     patient: {
-      patientRef: 'P1', name: '合成患者', ageYears: 45, sex: 'male', allergies: [], currentMedications: [], ...overrides.patient,
+      patientRef: 'P1', name: '合成患者', ageYears: 45, sex: 'male',
+      facts: {
+        allergies: { status: 'none', value: [], source: 'test', version: 1 },
+        currentMedications: { status: 'none', value: [], source: 'test', version: 1 },
+        liverImpairment: { status: 'none', value: false, source: 'test', version: 1 },
+        renalImpairment: { status: 'none', value: false, source: 'test', version: 1 },
+        pregnancy: { status: 'none', value: 'no', source: 'test', version: 1 },
+        lactation: { status: 'none', value: 'no', source: 'test', version: 1 },
+        ageYears: { status: 'reported', value: 45, unit: 'years', source: 'test', version: 1 },
+        weightKg: { status: 'not_asked', value: null, unit: 'kg', source: 'test', version: 1 },
+      },
+      allergyItems: [],
+      medicationItems: [],
+      ...overrides.patient,
     },
     prescriber: { name: '合成医师', licenseVerified: true, ...overrides.prescriber },
     prescription: {
@@ -421,27 +433,10 @@ describe('AI pharmacy: three-track engine safety', () => {
   });
 });
 
-describe('AI pharmacy: operations agent and digital twin', () => {
-  it('11. AI and approved proposals never modify inventory; 12. twin proposals need approval', async () => {
-    const before = JSON.stringify(getStore().inventory);
+describe('AI pharmacy: archived operations endpoints', () => {
+  it('operations and simulation routes are gone', async () => {
     const draft = await call('POST', '/api/ai/operations/proposals', { as: 'technician', body: { action: 'purchase', inventoryIds: [1, 2] } });
-    assert.strictEqual(draft.status, 201);
-    const p = draft.body.proposal;
-    assert.strictEqual(p.requiresApproval, true);
-    const early = await call('POST', `/api/ai/operations/proposals/${p.proposalId}/approve`, { as: 'pharmacist', body: { decision: 'approve', comment: 'ok' } });
-    assert.strictEqual(early.status, 409);
-    assert.strictEqual(early.body.error.code, 'simulation_required');
-    const sim = await call('POST', `/api/ai/operations/proposals/${p.proposalId}/simulate`, { as: 'technician', body: { replicates: 2 } });
-    assert.strictEqual(sim.status, 200);
-    const ev = sim.body.proposal.digitalTwinEvaluation;
-    assert.match(ev.scenarioHash, /^[0-9a-f]{64}$/);
-    assert.ok(ev.baselineMetrics && ev.proposalMetrics && ev.difference);
-    assert.match(ev.label, /synthetic/);
-    assert.strictEqual((await call('POST', `/api/ai/operations/proposals/${p.proposalId}/approve`, { as: 'technician', body: { decision: 'approve', comment: 'ok' } })).status, 403);
-    const ok = await call('POST', `/api/ai/operations/proposals/${p.proposalId}/approve`, { as: 'pharmacist', body: { decision: 'approve', comment: '同意生成草稿' } });
-    assert.strictEqual(ok.status, 200);
-    assert.strictEqual(ok.body.draft.status, 'draft_pending_execution');
-    assert.strictEqual(JSON.stringify(getStore().inventory), before);
+    assert.ok([403, 410].includes(draft.status));
   });
 });
 

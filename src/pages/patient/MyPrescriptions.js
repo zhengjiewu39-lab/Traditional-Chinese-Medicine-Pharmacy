@@ -24,9 +24,10 @@ export default function MyPrescriptions() {
           <Stack direction="row" spacing={1} alignItems="center">
             <Typography variant="subtitle1" sx={{ fontFamily: 'monospace' }}>{c.caseRef}</Typography>
             <Chip size="small" label={t(STATE_LABELS[c.state] || c.state)} />
+            {c.educationStatus && <Chip size="small" variant="outlined" label={c.educationStatus === 'published' ? t('nav.myEducation') : t('ai.mine.educationPending')} />}
           </Stack>
           <Typography variant="body2" sx={{ mt: 1 }}>{c.prescription.herbs.map((h) => `${h.name}${h.dosage ?? ''}${h.unit}`).join(', ')}</Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>{c.explanation.text}</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>{c.explanation?.text || t('ai.mine.educationPending')}</Typography>
           <List dense>
             {c.events.map((e, i) => (
               <ListItem key={i} disableGutters>

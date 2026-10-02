@@ -6,7 +6,7 @@
  * The orchestrator returns an analysis object. It has no access to workflow state, inventory or
  * dispensing records; the workflow service decides what to do with the result.
  */
-const { runRuleTrack, substitutionCandidatesFor, TIER_ORDER, maxTier } = require('./ruleTrack');
+const { runRuleTrack, TIER_ORDER, maxTier } = require('./ruleTrack');
 const { retrieve } = require('../knowledge/evidenceRetriever');
 const { knowledgeBaseVersion } = require('../knowledge/sourceRegistry');
 const { buildScreeningMessages, getPrompt } = require('./promptRegistry');
@@ -170,12 +170,12 @@ async function analyzeCase(caseRecord, {
   else if (ruleTrack.missingInformation.some((m) => m.critical)) recommendation = 'clarification_required';
   else if (retrieval.hits.some((h) => h.verifyWithPrescriber)) recommendation = 'refer_to_prescriber';
 
-  const counterfactuals = retrieval.hits.filter((h) => h.counterfactual).map((h) => ({ code: h.code, tier: h.tier, text: h.counterfactual }));
+  const nextVerificationSteps = retrieval.hits.filter((h) => h.counterfactual).map((h) => ({ code: h.code, tier: h.tier, text: h.counterfactual }));
   for (const m of ruleTrack.missingInformation.filter((x) => x.critical)) {
-    counterfactuals.push({ code: 'MISSING_INFORMATION', tier: 'A2', text: `补充「${m.message}」后可重新评估` });
+    nextVerificationSteps.push({ code: 'MISSING_INFORMATION', tier: 'A2', text: `补充「${m.message}」后可重新评估` });
   }
   if (abstainReasons.length) {
-    counterfactuals.push({ code: 'ABSTAIN', tier: riskTier, text: `AI未给出结论（${abstainReasons.join('、')}），需药师独立审核${hardStops.length ? '并处理阻断项' : ''}` });
+    nextVerificationSteps.push({ code: 'ABSTAIN', tier: riskTier, text: `AI未给出结论（${abstainReasons.join('、')}），需药师独立审核${hardStops.length ? '并处理阻断项' : ''}` });
   }
 
   const reasonText = semanticOk ? '' : { disabled: 'AI未启用，仅规则', disabled_by_kill_switch: 'AI总开关已关闭，仅规则', timeout: '模型超时，已回退规则', error: '模型不可用，已回退规则', schema_invalid: '模型输出不合规，已回退规则', skipped_injection: '疑似注入，已跳过模型', skipped_input_too_long: '输入过长，已跳过模型', policy_violation: '模型输出违反安全策略，已丢弃', circuit_open: '模型熔断，已回退规则' }[semantic.status];
@@ -190,8 +190,9 @@ async function analyzeCase(caseRecord, {
     hardStops,
     alerts,
     missingInformation,
-    counterfactuals,
-    substitutionCandidates: substitutionCandidatesFor(herbNames),
+    nextVerificationSteps,
+    counterfactuals: nextVerificationSteps,
+    substitutionCandidates: [],
     ruleTrackResult: ruleTrack,
     retrievalTrackResult: {
       knowledgeBaseVersion: knowledgeBaseVersion(),

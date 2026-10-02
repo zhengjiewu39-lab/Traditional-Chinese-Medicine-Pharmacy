@@ -522,6 +522,7 @@ const ai = {
   mine: {
     title: '我的处方',
     empty: '暂无处方记录',
+    educationPending: '用药说明尚未由药师审核发布',
   },
   confirm: {
     title: '处方信息确认',

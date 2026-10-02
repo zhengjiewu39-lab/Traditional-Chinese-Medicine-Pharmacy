@@ -152,7 +152,7 @@ function isPublicPath(path) {
   const p = String(path || '').split('?')[0];
   if (p === '/api/health' || p === '/api/auth/login') return true;
   if (p === '/api/pickup/redeem' || /^\/api\/pickup\/redeem\/?$/.test(p)) return true;
-  if (/^\/api\/patient\/(confirmation|feedback)\/[A-Za-z0-9_-]{20,100}$/.test(p)) return true;
+  if (/^\/api\/patient\/(confirmation|feedback|clarification)\/[A-Za-z0-9_-]{20,100}$/.test(p)) return true;
   return false;
 }
 

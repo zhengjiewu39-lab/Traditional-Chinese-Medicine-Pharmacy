@@ -49,7 +49,8 @@ function suggestionsFromAnalysis({ draftId, caseId, analysis, inputHash }) {
       evidenceStrength: (h.evidenceIds || []).length ? out.evidenceStrength : 'none',
       uncertainty: out.abstain ? 'high' : 'low',
       ruleIds: h.ruleId ? [h.ruleId] : [],
-      heuristicReliabilityLevel: (h.evidenceIds || []).length ? 'high' : 'low',
+      heuristicReliabilityLevel: undefined,
+      displayStatus: (h.evidenceIds || []).length ? 'citation_present' : 'evidence_not_found',
     });
   }
   for (const a of out.alerts || []) {
@@ -84,7 +85,7 @@ function suggestionsFromAnalysis({ draftId, caseId, analysis, inputHash }) {
       heuristicReliabilityLevel: 'medium',
     });
   }
-  for (const q of out.counterfactuals || []) {
+  for (const q of out.nextVerificationSteps || out.counterfactuals || []) {
     items.push({
       ...base,
       suggestionId: randomId('sug'),
@@ -97,23 +98,7 @@ function suggestionsFromAnalysis({ draftId, caseId, analysis, inputHash }) {
       evidenceStrength: 'limited',
       uncertainty: 'medium',
       ruleIds: q.code ? [q.code] : [],
-      heuristicReliabilityLevel: 'medium',
-    });
-  }
-  for (const s of out.substitutionCandidates || []) {
-    items.push({
-      ...base,
-      suggestionId: randomId('sug'),
-      suggestionType: 'candidate_prescription_change',
-      targetField: 'prescription.herbs',
-      severity: 'A2',
-      message: `候选修改（须医师主动采纳，系统不会自动改方）：${s.from} → ${s.to}（${s.condition}）`,
-      proposedChange: { type: 'replace_herb', from: s.from, to: s.to, ruleId: s.ruleId },
-      evidenceIds: s.evidenceIds || [],
-      evidenceStrength: 'moderate',
-      uncertainty: 'medium',
-      ruleIds: s.ruleId ? [s.ruleId] : [],
-      heuristicReliabilityLevel: 'low',
+      displayStatus: 'next_verification',
     });
   }
   if (out.abstain || out.disagreements?.length) {

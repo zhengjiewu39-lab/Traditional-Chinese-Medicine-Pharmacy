@@ -24,16 +24,15 @@ const templateRoutes = require('./server/routes/templates');
 const billingRoutes = require('./server/routes/billing');
 const herbRoutes = require('./server/routes/herbs');
 const dashboardRoutes = require('./server/routes/dashboard');
-const analyticsRoutes = require('./server/routes/analytics');
 const exportRoutes = require('./server/routes/export');
-const researchRoutes = require('./server/routes/research');
 const traceabilityRoutes = require('./server/routes/traceability');
-const simulationRoutes = require('./server/routes/simulation');
 const aiRoutes = require('./server/routes/ai');
 const patientPortalRoutes = require('./server/routes/patientPortal');
 const pickupRoutes = require('./server/routes/pickup');
+const evaluationRoutes = require('./server/research/evaluationRoutes');
 const { roleApiGuard } = require('./server/security/rbac');
 const { assertProductionAIConfig, describeProvider } = require('./server/ai/providerAdapter');
+const { importIfNeeded } = require('./server/db/migrateFromJson');
 
 try {
   assertProductionAIConfig();
@@ -44,6 +43,9 @@ try {
 
 const app = express();
 const port = process.env.PORT || 3002;
+function archived(req, res) {
+  return res.status(410).json({ error: { code: 'archived', message: 'This module was archived. Restore from archive/ or git tag v1.0.0-research / legacy-cdss-v1.' } });
+}
 
 const corsOrigins = process.env.CORS_ORIGIN
   ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim())
@@ -135,11 +137,16 @@ app.use('/api/prescriptions', prescriptionRoutes);
 app.use('/api/prescription-templates', templateRoutes);
 app.use('/api/billing', billingRoutes);
 app.use('/api/herbs', herbRoutes);
-app.use('/api/analytics', analyticsRoutes);
 app.use('/api/export', exportRoutes);
-app.use('/api/research', researchRoutes);
 app.use('/api/traceability', traceabilityRoutes);
-app.use('/api/simulation', simulationRoutes);
+app.use('/api/research/evaluation', evaluationRoutes);
+
+app.use('/api/simulation', archived);
+app.use('/api/analytics', archived);
+app.use('/api/research', (req, res, next) => {
+  if (req.path.startsWith('/evaluation') || req.originalUrl.startsWith('/api/research/evaluation')) return next();
+  return archived(req, res);
+});
 
 // 处方文件上传分析
 app.post('/api/prescriptions/analyze/file', (req, res) => {
@@ -189,28 +196,26 @@ app.post('/api/auth/register', (req, res) => {
   res.status(501).json({ message: '请联系管理员开通账号' });
 });
 
-const {
-  RELEASE_VERSION, ENGINE_VERSION, SCENARIO_MATRIX_VERSION, ERRA_HEURISTIC_VERSION,
-} = require('./server/simulation/releaseVersions');
-
-// 健康检查
 app.get('/api/health', (req, res) => {
+  const runtime = describeProvider();
   res.json({
     status: 'ok',
-    service: 'TCM Pharmacy API',
-    release: RELEASE_VERSION,
-    simulationEngine: ENGINE_VERSION.replace(/^simulation-engine-/, ''),
-    scenarioMatrix: SCENARIO_MATRIX_VERSION,
-    errraHeuristic: ERRA_HEURISTIC_VERSION,
-    features: ['pharmacist-governed-ai-pharmacy', 'supply-simulation-research', 'legacy-har-cdss', 'synthetic-data-only'],
-    simulationRouteVersion: 3,
-    ai: { provider: describeProvider().provider, isMock: describeProvider().isMock },
+    service: 'TCM digital pharmacy research prototype',
+    features: ['pharmacist-supervised-ai-support', 'clarification', 'education-approval', 'follow-up', 'sqlite-store', 'synthetic-data-only'],
+    archived: ['supply-simulation', 'operations-agent', 'legacy-cdss-research'],
+    ai: {
+      provider: runtime.provider,
+      isMock: runtime.isMock,
+      inferenceMode: runtime.isMock ? 'mock' : (runtime.provider === 'disabled' ? 'disabled' : 'real'),
+    },
+    note: 'Research prototype. Not clinically validated. Mock is not a live model.',
   });
 });
 
 const server = app.listen(port, () => {
   getStore();
-  console.log(`中药药房 API http://localhost:${port} [持久化 · 全业务 CRUD]`);
+  const migrated = importIfNeeded();
+  console.log(`中药数字药学服务 API http://localhost:${port}`, migrated?.skipped ? '(sqlite already imported)' : '');
   if (ALLOW_DEMO) {
     console.log('  演示账号: admin/admin123 · pharmacist/pharm123 · pharmacist2/pharm456 · prescriber/doc123 · technician/tech123 · researcher/research123 · patient/patient123 (仅 DEV / ALLOW_DEMO_AUTH)');
   }

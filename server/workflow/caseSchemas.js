@@ -36,6 +36,12 @@ const PATIENT = {
     renalImpairment: { type: 'boolean' },
     currentMedications: strList(30),
     identityVerified: { type: 'boolean' },
+    facts: { type: 'object' },
+    allergyItems: { type: 'array', maxItems: 40 },
+    medicationItems: { type: 'array', maxItems: 40 },
+    factChangeLog: { type: 'array', maxItems: 80 },
+    legacyPatientId: str(40),
+    legacyCustomerId: str(40),
   },
 };
 
@@ -97,6 +103,8 @@ const UPDATE_CONTENT = {
     prescriber: PRESCRIBER,
     prescription: PRESCRIPTION,
     reason: str(300, { minLength: 1 }),
+    expectedVersion: { type: 'integer', minimum: 1 },
+    factChange: { type: 'object' },
   },
 };
 
@@ -116,6 +124,8 @@ const PHARMACIST_DECISION = {
     overrideReason: { type: 'string', enum: OVERRIDE_REASONS },
     comment: str(1000),
     requestedInformation: strList(20, 120),
+    expectedVersion: { type: 'integer', minimum: 1 },
+    secondReviewerId: str(40),
   },
 };
 
@@ -145,8 +155,12 @@ const PATIENT_CONFIRMATION = {
     currentMedications: strList(30),
     fulfillment: { type: 'string', enum: ['pickup', 'delivery', 'decoction_pickup', 'decoction_delivery'] },
     contactConfirmed: { type: 'boolean' },
-    substitutionConsent: { type: 'string', enum: ['accept', 'decline'] },
+    substitutionConsent: { type: 'string', enum: ['accept', 'decline', 'not_applicable'] },
     educationAcknowledged: { type: 'boolean' },
+    educationReceived: { type: 'boolean' },
+    educationUnderstood: { type: 'boolean' },
+    allergyStatus: { type: 'string', enum: ['not_asked', 'unknown', 'none', 'reported'] },
+    medicationChanges: { type: 'array', maxItems: 30 },
     declineReason: str(300),
   },
 };
@@ -154,12 +168,18 @@ const PATIENT_CONFIRMATION = {
 const PATIENT_FEEDBACK = {
   type: 'object',
   additionalProperties: false,
-  required: ['effectiveness', 'adverseReaction'],
   properties: {
     effectiveness: { type: 'integer', minimum: 1, maximum: 5 },
     adverseReaction: { type: 'boolean' },
     adverseDescription: str(500),
     comments: str(500),
+    intakeStatus: { type: 'string', enum: ['taken', 'not_taken', 'partially_taken', 'unknown'] },
+    takenAt: str(40),
+    difficulty: str(300),
+    newSymptom: { type: 'boolean' },
+    symptomOnset: str(40),
+    patientSeverity: { type: 'string', enum: ['mild', 'moderate', 'severe', 'unknown'] },
+    contactPreference: str(80),
   },
 };
 
@@ -180,6 +200,8 @@ const DISPENSING_ACTION = {
         properties: { name: str(40), grams: { type: 'number', minimum: 0, maximum: 5000 } },
       },
     },
+    expectedVersion: { type: 'integer', minimum: 1 },
+    idempotencyKey: str(80),
   },
 };
 

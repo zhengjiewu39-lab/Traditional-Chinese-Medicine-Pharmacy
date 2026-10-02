@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 jobs:
-  simulation-research:
+  digital-pharmacy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -29,47 +29,13 @@ jobs:
       - name: Lint (zero warnings)
         run: npm run lint
 
-      - name: Simulation and server tests
-        run: npm run simulation:test
+      - name: Digital pharmacy and server tests
+        run: npm run test:server
 
-      - name: Offline AI review evaluation (synthetic cases)
+      - name: Offline AI review evaluation (synthetic cases, mock only)
         run: npm run ai:evaluate
-
-      - name: Simulation demo
-        run: npm run simulation:demo
-
-      - name: Research reproduce (10 replicates, exact re-run of every metric)
-        run: npm run research:reproduce
-        env:
-          REPLICATES: 10
-
-      - name: Exact reproduce check of the latest stored experiment
-        run: npm run research:reproduce -- --latest
-
-      - name: Paper pipeline smoke run (few seeds)
-        run: npm run paper:quick
 
       - name: Frontend build (strict, warnings are errors)
         run: npm run build
         env:
           CI: true
-
-      - name: Upload simulation experiments artifact
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: simulation-research-ci
-          path: data/simulation-experiments/*.json
-          if-no-files-found: ignore
-
-  legacy-cdss-benchmark:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-      - run: npm ci
-      - name: Legacy prescription benchmark (not part of the research build)
-        run: npm run evaluate:ablation

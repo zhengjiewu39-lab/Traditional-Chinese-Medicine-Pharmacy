@@ -9,6 +9,11 @@ function publicView(e) {
     effectiveDate: e.effectiveDate,
     content: e.content,
     hash: e.hash,
+    excerpt: String(e.content || '').slice(0, 280),
+    synthetic: Boolean(e.synthetic),
+    validFrom: e.validFrom || null,
+    validTo: e.validTo || null,
+    sourceType: e.sourceType || 'document',
   };
 }
 
@@ -30,12 +35,21 @@ function retrieve({ ruleHits = [], herbNames = [] }) {
     if (scoped.length && herbNames.some((n) => scoped.some((s) => n.includes(s)))) byId.set(e.sourceId, e);
   }
   const retrieved = [...byId.values()].map(publicView);
+  let retrievalCoverage = 'none';
+  if (hits.length === 0) retrievalCoverage = retrieved.length ? 'partial' : 'none';
+  else if (missingEvidenceFor.length === 0) retrievalCoverage = 'complete';
+  else if (missingEvidenceFor.length < hits.length) retrievalCoverage = 'partial';
   let evidenceStrength = 'none';
   if (hits.length === 0) evidenceStrength = retrieved.length ? 'moderate' : 'limited';
-  else if (missingEvidenceFor.length === 0) evidenceStrength = 'strong';
-  else if (missingEvidenceFor.length < hits.length) evidenceStrength = 'moderate';
-  else evidenceStrength = 'limited';
-  return { hits, retrieved, missingEvidenceFor, evidenceStrength };
+  else if (missingEvidenceFor.length === 0) evidenceStrength = 'moderate';
+  else if (missingEvidenceFor.length < hits.length) evidenceStrength = 'limited';
+  else evidenceStrength = 'none';
+  return {
+    hits, retrieved, missingEvidenceFor, evidenceStrength,
+    retrievalCoverage,
+    evidenceQuality: 'not_assessed',
+    note: 'evidenceStrength here is retrieval coverage, not clinical evidence strength. Citation presence does not mean the citation supports the claim.',
+  };
 }
 
 module.exports = { retrieve };

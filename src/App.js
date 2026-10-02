@@ -9,18 +9,8 @@ import Layout from './components/Layout';
 import RoleGuard from './components/RoleGuard';
 import { Box, CircularProgress } from '@mui/material';
 import { getHomeForRole } from './config/navigation';
-
 import Login from './pages/Login';
-import SimulationOverview from './pages/simulation/Overview';
-import ScenarioConfiguration from './pages/simulation/ScenarioConfiguration';
-import StrategyComparison from './pages/simulation/StrategyComparison';
-import SimulationRun from './pages/simulation/SimulationRun';
-import SimulationResults from './pages/simulation/Results';
-import Reproducibility from './pages/simulation/Reproducibility';
-import ExperimentArchive from './pages/simulation/ExperimentArchive';
-import Documentation from './pages/simulation/Documentation';
 
-// Pharmacist-governed AI pharmacy workflow.
 const Workbench = lazy(() => import('./pages/ai/Workbench'));
 const CaseIntake = lazy(() => import('./pages/ai/CaseIntake'));
 const CaseList = lazy(() => import('./pages/ai/CaseList'));
@@ -29,34 +19,22 @@ const DispensingBoard = lazy(() => import('./pages/ai/DispensingBoard'));
 const PatientService = lazy(() => import('./pages/ai/PatientService'));
 const Governance = lazy(() => import('./pages/ai/Governance'));
 const KnowledgeSources = lazy(() => import('./pages/ai/KnowledgeSources'));
-const OperationsAgent = lazy(() => import('./pages/ai/OperationsAgent'));
+const FollowUpBoard = lazy(() => import('./pages/ai/FollowUpBoard'));
 const PatientConfirmation = lazy(() => import('./pages/patient/PatientConfirmation'));
 const PatientFeedback = lazy(() => import('./pages/patient/PatientFeedback'));
 const MyPrescriptions = lazy(() => import('./pages/patient/MyPrescriptions'));
-
-// Pharmacy business pages (formerly under /legacy) and the remaining legacy demos: code-split.
-const OperationsDashboard = lazy(() => import('./pages/OperationsDashboard'));
+const PatientProfile = lazy(() => import('./pages/patient/PatientProfile'));
+const ClarificationRespond = lazy(() => import('./pages/patient/ClarificationRespond'));
 const DoctorWorkbench = lazy(() => import('./pages/DoctorWorkbench'));
 const PatientPickup = lazy(() => import('./pages/PatientPickup'));
 const Inventory = lazy(() => import('./pages/Inventory'));
 const Orders = lazy(() => import('./pages/Orders'));
-const Customers = lazy(() => import('./pages/Customers'));
 const Billing = lazy(() => import('./pages/Billing'));
-const Compliance = lazy(() => import('./pages/Compliance'));
-const Organization = lazy(() => import('./pages/Organization'));
 const Distribution = lazy(() => import('./pages/Distribution'));
 const PatientRecords = lazy(() => import('./pages/PatientRecords'));
 const TraceabilitySystem = lazy(() => import('./pages/TraceabilitySystem'));
-const QualityManagement = lazy(() => import('./pages/QualityManagement'));
-const MembershipManagement = lazy(() => import('./pages/MembershipManagement'));
 const PrescriptionTemplates = lazy(() => import('./pages/PrescriptionTemplates'));
-const PrescriptionAnalytics = lazy(() => import('./pages/PrescriptionAnalytics'));
-const ResearchHub = lazy(() => import('./pages/ResearchHub'));
-const HerbalKnowledgeBase = lazy(() => import('./pages/HerbalKnowledgeBase'));
-const PharmacistTraining = lazy(() => import('./pages/PharmacistTraining'));
-const PersonnelManagement = lazy(() => import('./pages/organization/PersonnelManagement'));
-const PositionsManagement = lazy(() => import('./pages/organization/PositionsManagement'));
-const PerformanceManagement = lazy(() => import('./pages/organization/PerformanceManagement'));
+const ResearchEvaluation = lazy(() => import('./pages/research/Evaluation'));
 
 const Loading = () => (
   <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
@@ -86,24 +64,6 @@ function RoleHome() {
   return <Navigate to={getHomeForRole(user.role)} replace />;
 }
 
-/** Business pages that rejoined the formal workflow: path → component. `/legacy/<path>` redirects here. */
-const BUSINESS_ROUTES = [
-  ['/doctor', DoctorWorkbench],
-  ['/patients', PatientRecords],
-  ['/customers', Customers],
-  ['/membership', MembershipManagement],
-          ['/prescriptions/templates', PrescriptionTemplates],
-  ['/knowledge', HerbalKnowledgeBase],
-  ['/pickup', PatientPickup],
-  ['/billing', Billing],
-  ['/distribution', Distribution],
-  ['/inventory', Inventory],
-  ['/orders', Orders],
-  ['/traceability', TraceabilitySystem],
-  ['/quality', QualityManagement],
-  ['/compliance', Compliance],
-];
-
 function PublicPage({ children }) {
   return <Suspense fallback={<Loading />}>{children}</Suspense>;
 }
@@ -120,6 +80,7 @@ function App() {
             <Route path="/" element={<RoleHome />} />
             <Route path="/patient/confirmation/:token" element={<PublicPage><PatientConfirmation /></PublicPage>} />
             <Route path="/patient/feedback/:token" element={<PublicPage><PatientFeedback /></PublicPage>} />
+            <Route path="/patient/clarification/:token" element={<PublicPage><ClarificationRespond /></PublicPage>} />
             <Route element={<ProtectedRoute />}>
               <Route path="/workbench" element={<Workbench />} />
               <Route path="/intake" element={<CaseIntake />} />
@@ -128,36 +89,31 @@ function App() {
               <Route path="/ai/reviews/:caseId" element={<ReviewDetail />} />
               <Route path="/ai/knowledge" element={<KnowledgeSources />} />
               <Route path="/ai/governance" element={<Governance />} />
-              <Route path="/ai/operations" element={<OperationsAgent />} />
+              <Route path="/ai/follow-up" element={<FollowUpBoard />} />
               <Route path="/dispensing" element={<DispensingBoard />} />
               <Route path="/patient-service" element={<PatientService />} />
               <Route path="/patient/me" element={<MyPrescriptions />} />
-              {BUSINESS_ROUTES.map(([p, Page]) => <Route key={p} path={p} element={<Page />} />)}
+              <Route path="/patient/profile" element={<PatientProfile />} />
+              <Route path="/doctor" element={<DoctorWorkbench />} />
+              <Route path="/patients" element={<PatientRecords />} />
+              <Route path="/prescriptions/templates" element={<PrescriptionTemplates />} />
+              <Route path="/pickup" element={<PatientPickup />} />
+              <Route path="/billing" element={<Billing />} />
+              <Route path="/distribution" element={<Distribution />} />
+              <Route path="/inventory" element={<Inventory />} />
+              <Route path="/orders" element={<Orders />} />
+              <Route path="/traceability" element={<TraceabilitySystem />} />
+              <Route path="/research/evaluation" element={<ResearchEvaluation />} />
               <Route path="/prescriptions/review" element={<Navigate to="/ai/review-queue" replace />} />
-              {BUSINESS_ROUTES.map(([p]) => <Route key={`legacy${p}`} path={`/legacy${p}`} element={<Navigate to={p} replace />} />)}
-              <Route path="/legacy/prescriptions/review" element={<Navigate to="/ai/review-queue" replace />} />
-              <Route path="/simulation/overview" element={<SimulationOverview />} />
-              <Route path="/simulation/scenario" element={<ScenarioConfiguration />} />
-              <Route path="/simulation/strategies" element={<StrategyComparison />} />
-              <Route path="/simulation/run" element={<SimulationRun />} />
-              <Route path="/simulation/results" element={<SimulationResults />} />
-              <Route path="/simulation/reproducibility" element={<Reproducibility />} />
-              <Route path="/simulation/archive" element={<ExperimentArchive />} />
-              <Route path="/simulation/documentation" element={<Documentation />} />
-              <Route path="/legacy" element={<Navigate to="/legacy/dashboard" replace />} />
-              <Route path="/legacy/dashboard" element={<OperationsDashboard />} />
-              <Route path="/legacy/organization" element={<Organization />} />
-              <Route path="/legacy/organization/personnel" element={<PersonnelManagement />} />
-              <Route path="/legacy/organization/positions" element={<PositionsManagement />} />
-              <Route path="/legacy/organization/performance" element={<PerformanceManagement />} />
-              <Route path="/legacy/prescriptions/analytics" element={<PrescriptionAnalytics />} />
-              <Route path="/legacy/research" element={<ResearchHub />} />
-              <Route path="/legacy/training" element={<PharmacistTraining />} />
+              <Route path="/knowledge" element={<Navigate to="/ai/knowledge" replace />} />
               <Route path="/dashboard" element={<Navigate to="/workbench" replace />} />
-              <Route path="/organization" element={<Navigate to="/legacy/organization" replace />} />
-              <Route path="/prescriptions/analytics" element={<Navigate to="/legacy/prescriptions/analytics" replace />} />
-              <Route path="/research" element={<Navigate to="/legacy/research" replace />} />
-              <Route path="/training" element={<Navigate to="/legacy/training" replace />} />
+              <Route path="/simulation/*" element={<Navigate to="/research/evaluation" replace />} />
+              <Route path="/legacy/*" element={<Navigate to="/workbench" replace />} />
+              <Route path="/research" element={<Navigate to="/research/evaluation" replace />} />
+              <Route path="/customers" element={<Navigate to="/patients" replace />} />
+              <Route path="/membership" element={<Navigate to="/patients" replace />} />
+              <Route path="/quality" element={<Navigate to="/traceability" replace />} />
+              <Route path="/compliance" element={<Navigate to="/ai/governance" replace />} />
             </Route>
           </Routes>
         </Router>
@@ -167,4 +123,4 @@ function App() {
   );
 }
 
-export default App; 
+export default App;

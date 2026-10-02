@@ -41,9 +41,7 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { buildNav, getPageTitleForPath } from '../config/navigation';
-import SimulationDisclaimer from './SimulationDisclaimer';
 import SyntheticDataNotice from './ai/SyntheticDataNotice';
-import ApiStatusBanner from './ApiStatusBanner';
 import LanguageSwitcher from './LanguageSwitcher';
 import RoleScopeBanner from './RoleScopeBanner';
 import { useLanguage } from '../i18n/LanguageContext';
@@ -106,7 +104,6 @@ function Layout({ children }) {
   const role = user?.role;
   const roleLabel = user?.username === 'pharmacist2' ? t('roles.pharmacist2') : t(`roles.${role}`);
   const RoleIcon = ROLE_ICONS[role] || AccountCircle;
-  const isTwinPage = location.pathname.startsWith('/simulation');
 
   const sections = useMemo(() => buildNav(t, role), [t, role]);
   const pageTitle = getPageTitleForPath(location.pathname, t);
@@ -240,11 +237,9 @@ function Layout({ children }) {
         </Drawer>
       </Box>
       <Box component="main" sx={{ flexGrow: 1, p: 3, width: { sm: `calc(100% - ${drawerWidth}px)` }, mt: '64px' }}>
-        {isTwinPage && <ApiStatusBanner />}
-        {!isTwinPage && <SyntheticDataNotice />}
+        <SyntheticDataNotice />
         <RoleScopeBanner />
         {children}
-        {isTwinPage && <SimulationDisclaimer />}
       </Box>
     </Box>
   );

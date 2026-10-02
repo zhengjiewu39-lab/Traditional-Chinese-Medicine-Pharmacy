@@ -72,11 +72,16 @@ function assertPharmacistAccount(id, { otherThan } = {}) {
 }
 
 function reviewLabel(body, actor) {
+  if (body.secondReviewerId) {
+    throw new ServiceError(400, 'proxy_second_review_forbidden', 'Filling secondReviewerId is not a dual signature. The second pharmacist must log in and POST their own label.');
+  }
   if (body.risk === 'high') {
-    if (!body.secondReviewerId) {
-      throw new ServiceError(400, 'dual_review_required', 'High-risk labels require a second pharmacist reviewer');
+    const ds = repo.learning().getDataset(body.datasetId);
+    const prior = (ds?.labels || []).filter((l) => l.suggestionId === body.suggestionId && l.risk === 'high');
+    const other = prior.find((l) => String(l.reviewerId) !== String(actor.id));
+    if (!other && prior.some((l) => String(l.reviewerId) === String(actor.id))) {
+      throw new ServiceError(409, 'dual_review_incomplete', 'High-risk labels need a second pharmacist to sign in separately');
     }
-    assertPharmacistAccount(body.secondReviewerId, { otherThan: actor.id });
   }
   const row = {
     labelId: randomId('lbl'),

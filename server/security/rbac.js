@@ -19,8 +19,12 @@ const PERMISSIONS = {
   'case:analyze': ['admin', 'pharmacist', 'technician', 'prescriber'],
   'case:replay': ['admin', 'pharmacist'],
   'case:audit_read': ['admin', 'pharmacist'],
-  'rx:review_decision': ['pharmacist', 'admin'],
-  'rx:final_check': ['pharmacist', 'admin'],
+  'rx:review_decision': ['pharmacist'],
+  'rx:final_check': ['pharmacist'],
+  'rx:education_publish': ['pharmacist'],
+  'rx:followup': ['pharmacist'],
+  'patient:clarification': ['pharmacist'],
+  'research:evaluation': ['researcher', 'admin'],
   'rx:request_information': ['pharmacist'],
   'rx:dispense': ['pharmacist', 'technician'],
   'rx:handover': ['pharmacist', 'technician'],
@@ -39,10 +43,10 @@ const PERMISSIONS = {
   'ai:learning_export': ['admin', 'pharmacist', 'researcher'],
   'ai:learning_review': ['pharmacist'],
   'ai:model_publish': ['admin'],
-  'ops:propose': ['admin', 'pharmacist', 'technician'],
-  'ops:read': ['admin', 'pharmacist', 'technician', 'researcher'],
-  'ops:simulate': ['admin', 'pharmacist', 'technician', 'researcher'],
-  'ops:approve': ['admin', 'pharmacist'],
+  'ops:propose': [],
+  'ops:read': [],
+  'ops:simulate': [],
+  'ops:approve': [],
   'legacy_rx:read': ['admin', 'pharmacist', 'technician', 'prescriber'],
   'legacy_rx:create': ['prescriber', 'pharmacist', 'technician'],
   'legacy_rx:update': ['pharmacist', 'prescriber'],
@@ -79,7 +83,7 @@ function requirePharmacistCredential(req, res, next) {
 
 const ROLE_API_PREFIXES = {
   patient: ['/api/patient/', '/api/auth/', '/api/pickup/'],
-  researcher: ['/api/simulation', '/api/research', '/api/ai/models', '/api/ai/knowledge', '/api/ai/governance/metrics', '/api/ai/operations/analysis', '/api/ai/operations/proposals', '/api/ai/learning', '/api/auth/'],
+  researcher: ['/api/research/evaluation', '/api/ai/models', '/api/ai/knowledge', '/api/ai/governance/metrics', '/api/ai/learning', '/api/auth/'],
 };
 
 function roleApiGuard(req, res, next) {

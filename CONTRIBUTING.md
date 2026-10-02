@@ -1,27 +1,28 @@
 # Contributing
 
-Thank you for contributing to the **pharmacy supply resilience simulation** platform (synthetic data, research use only).
+This repository is a **pharmacist-supervised, patient-participating AI TCM pharmacy research prototype** (synthetic data only).
 
 ## Getting started
 
 1. Fork and clone the repository
 2. `npm install`
-3. `cp .env.example .env` (optional; `.env.development` sets API URL for CRA)
+3. `cp .env.example .env` (optional)
 4. `npm run dev` — frontend :3000 + API :3002
 
 ## Checks before a PR
 
 ```bash
+npm run lint
 npm run test:server
-npm run verify:simulation
-npm run build
+npm run ai:evaluate
+CI=true npm run build
 ```
 
-Legacy prescription CDSS evaluation (optional): `npm run evaluate`
+Live-model comparison is explicit and optional: `npm run ai:evaluate:live` / `npm run ai:evaluate:compare` (requires a real provider). Do not commit invented live scores.
 
 ## Scope
 
-- **Primary:** `server/simulation/`, `src/pages/simulation/`, reproducibility tests
-- **Legacy demo:** existing prescription/CRM routes under `/legacy/*` — avoid expanding unless explicitly requested
+- **Primary:** prescription workflow, clarification, education approval, follow-up, inventory/traceability
+- **Archived:** `archive/` (simulation, operations agent, membership/org demos, legacy CDSS). Restore via git tags `v1.0.0-research` or `legacy-cdss-v1`.
 
-Do not commit real patient data, credentials, or local experiment JSON under `data/simulation-experiments/`.
+Do not commit real patient data, credentials, or `benchmarks/ai-review/results-live/*.json`.

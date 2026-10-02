@@ -48,12 +48,13 @@ export const aiGovernanceApi = {
   testProvider: () => api.post('/ai/runtime/test', {}, { timeout: 90000 }),
 };
 
-export const aiOperationsApi = {
-  analysis: () => api.get('/ai/operations/analysis'),
-  proposals: () => api.get('/ai/operations/proposals'),
-  propose: (body) => api.post('/ai/operations/proposals', body),
-  simulate: (id, replicates) => api.post(`/ai/operations/proposals/${id}/simulate`, replicates ? { replicates } : {}),
-  approve: (id, decision, comment) => api.post(`/ai/operations/proposals/${id}/approve`, { decision, comment }),
+export const aiFollowUpApi = {
+  list: () => api.get('/ai/follow-ups'),
+  act: (caseId, taskId, body) => api.post(`/ai/cases/${caseId}/follow-ups/${taskId}`, body),
+};
+
+export const researchEvalApi = {
+  home: () => api.get('/research/evaluation'),
 };
 
 /** Token links are public; no session header is attached. */
@@ -61,7 +62,10 @@ export const patientPortalApi = {
   getConfirmation: (token) => publicApi.get(`/patient/confirmation/${token}`),
   submitConfirmation: (token, body) => publicApi.post(`/patient/confirmation/${token}`, body),
   submitFeedback: (token, body) => publicApi.post(`/patient/feedback/${token}`, body),
+  getClarification: (token) => publicApi.get(`/patient/clarification/${token}`),
+  submitClarification: (token, body) => publicApi.post(`/patient/clarification/${token}`, body),
   myCases: () => api.get('/patient/me/cases'),
+  myProfile: () => api.get('/patient/me/profile'),
 };
 
 export const pickupApi = {

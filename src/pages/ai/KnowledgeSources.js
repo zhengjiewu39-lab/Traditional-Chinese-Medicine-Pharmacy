@@ -24,7 +24,7 @@ export default function KnowledgeSources() {
       {error && <Alert severity="error">{error}</Alert>}
       {data && (
         <Paper>
-          <Typography variant="caption" sx={{ p: 1, display: 'block' }}>{t('ai.knowledge.version', { v: data.knowledgeBaseVersion })}</Typography>
+          <Typography variant="caption" sx={{ p: 1, display: 'block' }}>{t('ai.knowledge.version', { v: data.knowledgeBaseVersion })} · {data.note}</Typography>
           <Table size="small">
             <TableHead>
               <TableRow>

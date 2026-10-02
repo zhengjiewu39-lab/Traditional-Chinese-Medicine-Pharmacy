@@ -1,25 +1,29 @@
-# 智能中药药房平台
+# 中药数字药学服务系统
 
-这是一个**药师监管、患者参与、AI编排**的智能中药药房研究原型。
+这是一个**药师监督、患者参与**的 AI 中药用药支持与随访**研究原型**。
 
 > **AI不独立诊断、开方或批准处方。**  
 > 系统使用**合成演示数据**，**尚未通过真实临床验证**。  
-> 不得用于真实发药、患者照护或现实世界资源配置。
+> 不得用于真实发药或患者照护。
 
-**English working title.** *Design and Technical Validation of a Pharmacist-Governed Agentic AI Platform for Traditional Chinese Medicine Pharmacy: A Synthetic Case and Digital-Twin Study.*
+**工作题目。** *面向线上中药药学服务的证据支持型AI决策辅助：系统开发与合成病例评估。*
+
+本轮研究问题：患者信息缺失或矛盾时，证据检索和结构化澄清是否能提高 AI 药学审核提示的可靠性。供应仿真与配货 Agent 已归档（标签 `v1.0.0-research`）。
+
+研究员首页：`/research/evaluation`。默认 CI 只跑数字药学核心检查。真实模型比较是显式步骤，缺密钥时如实退出。
 
 ## 产品边界
 
 | 角色 | 可以做 | 不可以做 |
 |---|---|---|
-| AI | 信息理解、风险筛查、证据检索、解释生成、运营预测、工作流编排 | 独立诊断、开方、改方、批准高风险处方、写入库存 |
-| 药师 | 处方安全与调剂放行的最终专业审核 | — |
-| 患者 | 信息确认、知情选择、服务偏好、拒绝服务、用药反馈 | 覆盖专业安全阻断、修改药味剂量、解除 A3 硬阻断 |
-| 调剂员 | 执行已批准的调剂与煎药任务 | 批准处方 |
-| 管理员 | 系统配置、AI 总开关 | 冒充药师批准处方 |
-| 研究员 | 去标识化/合成/聚合研究数据 | 访问患者确认令牌或批准处方 |
+| AI | 资料整理、药学审核提示、说明草稿、随访摘要 | 独立诊断、开方、改方、批准、扣库、关闭随访 |
+| 药师 | 审核、批准、说明发布、随访处置 | 代填第二审核人 ID 不算双签 |
+| 患者 | 资料、澄清问答、已发布说明、反馈 | 覆盖专业安全阻断、修改剂量、解除硬阻断 |
+| 调剂员 | 执行已批准的调剂与煎药 | 批准处方或改临床内容 |
+| 管理员 | 系统配置、AI 总开关 | 凭管理员身份取得药师或处方权 |
+| 研究员 | 合成或经授权处理的研究数据与评估 | 访问患者令牌或批准处方 |
 
-默认首页是**智能中药药房工作台**（`/workbench`）。供应韧性仿真（含 ERRRA）降级为后台 **药房数字孪生**（`/simulation/*`），算法与论文流水线完整保留。
+默认首页是工作台（`/workbench`）。研究员首页是 `/research/evaluation`。供应仿真、运营配货 Agent 已移到 `archive/`，历史标签 `v1.0.0-research` 可恢复。
 
 ## 快速启动
 
@@ -44,29 +48,26 @@ npm run dev          # API :3002 + 前端 :3000
 
 ## 一级导航
 
-1. 智能工作台 `/workbench`
-2. 患者与处方接收 `/intake`
-3. AI处方安全中心 `/ai/cases`
-4. 药师审核队列 `/ai/review-queue`
-5. 调剂与复核 `/dispensing`
-6. 煎药与配送 `/distribution`
-7. 库存与采购 `/inventory`
-8. 质量追溯 `/traceability`
-9. 患者用药服务 `/patient-service`（公开确认页 `/patient/confirmation/:token`）
-10. AI治理中心 `/ai/governance`
-11. 药房数字孪生 `/simulation/overview`
-12. Legacy演示功能 `/legacy/dashboard`
+员工：工作台 `/workbench`、患者与处方 `/patients` `/intake` `/doctor`、药师审核 `/ai/review-queue`、调剂与交付 `/dispensing`、患者随访 `/ai/follow-up`、知识中心 `/ai/knowledge`。管理设置与研究评估按角色显示。
+
+患者：我的资料 `/patient/profile`、我的处方 `/patient/me`、澄清 `/patient/clarification/:token`、确认 `/patient/confirmation/:token`、反馈 `/patient/feedback/:token`。
+
+未配置真实模型时界面显示「AI未连接/仅规则」，不会把 mock 当作真实服务。捆绑知识 `synthetic-demo-kb.json` 是合成演示知识，不是药典。
+
+```bash
+npm run ai:evaluate          # 合成病例 + mock，工程回归
+npm run ai:evaluate:compare  # 真实模型 A/B/C/D；缺密钥退出码 2，不写占位成绩
+```
 
 ## 验收命令
 
 ```bash
 npm ci
 npm run lint
-npm run simulation:test
+npm run test:server
 npm run ai:evaluate
 CI=true npm run build
 npm audit --omit=dev
-npm run paper:quick
 ```
 
 工程评估标注：**Engineering evaluation on synthetic standardized cases. Not a clinical validation.**
@@ -79,12 +80,12 @@ npm run paper:quick
 - 患者参与：[docs/patient-participation.md](docs/patient-participation.md)
 - AI 评估协议：[docs/ai-evaluation-protocol.md](docs/ai-evaluation-protocol.md)
 - 知识治理：[docs/knowledge-governance.md](docs/knowledge-governance.md)
-- 数字孪生桥接：[docs/digital-twin-integration.md](docs/digital-twin-integration.md)
 - 临床验证限制：[docs/clinical-validation-limitations.md](docs/clinical-validation-limitations.md)
-- 本轮验收：[AI_PHARMACY_VALIDATION_REPORT.md](AI_PHARMACY_VALIDATION_REPORT.md)
+- 本轮验收：[validation-report.md](validation-report.md)、[remaining-blockers.md](remaining-blockers.md)
+- 归档说明：[archive/README.md](archive/README.md)
 - 文档总索引：[docs/README.md](docs/README.md)
 
-供应韧性仿真（引擎 v4、矩阵 v2.0.0、ERRRA v2.0.0）仍冻结于标签 `v1.0.0-research`。详见 [FINAL_VALIDATION_REPORT.md](FINAL_VALIDATION_REPORT.md) 与 [药房数字孪生文档](docs/model-specification.md)。论文结果不因本次 UI/工作流重构而改变。
+旧供应仿真结果仍冻结于标签 `v1.0.0-research`，不挪作数字健康成绩。当前论文不声称降低真实不良反应、提高真实依从性或改善真实疗效。软件测试通过不是临床验证。
 
 ## 生产部署
 

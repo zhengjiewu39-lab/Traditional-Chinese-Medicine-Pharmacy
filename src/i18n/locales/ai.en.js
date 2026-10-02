@@ -522,6 +522,7 @@ const ai = {
   mine: {
     title: 'My prescriptions',
     empty: 'No prescription records',
+    educationPending: 'Medication notes have not been pharmacist-approved for release',
   },
   confirm: {
     title: 'Confirm prescription information',

@@ -30,11 +30,46 @@ router.post('/feedback/:token', validateBody(S.PATIENT_FEEDBACK), handle(async (
   res.json(service.submitPatientFeedback(req.params.token, req.body));
 }));
 
+router.get('/clarification/:token', handle(async (req, res) => {
+  res.json(service.getClarification(req.params.token));
+}));
+
+router.post('/clarification/:token', validateBody({
+  type: 'object',
+  additionalProperties: false,
+  required: ['status'],
+  properties: {
+    status: { type: 'string', enum: ['not_asked', 'unknown', 'none', 'reported', 'not_applicable'] },
+    value: {},
+    kind: { type: 'string', enum: ['add', 'stop', 'correct'] },
+    oldValue: {},
+  },
+}), handle(async (req, res) => {
+  res.json(await service.submitClarification(req.params.token, req.body));
+}));
+
+router.get('/me/profile', handle(async (req, res) => {
+  if (req.user?.role !== 'patient' || !req.user.patientRef) return sendError(res, 403, 'forbidden', 'Patient login required');
+  const fromRepo = repo.getPatient(req.user.patientRef);
+  const latestCase = repo.listCases().find((c) => c.patient?.patientRef === req.user.patientRef);
+  res.json({
+    patientRef: req.user.patientRef,
+    profile: fromRepo || latestCase?.patient || { patientRef: req.user.patientRef },
+    identityVerifiedProfessionally: false,
+  });
+}));
+
 router.get('/me/cases', handle(async (req, res) => {
   if (req.user?.role !== 'patient' || !req.user.patientRef) return sendError(res, 403, 'forbidden', 'Patient login required');
   const mine = repo.listCases().filter((c) => c.patient?.patientRef === req.user.patientRef);
   res.json({
-    cases: mine.map((c) => ({ ...service.patientView(c), events: audit.forCase(c.caseId, { audience: 'patient' }) })),
+    cases: mine.map((c) => ({
+      ...service.patientView(c),
+      education: c.educationDocuments || [],
+      clarifications: (c.clarificationTasks || []).filter((t) => t.status === 'sent'),
+      followUps: c.followUpTasks || [],
+      events: audit.forCase(c.caseId, { audience: 'patient' }),
+    })),
   });
 }));
 

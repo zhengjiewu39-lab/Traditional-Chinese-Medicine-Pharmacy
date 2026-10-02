@@ -79,8 +79,10 @@ function runRuleTrack(caseRecord, { now = new Date() } = {}) {
   // ---- completeness & legality
   if (herbs.length === 0) need('prescription.herbs', '处方未包含可识别的药味');
   herbs.forEach((h) => { if (h.dosage == null) need(`prescription.herbs.${h.name}.dosage`, `${h.name} 未注明剂量`); });
-  if (patient.ageYears == null) need('patient.ageYears', '缺少患者年龄');
-  if (patient.allergies == null) need('patient.allergies', '未记录过敏史（无过敏也需明确记录）');
+  const cf = require('../workflow/clinicalFacts');
+  const pFacts = cf.attachFacts(patient);
+  if (pFacts.facts.ageYears.status === 'not_asked' && patient.ageYears == null) need('patient.facts.ageYears', '缺少患者年龄');
+  if (cf.allergyIsMissing(pFacts)) need('patient.facts.allergies', '过敏史未询问或未知，不能视为无过敏');
   if (!patient.sex || patient.sex === 'unknown') need('patient.sex', '缺少患者性别', false);
   if (rx.doseCount == null) need('prescription.doseCount', '缺少剂数');
   if (!rx.usage && !rx.frequency) need('prescription.usage', '缺少用法用量');
@@ -250,7 +252,7 @@ function runRuleTrack(caseRecord, { now = new Date() } = {}) {
   }
 
   // ---- allergy
-  for (const allergen of patient.allergies || []) {
+  for (const allergen of cf.reportedAllergyNames(pFacts)) {
     const a = String(allergen).trim();
     if (!a) continue;
     const matched = names.filter((n) => n.includes(a) || a.includes(n));
@@ -263,15 +265,15 @@ function runRuleTrack(caseRecord, { now = new Date() } = {}) {
   }
 
   // ---- organ function
-  if (patient.liverImpairment) {
+  if (cf.liverReportedTrue(pFacts)) {
     names.filter((n) => matchesAny(n, safetyRules.hepatotoxic)).forEach((n) => hits.push(hit('HEPATOTOXIC_RISK', 'A2', `肝功能异常患者使用 ${n}`, { herbs: [n] })));
   }
-  if (patient.renalImpairment) {
+  if (cf.renalReportedTrue(pFacts)) {
     names.filter((n) => matchesAny(n, safetyRules.nephrotoxic)).forEach((n) => hits.push(hit('NEPHROTOXIC_RISK', 'A2', `肾功能异常患者使用 ${n}`, { herbs: [n] })));
   }
 
   // ---- herb–drug interactions
-  const meds = (patient.currentMedications || []).map((m) => String(m).toLowerCase());
+  const meds = cf.activeMedications(pFacts).map((m) => String(m.name).toLowerCase());
   for (const rule of safetyRules.interactions) {
     const hs = names.filter((n) => matchesAny(n, rule.herbs));
     const ds = rule.drugs.filter((d) => meds.some((m) => m.includes(d.toLowerCase())));
@@ -281,7 +283,7 @@ function runRuleTrack(caseRecord, { now = new Date() } = {}) {
       hits.push(h);
     }
   }
-  if (patient.currentMedications == null) need('patient.currentMedications', '未记录当前合并用药', false);
+  if (cf.attachFacts(patient).facts.currentMedications.status === 'not_asked' || cf.attachFacts(patient).facts.currentMedications.status === 'unknown') need('patient.facts.currentMedications', '合并用药未询问或未知', false);
 
   // ---- decoction
   const notes = `${rx.decoctionNotes || ''}`;
@@ -339,13 +341,8 @@ function runRuleTrack(caseRecord, { now = new Date() } = {}) {
   };
 }
 
-function substitutionCandidatesFor(herbNames) {
-  return safetyRules.substitutionRules
-    .filter((r) => herbNames.some((n) => n === r.from))
-    .map((r) => ({
-      label: '供药师审核的规则化候选',
-      ruleId: r.ruleId, from: r.from, to: r.to, condition: r.condition, approvedBy: r.approvedBy, evidenceIds: r.evidence,
-    }));
+function substitutionCandidatesFor() {
+  return [];
 }
 
 module.exports = {

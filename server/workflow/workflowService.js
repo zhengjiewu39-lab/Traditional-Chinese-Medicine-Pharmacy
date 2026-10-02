@@ -18,6 +18,11 @@ const { hasPharmacistCredential } = require('../security/rbac');
 const { ServiceError } = require('./errors');
 const suggestions = require('./suggestionService');
 const { prescriberFields } = require('../security/prescriberLicense');
+const facts = require('./clinicalFacts');
+const clarification = require('./clarificationService');
+const education = require('./educationService');
+const followUp = require('./followUpService');
+const { deductForCase } = require('./inventoryDeduct');
 
 const SYSTEM = { role: 'system', id: 'workflow' };
 const PATIENT_TOKEN_TTL_MS = () => (Number(process.env.PATIENT_TOKEN_TTL_MINUTES) || 48 * 60) * 60000;
@@ -133,7 +138,11 @@ function createCase(input, actor) {
     synthetic: isSyntheticMode(),
     legacyPrescriptionId: base.legacyPrescriptionId ?? input.legacyPrescriptionId ?? null,
     source,
-    patient: { ...base.patient, ...input.patient },
+    patient: facts.attachFacts({ ...base.patient, ...input.patient }),
+    clarificationTasks: [],
+    educationDocuments: [],
+    followUpTasks: [],
+    followUpPlan: null,
     prescriber: resolvePrescriberOnCreate(base.prescriber, input.prescriber, actor),
     prescription,
     state: 'received',
@@ -206,8 +215,10 @@ async function screen(c, trigger) {
   if (c.state !== 'ai_screening') transition(c, 'ai_screening', SYSTEM, trigger);
   const analysis = await runAnalysis(c, trigger);
   const aiActor = { role: 'ai', id: analysis.output.modelVersion };
-  const needsInfo = analysis.output.recommendation === 'clarification_required';
-  transition(c, needsInfo ? 'information_incomplete' : 'pharmacist_review_required', aiActor, `AI筛查：${analysis.output.riskTier} / ${analysis.output.recommendation}`);
+  const to = (c.clarificationTasks || []).some((t) => t.requiredForDecision && t.status === 'sent')
+    ? 'information_incomplete'
+    : 'pharmacist_review_required';
+  transition(c, to, aiActor, `AI筛查：${analysis.output.riskTier} / ${analysis.output.recommendation}`);
   return analysis;
 }
 
@@ -248,8 +259,16 @@ function invalidateApproval(c, actor, reason) {
   record(c, 'approval_invalidated', actor, { decisionId: c.approval.decisionId, reason });
 }
 
+function assertVersion(c, expectedVersion) {
+  if (expectedVersion == null) return;
+  if (Number(expectedVersion) !== Number(c.contentVersion)) {
+    throw new ServiceError(409, 'version_conflict', 'Another user updated this case; reload and retry', { currentVersion: c.contentVersion });
+  }
+}
+
 async function updateContent(caseId, patch, actor) {
   const c = getCaseOr404(caseId);
+  assertVersion(c, patch.expectedVersion);
   if (CONTENT_LOCKED_STATES.has(c.state)) throw new ServiceError(409, 'content_locked', `Content cannot change in state ${c.state}`);
   if (actor.role === 'technician') {
     throw new ServiceError(403, 'clinical_content_forbidden', 'Technicians cannot change diagnosis, herbs, dosage or usage');
@@ -261,7 +280,11 @@ async function updateContent(caseId, patch, actor) {
     throw new ServiceError(403, 'signed_content_locked', 'A prescriber cannot change a pharmacist-signed prescription');
   }
   const before = { hash: c.contentHash, snapshot: structuredClone(contentOf(c)) };
-  if (patch.patient) c.patient = { ...c.patient, ...patch.patient };
+  if (patch.patient) c.patient = facts.attachFacts({ ...c.patient, ...patch.patient });
+  if (patch.factChange) {
+    const applied = facts.applyFactChange(c.patient, { ...patch.factChange, changeId: patch.factChange.changeId || randomId('fch') }, actor);
+    c.patient = applied.patient;
+  }
   if (patch.prescriber) c.prescriber = resolvePrescriberOnCreate(c.prescriber, patch.prescriber, actor);
   if (patch.prescription) {
     c.prescription = { ...c.prescription, ...patch.prescription };
@@ -278,6 +301,13 @@ async function updateContent(caseId, patch, actor) {
   });
   record(c, 'content_changed', actor, { fromHash: before.hash, toHash: newHash, version: c.contentVersion, reason: patch.reason || null });
   suggestions.supersedePending({ caseId: c.caseId });
+  clarification.expireStale(c);
+  for (const doc of c.educationDocuments || []) {
+    if (['draft', 'review_required', 'approved', 'published'].includes(doc.status) && doc.caseContentVersion !== c.contentVersion) {
+      doc.status = 'superseded';
+      doc.supersededAt = new Date().toISOString();
+    }
+  }
 
   let analysis = null;
   if (POST_APPROVAL_STATES.has(c.state) || c.state === 'pharmacist_review_required') {
@@ -304,10 +334,11 @@ function requireLatest(c, analysisId) {
 }
 
 function pharmacistDecision(caseId, body, actor) {
-  if (!hasPharmacistCredential(actor)) {
+  if (!hasPharmacistCredential(actor) || actor.role !== 'pharmacist') {
     throw new ServiceError(403, 'pharmacist_credential_required', 'Only a pharmacist credential can record review decisions; admin role is not sufficient');
   }
   const c = getCaseOr404(caseId);
+  assertVersion(c, body.expectedVersion);
   if (c.createdBy?.id === String(actor.id) && c.createdBy?.role === 'prescriber') {
     throw new ServiceError(403, 'cannot_review_own_prescription', 'A prescriber cannot review their own prescription');
   }
@@ -340,7 +371,10 @@ function pharmacistDecision(caseId, body, actor) {
       if (out.abstain && !body.comment) throw new ServiceError(400, 'comment_required', 'AI abstained; approval requires an independent-review comment');
       if (c.secondReview?.status === 'pending') {
         if (c.secondReview.requestedBy === String(actor.id)) throw new ServiceError(409, 'second_review_pending', 'A different pharmacist must complete the requested second review');
-        c.secondReview = { ...c.secondReview, status: 'completed', completedBy: String(actor.id), completedAt: decision.at };
+        c.secondReview = { ...c.secondReview, status: 'completed', completedBy: String(actor.id), completedAt: decision.at, signedInAs: actor.username || null };
+      }
+      if (body.secondReviewerId) {
+        throw new ServiceError(400, 'proxy_second_review_forbidden', 'Filling secondReviewerId is not a dual signature; the second pharmacist must log in and submit');
       }
       transition(c, 'pharmacist_approved', actor, body.comment || 'approved');
       c.approval = { decisionId: decision.decisionId, pharmacistId: String(actor.id), contentHash: c.contentHash, analysisId: latest.analysisId, at: decision.at, valid: true };
@@ -403,10 +437,20 @@ function requestInformation(caseId, body, actor) {
 
 // ---------------------------------------------------------------- patient tokens
 
-function issueToken(caseId, purpose, ttlMs) {
+function issueToken(caseId, purpose, ttlMs, extra = {}) {
   const token = crypto.randomBytes(32).toString('base64url');
   const tokenHash = sha256(token);
-  const rec = { caseId, purpose, issuedAt: new Date().toISOString(), expiresAt: new Date(Date.now() + ttlMs).toISOString(), usedAt: null, revokedAt: null };
+  const rec = {
+    caseId, purpose,
+    contentVersion: extra.contentVersion ?? null,
+    questionVersion: extra.questionVersion ?? null,
+    taskId: extra.taskId ?? null,
+    patientRef: extra.patientRef ?? null,
+    issuedAt: new Date().toISOString(),
+    expiresAt: new Date(Date.now() + ttlMs).toISOString(),
+    usedAt: null,
+    revokedAt: null,
+  };
   repo.tokens().put(tokenHash, rec);
   return { token, tokenHash, ...rec };
 }
@@ -422,7 +466,9 @@ function issuePatientConfirmation(caseId, actor) {
       pc.revokedAt = new Date().toISOString();
     }
   }
-  const t = issueToken(caseId, 'confirmation', PATIENT_TOKEN_TTL_MS());
+  const t = issueToken(caseId, 'confirmation', PATIENT_TOKEN_TTL_MS(), {
+    contentVersion: c.contentVersion, patientRef: c.patient?.patientRef || null,
+  });
   c.patientConfirmations.push({ tokenHash: t.tokenHash, issuedAt: t.issuedAt, expiresAt: t.expiresAt, issuedBy: String(actor.id), usedAt: null, revokedAt: null, response: null });
   record(c, 'patient_confirmation_requested', actor, { tokenFingerprint: fingerprint(t.tokenHash), expiresAt: t.expiresAt, patientSummary: '请确认个人信息与服务选择' });
   repo.saveCase(c);
@@ -437,16 +483,23 @@ function resolveToken(token, purpose) {
   if (rec.usedAt) throw new ServiceError(410, 'token_used', 'This link has already been used');
   if (rec.revokedAt) throw new ServiceError(410, 'token_revoked', 'This link has been replaced by a newer one');
   if (Date.parse(rec.expiresAt) <= Date.now()) throw new ServiceError(410, 'token_expired', 'This link has expired');
+  if (rec.contentVersion != null) {
+    const c = repo.getCase(rec.caseId);
+    if (c && c.contentVersion !== rec.contentVersion) {
+      throw new ServiceError(409, 'stale_token', 'This link is for a previous content version');
+    }
+  }
   return { hash, rec };
 }
 
 function patientView(c) {
-  const a = c.analyses.at(-1)?.output;
-  const p = c.patient || {};
+  const p = facts.attachFacts(c.patient || {});
+  const published = education.publishedFor(c);
   return {
     caseRef: c.caseId.slice(-8),
     synthetic: c.synthetic,
     state: c.state,
+    contentVersion: c.contentVersion,
     prescription: {
       herbs: (c.prescription.herbs || []).map((h) => ({ name: h.name, dosage: h.dosage, unit: h.unit })),
       doseCount: c.prescription.doseCount ?? null,
@@ -454,17 +507,22 @@ function patientView(c) {
       form: c.prescription.form ?? null,
     },
     recordedInformation: {
-      ageYears: p.ageYears ?? null,
-      allergies: p.allergies ?? null,
-      pregnancy: p.pregnancy ?? 'unknown',
-      lactation: p.lactation ?? 'unknown',
-      currentMedications: p.currentMedications ?? null,
+      ageYears: p.facts.ageYears,
+      allergies: p.facts.allergies,
+      allergyItems: p.allergyItems || [],
+      pregnancy: p.facts.pregnancy,
+      lactation: p.facts.lactation,
+      currentMedications: p.facts.currentMedications,
+      medicationItems: p.medicationItems || [],
+      liverImpairment: p.facts.liverImpairment,
+      renalImpairment: p.facts.renalImpairment,
       phoneMasked: p.phone ? `${String(p.phone).slice(0, 3)}****${String(p.phone).slice(-4)}` : null,
     },
-    explanation: c.approval?.valid
-      ? { text: a?.patientExplanation || '', label: 'AI辅助生成、经药师审核的说明；如有疑问请咨询药师' }
-      : { text: '药师审核中，审核完成后可查看用药说明。', label: null },
-    substitutionAsked: (a?.substitutionCandidates || []).length > 0,
+    explanation: published
+      ? { text: published.text, label: published.genericFixedNotice ? '固定提示（非AI已审核说明）' : '经药师审核发布的用药说明', documentId: published.documentId, approvedAt: published.approvedAt }
+      : { text: '用药说明尚未由药师审核发布。处方批准不等于说明已审核。', label: null, documentId: null },
+    educationStatus: published ? 'published' : 'not_published',
+    substitutionAsked: false,
   };
 }
 
@@ -476,16 +534,34 @@ function getPatientConfirmation(token) {
 }
 
 function safetyChangesFrom(c, body) {
-  const p = c.patient || {};
-  const patch = {};
-  if (body.allergyCorrections?.length) patch.allergies = [...new Set([...(p.allergies || []), ...body.allergyCorrections])];
-  if (body.pregnancy && body.pregnancy !== (p.pregnancy ?? 'unknown')) patch.pregnancy = body.pregnancy;
-  if (body.lactation && body.lactation !== (p.lactation ?? 'unknown')) patch.lactation = body.lactation;
-  if (body.currentMedications) {
-    const merged = [...new Set([...(p.currentMedications || []), ...body.currentMedications])];
-    if (merged.length !== (p.currentMedications || []).length) patch.currentMedications = merged;
+  const changes = [];
+  if (body.allergyStatus === 'none') {
+    changes.push({ changeId: randomId('fch'), kind: 'correct', fieldPath: 'patient.facts.allergies', newStatus: 'none', newValue: [] });
   }
-  return patch;
+  if (body.allergyCorrections?.length) {
+    for (const item of body.allergyCorrections) {
+      if (typeof item === 'string') changes.push({ changeId: randomId('fch'), kind: 'add', fieldPath: 'patient.facts.allergies', newValue: item });
+      else changes.push({ changeId: randomId('fch'), kind: item.kind || 'add', fieldPath: 'patient.facts.allergies', oldValue: item.oldValue, newValue: item.name || item.newValue, newStatus: item.status });
+    }
+  }
+  if (body.medicationChanges?.length) {
+    for (const item of body.medicationChanges) {
+      changes.push({
+        changeId: randomId('fch'),
+        kind: item.kind || 'add',
+        fieldPath: 'patient.facts.currentMedications',
+        oldValue: item.oldValue || item.name,
+        newValue: item,
+      });
+    }
+  } else if (body.currentMedications?.length) {
+    for (const name of body.currentMedications) {
+      changes.push({ changeId: randomId('fch'), kind: 'add', fieldPath: 'patient.facts.currentMedications', newValue: { name } });
+    }
+  }
+  if (body.pregnancy) changes.push({ changeId: randomId('fch'), kind: 'correct', fieldPath: 'patient.facts.pregnancy', newValue: { status: body.pregnancy === 'unknown' ? 'unknown' : body.pregnancy === 'no' ? 'none' : 'reported', value: body.pregnancy === 'unknown' ? null : body.pregnancy } });
+  if (body.lactation) changes.push({ changeId: randomId('fch'), kind: 'correct', fieldPath: 'patient.facts.lactation', newValue: { status: body.lactation === 'unknown' ? 'unknown' : body.lactation === 'no' ? 'none' : 'reported', value: body.lactation === 'unknown' ? null : body.lactation } });
+  return changes;
 }
 
 async function submitPatientConfirmation(token, body) {
@@ -511,24 +587,33 @@ async function submitPatientConfirmation(token, body) {
   if (!body.identityConfirmed) {
     record(c, 'patient_identity_not_confirmed', patient, { patientSummary: '身份未确认，请联系药房' });
     repo.saveCase(c);
-    return { outcome: 'identity_not_confirmed', state: c.state, message: '身份信息未确认，药房将与您联系。' };
+    return { outcome: 'identity_not_confirmed', state: c.state, message: '身份信息未确认，药房将与您联系。勾选确认不构成专业身份核验。' };
   }
-  const safetyPatch = safetyChangesFrom(c, body);
   c.serviceChoices = {
     fulfillment: body.fulfillment || 'pickup',
-    substitutionConsent: body.substitutionConsent || 'decline',
+    substitutionConsent: 'not_applicable',
     contactConfirmed: Boolean(body.contactConfirmed),
-    educationAcknowledged: Boolean(body.educationAcknowledged),
+    educationReceived: Boolean(body.educationReceived),
+    educationUnderstood: Boolean(body.educationUnderstood),
+    identityConfirmedCheckbox: Boolean(body.identityConfirmed),
+    identityVerifiedProfessionally: false,
     at: now,
   };
-  if (Object.keys(safetyPatch).length) {
-    record(c, 'patient_reported_safety_information', patient, { fields: Object.keys(safetyPatch), patientSummary: '您补充的信息已提交药师重新审核' });
-    await updateContent(c.caseId, { patient: safetyPatch, reason: '患者确认时补充安全相关信息' }, patient);
+  const safetyChanges = safetyChangesFrom(c, body);
+  if (safetyChanges.length) {
+    let next = c.patient;
+    for (const ch of safetyChanges) {
+      next = facts.applyFactChange(next, ch, patient).patient;
+    }
+    record(c, 'patient_reported_safety_information', patient, { fields: safetyChanges.map((x) => x.fieldPath), patientSummary: '您补充的信息已提交药师重新审核' });
+    await updateContent(c.caseId, { patient: next, reason: '患者确认时补充安全相关信息' }, patient);
     return { outcome: 'returned_for_review', state: repo.getCase(c.caseId).state, message: '您补充的信息需要药师重新审核，审核后会再次通知您。' };
   }
   transition(c, 'patient_confirmed', patient, '患者确认');
   record(c, 'patient_confirmed', patient, { choices: c.serviceChoices, patientSummary: '您已确认' });
-  const fb = issueToken(c.caseId, 'feedback', FEEDBACK_TOKEN_TTL_MS);
+  const fb = issueToken(c.caseId, 'feedback', FEEDBACK_TOKEN_TTL_MS, {
+    contentVersion: c.contentVersion, patientRef: c.patient?.patientRef || null,
+  });
   c.feedbackTokenHash = fb.tokenHash;
   repo.saveCase(c);
   return { outcome: 'confirmed', state: c.state, feedbackPath: `/patient/feedback/${fb.token}`, feedbackExpiresAt: fb.expiresAt };
@@ -539,24 +624,62 @@ function submitPatientFeedback(token, body) {
   const c = getCaseOr404(rec.caseId);
   repo.tokens().put(hash, { ...rec, usedAt: new Date().toISOString() });
   const patient = { role: 'patient', id: `token:${fingerprint(hash)}` };
-  const fb = { at: new Date().toISOString(), ...body };
+  const fb = {
+    at: new Date().toISOString(),
+    intakeStatus: body.intakeStatus || 'unknown',
+    takenAt: body.takenAt || null,
+    difficulty: body.difficulty || null,
+    newSymptom: Boolean(body.newSymptom || body.adverseReaction),
+    symptomOnset: body.symptomOnset || null,
+    patientSeverity: body.patientSeverity || null,
+    contactPreference: body.contactPreference || null,
+    effectiveness: body.effectiveness ?? null,
+    adverseReactionReported: Boolean(body.adverseReaction || body.newSymptom),
+    adverseDescription: body.adverseDescription || null,
+    comments: body.comments || null,
+    notAdrConfirmation: false,
+    notPostDoseIfBeforePickup: c.state !== 'completed' && c.state !== 'ready_for_pickup',
+  };
+  c.patientFeedback = c.patientFeedback || [];
   c.patientFeedback.push(fb);
-  if (body.adverseReaction) c.pharmacovigilanceFollowUp = { flaggedAt: fb.at, status: 'open' };
-  record(c, 'patient_feedback_submitted', patient, { effectiveness: body.effectiveness, adverseReaction: body.adverseReaction, patientSummary: '反馈已提交' });
+  let followUpTask = null;
+  if (fb.adverseReactionReported || fb.newSymptom) {
+    followUpTask = followUp.createFromFeedback(c, { ...fb, adverseReported: true }, patient);
+  }
+  record(c, 'patient_feedback_submitted', patient, {
+    effectiveness: fb.effectiveness, adverseReaction: fb.adverseReactionReported, patientSummary: '反馈已提交（自报感受，不等于药物不良反应确诊）',
+  });
   repo.saveCase(c);
-  return { outcome: 'recorded', pharmacistFollowUp: Boolean(body.adverseReaction) };
+  const next = issueToken(c.caseId, 'feedback', FEEDBACK_TOKEN_TTL_MS, {
+    contentVersion: c.contentVersion, patientRef: c.patient?.patientRef || null,
+  });
+  c.feedbackTokenHash = next.tokenHash;
+  repo.saveCase(c);
+  return {
+    outcome: 'recorded',
+    pharmacistFollowUp: Boolean(followUpTask),
+    followUpTaskId: followUpTask?.taskId || null,
+    nextFeedbackPath: `/patient/feedback/${next.token}`,
+    note: '疗效评分为患者自报感受；新不适未自动确认为药物不良反应。',
+  };
 }
 
 // ---------------------------------------------------------------- dispensing
 
 function dispensingAction(caseId, body, actor) {
   const c = getCaseOr404(caseId);
+  assertVersion(c, body.expectedVersion);
   const at = new Date().toISOString();
+  const idempotencyKey = body.idempotencyKey || `${body.action}:${c.caseId}:${c.contentVersion}:${c.state}`;
   switch (body.action) {
-    case 'start':
+    case 'start': {
+      const already = (c.dispensingRecords || []).find((r) => r.type === 'start' && r.idempotencyKey === idempotencyKey);
+      if (already && c.state === 'dispensing') return c;
       transition(c, 'dispensing', actor, body.note || '开始调剂');
-      c.dispensingRecords.push({ type: 'start', by: String(actor.id), role: actor.role, at });
+      const stock = deductForCase(c, actor, { idempotencyKey: `stock:${idempotencyKey}` });
+      c.dispensingRecords.push({ type: 'start', by: String(actor.id), role: actor.role, at, idempotencyKey, stock });
       break;
+    }
     case 'submit_final_check': {
       const perDose = new Map((c.prescription.herbs || []).map((h) => [h.name, h.dosage]));
       const deviations = (body.weighedItems || []).map((w) => {
@@ -585,10 +708,14 @@ function dispensingAction(caseId, body, actor) {
       transition(c, 'dispensing', actor, body.note || '复核未通过，退回调剂');
       c.dispensingRecords.push({ type: 'final_check_fail', by: String(actor.id), role: actor.role, at, note: body.note || null });
       break;
-    case 'handover':
+    case 'handover': {
+      const alreadyHandover = (c.dispensingRecords || []).find((r) => r.type === 'handover');
+      if (alreadyHandover && c.state === 'completed') return c;
       transition(c, 'completed', actor, body.note || '已交付');
-      c.dispensingRecords.push({ type: 'handover', by: String(actor.id), role: actor.role, at });
+      c.dispensingRecords.push({ type: 'handover', by: String(actor.id), role: actor.role, at, idempotencyKey });
+      followUp.createScheduled(c, c.followUpPlan, actor);
       break;
+    }
     default:
       throw new ServiceError(400, 'unknown_action', `Unknown dispensing action ${body.action}`);
   }
@@ -675,6 +802,113 @@ function sampleLowRisk(actor, { rate = 0.1, seed } = {}) {
   return { eligible: eligible.length, sampled: picked.length, seed: sampleSeed, method: 'stratified_by_state', cases: picked };
 }
 
+function issueClarification(caseId, body, actor) {
+  if (!hasPharmacistCredential(actor) || actor.role !== 'pharmacist') {
+    throw new ServiceError(403, 'pharmacist_credential_required', 'Only a pharmacist can send clarification tasks');
+  }
+  const c = getCaseOr404(caseId);
+  if (!['information_incomplete', 'pharmacist_review_required', 'received', 'ai_screening'].includes(c.state)) {
+    throw new ServiceError(409, 'invalid_state', `Clarification is not available in state ${c.state}`);
+  }
+  const task = clarification.createTask(c, body, actor);
+  if (body.send !== false) clarification.sendTask(c, task.taskId, actor);
+  const t = issueToken(c.caseId, 'clarification', PATIENT_TOKEN_TTL_MS(), {
+    contentVersion: c.contentVersion,
+    taskId: task.taskId,
+    questionVersion: task.questionVersion,
+    patientRef: c.patient?.patientRef || null,
+  });
+  task.tokenFingerprint = fingerprint(t.tokenHash);
+  if (c.state !== 'information_incomplete') {
+    transition(c, 'information_incomplete', actor, `澄清：${task.fieldPath}`);
+  }
+  record(c, 'clarification_issued', actor, { taskId: task.taskId, fieldPath: task.fieldPath, tokenFingerprint: task.tokenFingerprint });
+  repo.saveCase(c);
+  return { task, token: t.token, expiresAt: t.expiresAt, path: `/patient/clarification/${t.token}` };
+}
+
+function getClarification(token) {
+  const { rec } = resolveToken(token, 'clarification');
+  const c = getCaseOr404(rec.caseId);
+  const task = (c.clarificationTasks || []).find((x) => x.taskId === rec.taskId);
+  if (!task) throw new ServiceError(404, 'clarification_not_found', 'Clarification task not found');
+  return { ...patientView(c), task: { taskId: task.taskId, fieldPath: task.fieldPath, question: task.question, reason: task.reason, status: task.status, allowedStatuses: facts.FACT_STATUSES } };
+}
+
+async function submitClarification(token, body) {
+  const { hash, rec } = resolveToken(token, 'clarification');
+  const c = getCaseOr404(rec.caseId);
+  const task = (c.clarificationTasks || []).find((x) => x.taskId === rec.taskId);
+  if (!task) throw new ServiceError(404, 'clarification_not_found', 'Clarification task not found');
+  const patient = { role: 'patient', id: `token:${fingerprint(hash)}` };
+  clarification.answerTask(c, task, body);
+  repo.tokens().put(hash, { ...rec, usedAt: new Date().toISOString() });
+  const applied = facts.applyFactChange(c.patient, {
+    changeId: randomId('fch'),
+    kind: body.kind || 'correct',
+    fieldPath: task.fieldPath,
+    newValue: body.value,
+    newStatus: body.status,
+    oldValue: body.oldValue,
+  }, patient);
+  record(c, 'clarification_answered', patient, { taskId: task.taskId, fieldPath: task.fieldPath });
+  await updateContent(c.caseId, { patient: applied.patient, reason: `患者澄清 ${task.fieldPath}` }, patient);
+  return { outcome: 'answered', state: repo.getCase(c.caseId).state, taskId: task.taskId };
+}
+
+function createEducation(caseId, body, actor) {
+  if (!hasPharmacistCredential(actor) || actor.role !== 'pharmacist') {
+    throw new ServiceError(403, 'pharmacist_credential_required', 'Education publish requires a pharmacist');
+  }
+  const c = getCaseOr404(caseId);
+  const doc = education.createDraft(c, actor, { text: body.text, source: body.source || 'pharmacist' });
+  record(c, 'education_drafted', actor, { documentId: doc.documentId });
+  repo.saveCase(c);
+  return doc;
+}
+
+function decideEducation(caseId, documentId, body, actor) {
+  if (!hasPharmacistCredential(actor) || actor.role !== 'pharmacist') {
+    throw new ServiceError(403, 'pharmacist_credential_required', 'Education publish requires a pharmacist');
+  }
+  const c = getCaseOr404(caseId);
+  let doc;
+  if (body.action === 'approve') doc = education.approve(c, documentId, actor);
+  else if (body.action === 'publish') doc = education.publish(c, documentId, actor);
+  else throw new ServiceError(400, 'unknown_action', 'Education action must be approve or publish');
+  record(c, `education_${body.action}`, actor, { documentId });
+  repo.saveCase(c);
+  return doc;
+}
+
+function followUpAction(caseId, taskId, body, actor) {
+  if (actor.role !== 'pharmacist') throw new ServiceError(403, 'pharmacist_credential_required', 'Follow-up disposition requires a pharmacist');
+  const c = getCaseOr404(caseId);
+  let task;
+  if (body.action === 'assign') task = followUp.assign(c, taskId, actor);
+  else if (body.action === 'contact') task = followUp.addContact(c, taskId, actor, body.note);
+  else if (body.action === 'close') task = followUp.close(c, taskId, actor, body.summary);
+  else if (body.action === 'escalate') task = followUp.escalate(c, taskId, actor, body.note);
+  else throw new ServiceError(400, 'unknown_action', 'Unknown follow-up action');
+  record(c, 'followup_action', actor, { taskId, action: body.action });
+  repo.saveCase(c);
+  return task;
+}
+
+function listFollowUps() {
+  return followUp.listOpen(repo.listCases());
+}
+
+function issueFeedbackToken(caseId, actor) {
+  const c = getCaseOr404(caseId);
+  const t = issueToken(c.caseId, 'feedback', FEEDBACK_TOKEN_TTL_MS, {
+    contentVersion: c.contentVersion, patientRef: c.patient?.patientRef || null,
+  });
+  record(c, 'feedback_token_issued', actor, { tokenFingerprint: fingerprint(t.tokenHash) });
+  repo.saveCase(c);
+  return { token: t.token, expiresAt: t.expiresAt, path: `/patient/feedback/${t.token}` };
+}
+
 module.exports = {
   ServiceError,
   createCase,
@@ -693,4 +927,12 @@ module.exports = {
   reviewQueue,
   sampleLowRisk,
   isPriorityReview,
+  issueClarification,
+  getClarification,
+  submitClarification,
+  createEducation,
+  decideEducation,
+  followUpAction,
+  listFollowUps,
+  issueFeedbackToken,
 };

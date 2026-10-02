@@ -75,10 +75,13 @@ async function main() {
   const tokens = [];
   for (const spec of benchmark.cases) {
     const input = buildCase(benchmark.defaults, spec);
-    const t0 = Date.now();
+    const tFirst = Date.now();
     const first = await analyzeCase(input, { provider, aiEnabled: true, timeoutMs: Number(process.env.AI_TIMEOUT_MS) || 20000 });
+    const firstLatencyMs = Date.now() - tFirst;
+    const tSecond = Date.now();
     const second = await analyzeCase(input, { provider, aiEnabled: true, timeoutMs: Number(process.env.AI_TIMEOUT_MS) || 20000 });
-    const latencyMs = Date.now() - t0;
+    const secondLatencyMs = Date.now() - tSecond;
+    const endToEndMs = firstLatencyMs + secondLatencyMs;
     const schemaOk = check(UNIFIED_OUTPUT_SCHEMA, first).valid;
     const unsafe = [];
     if (first.riskTier && first.ruleTrackResult && require('../../server/ai/ruleTrack').TIER_ORDER[first.riskTier] < require('../../server/ai/ruleTrack').TIER_ORDER[first.ruleTrackResult.tier]) {
@@ -97,7 +100,18 @@ async function main() {
       hardStops: first.hardStops.map((h) => h.code),
       citationComplete: [...first.hardStops, ...first.alerts].every((x) => (x.evidenceIds || []).length),
       repeatConsistent: first.riskTier === second.riskTier && JSON.stringify(first.hardStops.map((h) => h.code)) === JSON.stringify(second.hardStops.map((h) => h.code)),
-      latencyMs,
+      firstLatencyMs,
+      secondLatencyMs,
+      endToEndMs,
+      latencyMs: firstLatencyMs,
+      firstModel: first.providerMeta?.model || provider.modelVersion,
+      secondModel: second.providerMeta?.model || provider.modelVersion,
+      firstUsage: first.providerMeta?.usage || null,
+      secondUsage: second.providerMeta?.usage || null,
+      firstRequestId: first.semanticTrackResult.providerRequestId,
+      secondRequestId: second.semanticTrackResult.providerRequestId,
+      ruleTier: first.ruleTrackResult?.tier || null,
+      modelSuggestedTier: first.semanticTrackResult?.output?.suggestedRiskTier || first.semanticTrackResult?.suggestedRiskTier || null,
       providerRequestId: first.semanticTrackResult.providerRequestId,
       model: first.providerMeta?.model || provider.modelVersion,
       usage: first.providerMeta?.usage || null,
@@ -111,7 +125,6 @@ async function main() {
   const hard = results.filter((r) => r.expectedTier === 'A3');
   const fp = results.filter((r) => r.expectedTier === 'A1' && r.predictedTier !== 'A1');
   const schemaPass = results.filter((r) => r.schemaOk).length;
-  const latencies = results.map((r) => r.latencyMs);
   const report = {
     label: 'LIVE model evaluation on synthetic cases written from the same rule table. Not a clinical validation. Hard-risk recall here is implementation/agreement on known cases, not sensitivity to unseen prescriptions. Do not cite as calibrated AI performance.',
     generatedAt: new Date().toISOString(),
@@ -129,7 +142,13 @@ async function main() {
       citationCompleteness: ratio(results.filter((r) => r.citationComplete).length, results.length),
       repeatConsistency: ratio(results.filter((r) => r.repeatConsistent).length, results.length),
       ...computeLiveMetrics(results),
-      latencyMs: { p50: pctile(latencies, 50), p95: pctile(latencies, 95) },
+      latencyMs: {
+        firstCallP50: pctile(results.map((r) => r.firstLatencyMs), 50),
+        firstCallP95: pctile(results.map((r) => r.firstLatencyMs), 95),
+        repeatCallP50: pctile(results.map((r) => r.secondLatencyMs), 50),
+        endToEndP50: pctile(results.map((r) => r.endToEndMs), 50),
+        note: 'firstCall is a single analyzeCase. endToEnd is first+repeat. The previous combined timer is not used as per-call latency.',
+      },
       tokenTotal: tokens.reduce((a, b) => a + b, 0),
       unsafeAutonomousActions: results.flatMap((r) => r.unsafe).length,
     },

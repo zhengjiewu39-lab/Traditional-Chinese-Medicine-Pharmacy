@@ -13,14 +13,13 @@ const { listPrompts } = require('../ai/promptRegistry');
 const { ruleSetVersion } = require('../ai/ruleTrack');
 const { listSources, knowledgeBaseVersion } = require('../knowledge/sourceRegistry');
 const { computeGovernanceMetrics } = require('../ai/governanceMetrics');
-const { analyzeOperations, draftProposal, ACTIONS } = require('../ai/operationsAgent');
-const { evaluateProposal } = require('../ai/digitalTwinBridge');
-const { randomId } = require('../common/hash');
 const draftService = require('../workflow/draftService');
 const suggestionService = require('../workflow/suggestionService');
 const learning = require('../workflow/learningLoop');
 const { migrateLegacyPrescriptions } = require('../workflow/legacyMigrate');
 const { issuePickupToken } = require('../workflow/pickupService');
+const { inventoryCounts } = require('../workflow/inventoryDeduct');
+const { getStore } = require('../data/store');
 
 const router = express.Router();
 
@@ -28,7 +27,10 @@ router.use(limitBody());
 router.use(limiter(Number(process.env.AI_RATE_LIMIT_PER_MIN) || 120));
 router.use(accessAudit('ai'));
 
-const actorOf = (req) => ({ role: req.user.role, id: req.user.id, name: req.user.name });
+const actorOf = (req) => ({ role: req.user.role, id: req.user.id, name: req.user.name, username: req.user.username });
+function gone(req, res) {
+  return sendError(res, 410, 'archived', 'This endpoint was archived with the supply-simulation / operations-agent modules');
+}
 
 function summary(c) {
   const a = c.analyses.at(-1)?.output;
@@ -74,7 +76,7 @@ router.get('/workbench/summary', requirePermission('case:read'), handle(async (r
   const cases = repo.listCases();
   const today = new Date().toISOString().slice(0, 10);
   const by = (s) => cases.filter((c) => c.state === s).length;
-  const ops = analyzeOperations();
+  const inv = inventoryCounts();
   res.json({
     today: cases.filter((c) => c.createdAt.startsWith(today)).length,
     pendingReview: by('pharmacist_review_required'),
@@ -85,10 +87,11 @@ router.get('/workbench/summary', requirePermission('case:read'), handle(async (r
     toDispense: by('patient_confirmed') + by('dispensing'),
     toCheck: by('pharmacist_final_check'),
     readyForPickup: by('ready_for_pickup'),
+    pendingFollowUp: service.listFollowUps().length,
     priorityReview: service.reviewQueue().priority.length,
     batchReview: service.reviewQueue().batch.length,
-    shortage: ops.summary.lowStock + ops.summary.nearMin,
-    nearExpiry: ops.summary.nearExpiry,
+    shortage: inv.shortage,
+    nearExpiry: inv.nearExpiry,
     ai: runtime.describeRuntime(),
     auditChainValid: audit.verify().valid,
   });
@@ -248,10 +251,15 @@ router.post('/runtime/test', requirePermission('ai:runtime_configure'), handle(a
 }));
 
 router.get('/knowledge/sources', requirePermission('ai:knowledge_read'), handle(async (req, res) => {
+  const herbs = (getStore().herbs || []).slice(0, 200).map((h) => ({
+    id: h.id, name: h.name, category: h.category || null, stock: h.stock ?? null, catalogOnly: true, clinicalEvidence: false,
+  }));
   const reg = require('../knowledge/sourceRegistry').loadRegistry();
   res.json({
     knowledgeBaseVersion: knowledgeBaseVersion(),
     sources: listSources(),
+    herbCatalog: herbs,
+    note: 'Herb catalog rows are inventory identifiers, not clinical evidence.',
     bases: reg.bases.map((b) => ({
       knowledgeBaseId: b.knowledgeBaseId,
       version: b.version,
@@ -275,73 +283,49 @@ router.post('/governance/kill-switch', requirePermission('ai:kill_switch'), vali
   res.json({ aiEnabled: runtime.isAiEnabled() });
 }));
 
-// ---------------------------------------------------------------- operations agent
+// Archived operations/digital-twin routes are not mounted.
 
-router.get('/operations/analysis', requirePermission('ops:read'), handle(async (req, res) => {
-  res.json(analyzeOperations());
-}));
-
-router.get('/operations/proposals', requirePermission('ops:read'), handle(async (req, res) => {
-  res.json({ proposals: repo.proposals().list(), purchaseDrafts: repo.purchaseDrafts() });
-}));
-
-router.post('/operations/proposals', requirePermission('ops:propose'), validateBody({
-  type: 'object',
-  additionalProperties: false,
-  required: ['action'],
+router.post('/cases/:id/clarifications', requirePermission('patient:clarification'), requirePharmacistCredential, validateBody({
+  type: 'object', additionalProperties: false, required: ['fieldPath', 'question'],
   properties: {
-    action: { type: 'string', enum: ACTIONS },
-    inventoryIds: { type: 'array', maxItems: 20, items: { type: 'integer', minimum: 1 } },
-    note: { type: 'string', maxLength: 300 },
+    fieldPath: { type: 'string', maxLength: 80 },
+    question: { type: 'string', minLength: 1, maxLength: 240 },
+    reason: { type: 'string', maxLength: 300 },
+    requiredForDecision: { type: 'boolean' },
+    source: { type: 'string', enum: ['rule', 'model', 'pharmacist'] },
+    send: { type: 'boolean' },
   },
 }), handle(async (req, res) => {
-  const p = { ...draftProposal(req.body), createdBy: String(req.user.id) };
-  repo.proposals().put(p);
-  audit.append({ eventType: 'ops_proposal_drafted', actorType: 'ai', actorId: 'operations-agent', payload: { proposalId: p.proposalId, action: p.action, items: p.items.length, requestedBy: req.user.id } });
-  res.status(201).json({ proposal: p });
+  res.status(201).json(service.issueClarification(req.params.id, req.body, actorOf(req)));
 }));
 
-router.post('/operations/proposals/:id/simulate', requirePermission('ops:simulate'), validateBody({
-  type: 'object', additionalProperties: false, properties: { replicates: { type: 'integer', minimum: 1, maximum: 20 } },
+router.post('/cases/:id/education', requirePermission('rx:education_publish'), requirePharmacistCredential, validateBody({
+  type: 'object', additionalProperties: false, required: ['text'],
+  properties: { text: { type: 'string', minLength: 1, maxLength: 4000 }, source: { type: 'string', enum: ['pharmacist', 'fixed_template'] } },
 }), handle(async (req, res) => {
-  const p = repo.proposals().get(req.params.id);
-  if (!p) return sendError(res, 404, 'proposal_not_found', 'Proposal not found');
-  if (p.status !== 'draft' && p.status !== 'simulated') return sendError(res, 409, 'invalid_state', `Proposal is ${p.status}`);
-  const evaluation = evaluateProposal(p, { replicates: req.body.replicates });
-  const next = { ...p, digitalTwinEvaluation: evaluation, status: 'simulated' };
-  repo.proposals().put(next);
-  audit.append({ eventType: 'ops_proposal_simulated', actorType: 'system', actorId: 'digital-twin', payload: { proposalId: p.proposalId, scenarioHash: evaluation.scenarioHash, difference: evaluation.difference } });
-  return res.json({ proposal: next });
+  res.status(201).json({ document: service.createEducation(req.params.id, req.body, actorOf(req)) });
 }));
 
-router.post('/operations/proposals/:id/approve', requirePermission('ops:approve'), validateBody({
-  type: 'object', additionalProperties: false, required: ['decision', 'comment'], properties: { decision: { type: 'string', enum: ['approve', 'reject'] }, comment: { type: 'string', minLength: 1, maxLength: 500 } },
+router.post('/cases/:id/education/:documentId', requirePermission('rx:education_publish'), requirePharmacistCredential, validateBody({
+  type: 'object', additionalProperties: false, required: ['action'],
+  properties: { action: { type: 'string', enum: ['approve', 'publish'] } },
 }), handle(async (req, res) => {
-  const p = repo.proposals().get(req.params.id);
-  if (!p) return sendError(res, 404, 'proposal_not_found', 'Proposal not found');
-  if (p.status !== 'simulated') return sendError(res, 409, 'simulation_required', 'Run the digital-twin evaluation before approval');
-  const at = new Date().toISOString();
-  let draft = null;
-  if (req.body.decision === 'approve' && p.action !== 'hold') {
-    draft = repo.addPurchaseDraft({
-      docId: randomId(p.action === 'transfer' ? 'xfer' : 'po'),
-      type: p.action === 'transfer' ? 'transfer_draft' : p.action === 'expedite' ? 'expedite_request_draft' : 'purchase_order_draft',
-      proposalId: p.proposalId,
-      items: p.items,
-      status: 'draft_pending_execution',
-      approvedBy: String(req.user.id),
-      approvedRole: req.user.role,
-      approvedAt: at,
-      note: '草稿单据：需在库存/采购模块由员工执行；系统不会自动修改库存',
-      synthetic: true,
-    });
-  }
-  const next = {
-    ...p, status: req.body.decision === 'approve' ? 'approved' : 'rejected', decidedBy: String(req.user.id), decidedRole: req.user.role, decidedAt: at, decisionComment: req.body.comment, draftDocId: draft?.docId || null,
-  };
-  repo.proposals().put(next);
-  audit.append({ eventType: 'ops_proposal_decided', actorType: req.user.role, actorId: req.user.id, payload: { proposalId: p.proposalId, decision: req.body.decision, draftDocId: draft?.docId || null } });
-  return res.json({ proposal: next, draft });
+  res.json({ document: service.decideEducation(req.params.id, req.params.documentId, req.body, actorOf(req)) });
+}));
+
+router.get('/follow-ups', requirePermission('rx:followup'), handle(async (req, res) => {
+  res.json({ tasks: service.listFollowUps() });
+}));
+
+router.post('/cases/:id/follow-ups/:taskId', requirePermission('rx:followup'), requirePharmacistCredential, validateBody({
+  type: 'object', additionalProperties: false, required: ['action'],
+  properties: { action: { type: 'string', enum: ['assign', 'contact', 'close', 'escalate'] }, note: { type: 'string', maxLength: 500 }, summary: { type: 'string', maxLength: 1000 } },
+}), handle(async (req, res) => {
+  res.json({ task: service.followUpAction(req.params.id, req.params.taskId, req.body, actorOf(req)) });
+}));
+
+router.post('/cases/:id/feedback-token', requirePermission('patient:issue_token'), handle(async (req, res) => {
+  res.json(service.issueFeedbackToken(req.params.id, actorOf(req)));
 }));
 
 router.get('/review-queue', requirePermission('rx:review_decision'), handle(async (req, res) => {
@@ -494,5 +478,7 @@ router.post('/learning/models/:id/status', requirePermission('ai:model_publish')
     pharmacistApproverId: req.body.pharmacistApproverId,
   }));
 }));
+
+router.use('/operations', gone);
 
 module.exports = router;

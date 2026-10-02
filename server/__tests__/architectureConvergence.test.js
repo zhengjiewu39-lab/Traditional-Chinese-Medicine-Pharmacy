@@ -92,7 +92,18 @@ function caseInput(overrides = {}) {
   return {
     source: { channel: 'counter' },
     patient: {
-      patientRef: 'P1', name: '合成患者', ageYears: 45, sex: 'male', allergies: [], currentMedications: [], ...overrides.patient,
+      patientRef: 'P1', name: '合成患者', ageYears: 45, sex: 'male',
+      facts: {
+        allergies: { status: 'none', value: [], source: 'test', version: 1 },
+        currentMedications: { status: 'none', value: [], source: 'test', version: 1 },
+        liverImpairment: { status: 'none', value: false, source: 'test', version: 1 },
+        renalImpairment: { status: 'none', value: false, source: 'test', version: 1 },
+        pregnancy: { status: 'none', value: 'no', source: 'test', version: 1 },
+        lactation: { status: 'none', value: 'no', source: 'test', version: 1 },
+        ageYears: { status: 'reported', value: 45, unit: 'years', source: 'test', version: 1 },
+        weightKg: { status: 'not_asked', value: null, unit: 'kg', source: 'test', version: 1 },
+      },
+      ...overrides.patient,
     },
     prescriber: { name: '合成医师', licenseVerified: true, ...overrides.prescriber },
     prescription: {
@@ -379,27 +390,23 @@ describe('architecture convergence: pickup, data mode, learning, queue', () => {
     assert.strictEqual(earlyLive.body.error.code, 'shadow_incomplete');
   });
 
-  it('high-risk labels reject a missing, non-pharmacist, or same-person second reviewer', async () => {
-    const missing = await call('POST', '/api/ai/learning/labels', {
-      as: 'pharmacist',
-      body: { suggestionId: 'sug_x', label: 'true_positive', risk: 'high', secondReviewerId: '9999' },
-    });
-    assert.strictEqual(missing.status, 400);
-    const notPharm = await call('POST', '/api/ai/learning/labels', {
-      as: 'pharmacist',
-      body: { suggestionId: 'sug_x', label: 'true_positive', risk: 'high', secondReviewerId: '7' },
-    });
-    assert.strictEqual(notPharm.status, 400);
-    const same = await call('POST', '/api/ai/learning/labels', {
-      as: 'pharmacist',
-      body: { suggestionId: 'sug_x', label: 'true_positive', risk: 'high', secondReviewerId: '2' },
-    });
-    assert.strictEqual(same.status, 400);
-    const ok = await call('POST', '/api/ai/learning/labels', {
+  it('high-risk labels reject a proxy secondReviewerId; a second pharmacist must sign in', async () => {
+    const proxy = await call('POST', '/api/ai/learning/labels', {
       as: 'pharmacist',
       body: { suggestionId: 'sug_x', label: 'true_positive', risk: 'high', secondReviewerId: '3' },
     });
-    assert.strictEqual(ok.status, 201, JSON.stringify(ok.body));
+    assert.strictEqual(proxy.status, 400);
+    assert.strictEqual(proxy.body.error.code, 'proxy_second_review_forbidden');
+    const first = await call('POST', '/api/ai/learning/labels', {
+      as: 'pharmacist',
+      body: { suggestionId: 'sug_x', label: 'true_positive', risk: 'high' },
+    });
+    assert.strictEqual(first.status, 201, JSON.stringify(first.body));
+    const second = await call('POST', '/api/ai/learning/labels', {
+      as: 'pharmacist2',
+      body: { suggestionId: 'sug_x', label: 'true_positive', risk: 'high' },
+    });
+    assert.strictEqual(second.status, 201, JSON.stringify(second.body));
   });
 
   it('draft submit copies license status from the roster, not a hardcoded true', async () => {

@@ -109,8 +109,8 @@ function checkTransition(caseRecord, to, actorRole) {
   if (!allowed.includes(actorRole)) {
     throw new TransitionError('actor_not_allowed', `Actor ${actorRole} may not perform ${from} → ${to}`);
   }
-  if (PHARMACIST_ONLY_TARGETS.has(to) && actorRole !== 'pharmacist' && actorRole !== 'admin') {
-    throw new TransitionError('pharmacist_only', `${to} requires a pharmacist credential`);
+  if (PHARMACIST_ONLY_TARGETS.has(to) && actorRole !== 'pharmacist') {
+    throw new TransitionError('pharmacist_only', `${to} requires a pharmacist credential; admin role is not sufficient`);
   }
   const latest = caseRecord.analyses?.[caseRecord.analyses.length - 1];
   if (to === 'pharmacist_approved') {

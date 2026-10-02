@@ -9,20 +9,13 @@ import { RiskTierChip, StateChip } from '../../components/ai/Badges';
 import { useLanguage } from '../../i18n/LanguageContext';
 
 const ALL_TILES = [
-  { key: 'today', labelKey: 'ai.workbench.today', path: '/ai/cases' },
-  { key: 'pendingReview', labelKey: 'ai.workbench.pendingReview', path: '/ai/review-queue', color: '#1565C0' },
-  { key: 'priorityReview', labelKey: 'ai.workbench.priorityReview', path: '/ai/review-queue', color: '#C62828' },
-  { key: 'batchReview', labelKey: 'ai.workbench.batchReview', path: '/ai/review-queue', color: '#EF6C00' },
-  { key: 'a3', labelKey: 'ai.workbench.a3', path: '/ai/review-queue?tier=A3', color: '#C62828' },
   { key: 'informationIncomplete', labelKey: 'ai.workbench.informationIncomplete', path: '/ai/cases?state=information_incomplete', color: '#EF6C00' },
-  { key: 'awaitingPatient', labelKey: 'ai.workbench.awaitingPatient', path: '/patient-service', color: '#6A1B9A' },
-  { key: 'awaitingPrescriber', labelKey: 'ai.workbench.awaitingPrescriber', path: '/ai/cases?state=returned_to_prescriber', color: '#AD1457' },
+  { key: 'pendingReview', labelKey: 'ai.workbench.pendingReview', path: '/ai/review-queue', color: '#1565C0' },
   { key: 'toDispense', labelKey: 'ai.workbench.toDispense', path: '/dispensing', color: '#2E7D32' },
   { key: 'toCheck', labelKey: 'ai.workbench.toCheck', path: '/dispensing', color: '#00838F' },
-  { key: 'shortage', labelKey: 'ai.workbench.shortage', path: '/ai/operations', color: '#5D4037' },
-  { key: 'nearExpiry', labelKey: 'ai.workbench.nearExpiry', path: '/ai/operations', color: '#795548' },
+  { key: 'pendingFollowUp', labelKey: 'nav.followUp', path: '/ai/follow-up', color: '#6A1B9A' },
 ];
-const ADMIN_TILES = ALL_TILES.filter((tile) => ['today', 'shortage', 'nearExpiry'].includes(tile.key));
+const ADMIN_TILES = ALL_TILES;
 
 export default function Workbench() {
   const navigate = useNavigate();
@@ -74,7 +67,7 @@ export default function Workbench() {
           <Typography variant="h6">{t('ai.workbench.recent')}</Typography>
           <Stack direction="row" spacing={1}>
             <Button onClick={() => navigate('/ai/cases')}>{t('nav.aiCases')}</Button>
-            <Button onClick={() => navigate('/ai/operations')}>{t('nav.operationsAgent')}</Button>
+            <Button onClick={() => navigate('/ai/follow-up')}>{t('nav.followUp')}</Button>
           </Stack>
         </Stack>
         <Table size="small">
