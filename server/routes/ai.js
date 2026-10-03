@@ -21,6 +21,7 @@ const { issuePickupToken } = require('../workflow/pickupService');
 const { inventoryCounts } = require('../workflow/inventoryDeduct');
 const { getStore } = require('../data/store');
 const pharmacyOps = require('../workflow/pharmacyOps');
+const deskAssist = require('../workflow/deskAssist');
 const { staffPatientDisplay } = require('../workflow/patientIdentity');
 
 const router = express.Router();
@@ -57,6 +58,9 @@ function summary(c) {
     patientDeclined: c.patientDeclined,
     priority: service.isPriorityReview(c),
     displaySource: a?.displaySource || null,
+    doseCount: c.prescription?.doseCount ?? null,
+    herbs: (c.prescription?.herbs || []).map((h) => ({ name: h.name, dosage: h.dosage, unit: h.unit || 'g' })),
+    deskNotes: a?.deskNotes || a?.shadowResult?.deskNotes || null,
   };
 }
 
@@ -74,34 +78,39 @@ router.post('/cases', requirePermission('case:create'), validateBody(S.CREATE_CA
 
 router.get('/cases', requirePermission('case:read'), handle(async (req, res) => {
   const { state, riskTier } = req.query;
-  let list = repo.listCases({ state, riskTier });
-  if (req.user.role === 'prescriber') {
-    list = list.filter((c) => c.createdBy?.id === String(req.user.id) || c.prescriber?.userId === String(req.user.id));
-  }
-  res.json({ cases: list.map(summary) });
+  const limit = Math.min(Math.max(Number(req.query.limit) || 40, 1), 100);
+  const offset = Math.max(Number(req.query.offset) || 0, 0);
+  const createdById = req.user.role === 'prescriber' ? String(req.user.id) : undefined;
+  const filter = { state, riskTier, createdById };
+  const total = repo.countCases({ state, createdById });
+  const list = repo.listCases({ ...filter, limit, offset });
+  res.json({ cases: list.map(summary), total, limit, offset });
 }));
 
 router.get('/workbench/summary', requirePermission('case:read'), handle(async (req, res) => {
-  const cases = repo.listCases();
+  const byState = repo.countCasesByState();
+  const by = (s) => byState[s] || 0;
   const today = new Date().toISOString().slice(0, 10);
-  const by = (s) => cases.filter((c) => c.state === s).length;
+  const recent = repo.listCases({ limit: 10 });
   const inv = inventoryCounts();
+  const deskCases = repo.listCasesInStates(['pharmacist_approved', 'patient_confirmation_required', 'patient_confirmed', 'dispensing']);
   res.json({
-    today: cases.filter((c) => c.createdAt.startsWith(today)).length,
+    today: repo.countCasesCreatedOn(today),
     pendingReview: by('pharmacist_review_required'),
-    a3: cases.filter((c) => c.analyses.at(-1)?.output.riskTier === 'A3' && !['completed', 'patient_declined', 'returned_to_prescriber', 'pharmacist_rejected'].includes(c.state)).length,
+    a3: 0,
     informationIncomplete: by('information_incomplete'),
     awaitingPatient: by('patient_confirmation_required'),
     awaitingPrescriber: by('returned_to_prescriber'),
     toDispense: by('patient_confirmed') + by('dispensing'),
     toCheck: by('pharmacist_final_check'),
     readyForPickup: by('ready_for_pickup'),
-    pendingFollowUp: service.listFollowUps().length,
-    priorityReview: service.reviewQueue().priority.length,
-    batchReview: service.reviewQueue().batch.length,
+    pendingFollowUp: service.listFollowUps(repo.listCasesInStates(['pharmacist_approved', 'patient_confirmation_required', 'patient_confirmed', 'dispensing', 'ready_for_pickup', 'completed'])).length,
+    priorityReview: by('pharmacist_review_required'),
+    batchReview: 0,
     shortage: inv.shortage,
     nearExpiry: inv.nearExpiry,
-    restockSuggested: pharmacyOps.planDesk(cases).restock.length,
+    restockSuggested: pharmacyOps.planDesk(deskCases).restock.length,
+    recent: recent.map(summary),
     ai: runtime.describeRuntime(),
     auditChainValid: audit.verify().valid,
   });
@@ -158,6 +167,36 @@ router.post('/cases/:id/dispensing', requirePermission('rx:dispense'), validateB
 
 router.get('/ops/desk', requirePermission('ops:read'), handle(async (req, res) => {
   res.json(pharmacyOps.planDesk());
+}));
+
+router.get('/desk/assist', requirePermission('case:read'), handle(async (req, res) => {
+  const lane = String(req.query.lane || 'admin');
+  if (lane === 'admin' && req.user.role !== 'admin') {
+    return sendError(res, 403, 'forbidden', 'Admin assist is for administrators');
+  }
+  let caseRecord = null;
+  if (req.query.caseId) caseRecord = service.getCaseOr404(req.query.caseId);
+  res.json(deskAssist.assist(lane, { caseRecord }));
+}));
+
+router.post('/desk/admin-confirm', requirePermission('ai:runtime_configure'), validateBody({
+  type: 'object',
+  additionalProperties: false,
+  required: ['type', 'decision'],
+  properties: {
+    type: { type: 'string', enum: ['restock', 'knowledge_fetch', 'info', 'kill_switch', 'promote_live', 'approve', 'dispense'] },
+    decision: { type: 'string', enum: ['accept', 'reject'] },
+    payload: { type: 'object' },
+  },
+}), handle(async (req, res) => {
+  const out = await deskAssist.confirmAdminProposal(req.body, actorOf(req));
+  audit.append({
+    eventType: 'admin_ai_proposal',
+    actorType: 'admin',
+    actorId: req.user.id,
+    payload: { type: req.body.type, decision: req.body.decision, applied: Boolean(out.applied || out.requests) },
+  });
+  res.json(out);
 }));
 
 router.post('/ops/restock', requirePermission('ops:execute'), validateBody(S.RESTOCK_APPLY), handle(async (req, res) => {
@@ -351,8 +390,15 @@ router.post('/governance/kill-switch', requirePermission('ai:kill_switch'), vali
 
 // Archived operations/digital-twin routes are not mounted.
 
-router.post('/cases/:id/clarifications/:taskId/review', requirePermission('patient:clarification'), requirePharmacistCredential, handle(async (req, res) => {
-  res.json({ task: service.reviewClarification(req.params.id, req.params.taskId, actorOf(req)) });
+router.post('/cases/:id/clarifications/:taskId/review', requirePermission('patient:clarification'), requirePharmacistCredential, validateBody({
+  type: 'object', additionalProperties: false,
+  properties: {
+    independentlyVerified: { type: 'boolean' },
+    source: { type: 'string', maxLength: 80 },
+    note: { type: 'string', maxLength: 300 },
+  },
+}), handle(async (req, res) => {
+  res.json({ task: service.reviewClarification(req.params.id, req.params.taskId, actorOf(req), req.body) });
 }));
 
 router.post('/cases/:id/follow-up-plan', requirePermission('rx:followup'), requirePharmacistCredential, validateBody({
@@ -371,7 +417,7 @@ router.post('/cases/:id/fact-candidates', requirePermission('patient:clarificati
     status: { type: 'string', maxLength: 20 },
   },
 }), handle(async (req, res) => {
-  res.json(service.confirmFactCandidate(req.params.id, req.body, actorOf(req)));
+  res.json(await service.confirmFactCandidate(req.params.id, req.body, actorOf(req)));
 }));
 
 router.post('/cases/:id/clarifications', requirePermission('patient:clarification'), requirePharmacistCredential, validateBody({

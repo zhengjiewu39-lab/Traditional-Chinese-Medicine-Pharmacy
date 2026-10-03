@@ -18,6 +18,7 @@ export const STATE_LABELS = {
   pharmacist_final_check: 'ai.state.pharmacist_final_check',
   ready_for_pickup: 'ai.state.ready_for_pickup',
   completed: 'ai.state.completed',
+  center_record: 'ai.state.center_record',
 };
 
 export const STATE_COLORS = {

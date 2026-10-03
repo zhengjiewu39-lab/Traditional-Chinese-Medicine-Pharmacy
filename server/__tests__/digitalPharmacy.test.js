@@ -36,6 +36,7 @@ const USERS = {
   technician: { id: 4, username: 'technician', name: '赵调剂员', role: 'technician' },
   researcher: { id: 5, username: 'researcher', name: '研究员', role: 'researcher' },
   patient: { id: 6, username: 'patient', name: '演示患者', role: 'patient', patientRef: 'P1' },
+  patientB: { id: 8, username: 'patientB', name: '其他患者', role: 'patient', patientRef: 'P9' },
   prescriber: { id: 7, username: 'prescriber', name: '周医师', role: 'prescriber' },
 };
 const tokens = Object.fromEntries(Object.entries(USERS).map(([k, u]) => [k, signToken(u)]));
@@ -543,9 +544,62 @@ describe('P1 review fixes', () => {
       body: { name: '李四', age: 32, allergies: [], medicalHistory: '过敏性鼻炎' },
     });
   });
+
+  it('patient center and patient inbox share the same P1–P500 identities', async () => {
+    const all = await call('GET', '/api/patients', { as: 'prescriber' });
+    assert.strictEqual(all.status, 200);
+    assert.ok((all.body || []).length >= 500, `patients ${all.body?.length}`);
+    const refs = new Set((all.body || []).map((p) => p.patientRef || `P${p.id}`));
+    assert.ok(refs.has('P1') && refs.has('P500'));
+    const listed = await call('GET', '/api/patients?q=P500', { as: 'prescriber' });
+    assert.strictEqual(listed.status, 200);
+    const row = (listed.body || []).find((p) => p.patientRef === 'P500' || Number(p.id) === 500);
+    assert.ok(row, JSON.stringify((listed.body || []).slice(0, 3)));
+    assert.strictEqual(row.patientRef, 'P500');
+    const tok = signToken({
+      id: 100500, username: 'P500', name: row.name, role: 'patient', patientRef: 'P500',
+    });
+    const mine = await call('GET', '/api/patient/me/cases', { token: tok });
+    assert.strictEqual(mine.status, 200, JSON.stringify(mine.body));
+    assert.strictEqual(mine.body.patientRef, 'P500');
+    assert.ok((mine.body.cases || []).some((c) => String(c.caseId).startsWith('center-')));
+    assert.ok((mine.body.cases || []).every((c) => !c.patientRef || c.patientRef === 'P500'));
+    const p1 = await call('GET', '/api/patient/me/cases', { as: 'patient' });
+    assert.ok(!(p1.body.cases || []).some((c) => c.patientRef === 'P500'));
+  });
 });
 
 describe('authority knowledge catalog', () => {
+  it('admin desk assist drafts restock and refuses reserved actions', async () => {
+    const denied = await call('GET', '/api/ai/desk/assist?lane=admin', { as: 'pharmacist' });
+    assert.strictEqual(denied.status, 403);
+    const assist = await call('GET', '/api/ai/desk/assist?lane=admin', { as: 'admin' });
+    assert.strictEqual(assist.status, 200, JSON.stringify(assist.body));
+    assert.ok(assist.body.brief.reservedForAdmin.includes('kill_switch'));
+    const kill = await call('POST', '/api/ai/desk/admin-confirm', {
+      as: 'admin',
+      body: { type: 'kill_switch', decision: 'accept' },
+    });
+    assert.strictEqual(kill.status, 403);
+    const restock = (assist.body.brief.proposals || []).find((p) => p.type === 'restock');
+    if (restock) {
+      const ok = await call('POST', '/api/ai/desk/admin-confirm', {
+        as: 'admin',
+        body: { type: 'restock', decision: 'accept', payload: restock.payload },
+      });
+      assert.strictEqual(ok.status, 200, JSON.stringify(ok.body));
+      assert.ok((ok.body.requests || []).length >= 1);
+    }
+  });
+
+  it('workbench summary returns a short recent list', async () => {
+    const r = await call('GET', '/api/ai/workbench/summary', { as: 'pharmacist' });
+    assert.strictEqual(r.status, 200);
+    assert.ok(Array.isArray(r.body.recent));
+    assert.ok(r.body.recent.length <= 10);
+    assert.equal(typeof r.body.pendingReview, 'number');
+  });
+
   it('lists pharmacopoeia as no open API and parses PubMed payloads without inventing text', () => {
     const { listAuthorities } = require('../knowledge/authorityIngest');
     const { parseSearch, parseSummaries, queryFor } = require('../knowledge/pubmedConnector');
@@ -935,12 +989,158 @@ describe('2026-10-03 remaining probes', () => {
   it('heuristic extract skips family, history and unsourced spans', () => {
     const extract = require('../workflow/factExtract');
     const hist = extract.heuristicExtract('我几年前有肝炎，父亲也有肝炎。如果怀孕了怎么办。');
-    assert.ok(!hist.some((c) => c.fieldPath === 'patient.facts.liverImpairment' && c.candidateValue === true));
+    assert.ok(!hist.some((c) => c.fieldPath === 'patient.facts.liverImpairment'));
     assert.ok(!hist.some((c) => c.fieldPath === 'patient.facts.pregnancy'));
+    const treating = extract.heuristicExtract('我以前有肝炎，现在还在治疗。');
+    assert.ok(treating.some((c) => c.fieldPath === 'patient.facts.liverImpairment' && c.candidateValue === true));
     const noSpan = extract.whitelistOnly([{
       fieldPath: 'patient.facts.pregnancy', candidateValue: 'yes', sourceText: '不存在的片段',
     }], '我没有怀孕');
     assert.strictEqual(noSpan.length, 0);
+  });
+
+  it('fact-candidate confirm is bound to the patient and cannot leak another case', async () => {
+    const created = await call('POST', '/api/ai/cases', {
+      as: 'prescriber',
+      body: {
+        ...caseBody({ patientRef: 'P1', sex: 'female', ageYears: 28 }),
+        source: { channel: 'counter', rawText: '我怀孕了，正在服药。' },
+      },
+    });
+    assert.strictEqual(created.status, 201, JSON.stringify(created.body));
+    const id = created.body.case.caseId;
+    const c0 = repo.getCase(id);
+    if (!(c0.factCandidates || []).length) {
+      c0.factCandidates = [{
+        candidateId: 'cand-cross', caseId: id, fieldPath: 'patient.facts.pregnancy',
+        candidateValue: 'yes', proposedStatus: 'reported', status: 'pending_confirmation',
+        caseContentVersion: c0.contentVersion, sourceText: '我怀孕了',
+      }];
+      repo.saveCase(c0);
+    }
+    const candId = repo.getCase(id).factCandidates[0].candidateId;
+    const pregBefore = JSON.stringify(repo.getCase(id).patient.facts.pregnancy);
+    const other = await call('POST', `/api/patient/me/cases/${id}/fact-candidates`, {
+      as: 'patientB', body: { candidateId: candId, action: 'accept' },
+    });
+    assert.ok([403, 404].includes(other.status), JSON.stringify(other.body));
+    assert.ok(!JSON.stringify(other.body || {}).includes('analyses'));
+    assert.strictEqual(JSON.stringify(repo.getCase(id).patient.facts.pregnancy), pregBefore);
+    const tech = await call('POST', `/api/ai/cases/${id}/fact-candidates`, {
+      as: 'technician', body: { candidateId: candId, action: 'accept' },
+    });
+    assert.ok([403, 404].includes(tech.status), JSON.stringify(tech.body));
+    const wrongCand = await call('POST', `/api/patient/me/cases/${id}/fact-candidates`, {
+      as: 'patient', body: { candidateId: 'cand-from-other-case', action: 'accept' },
+    });
+    assert.ok([403, 404].includes(wrongCand.status), JSON.stringify(wrongCand.body));
+  });
+
+  it('accepting a candidate versions content and voids a current approval', async () => {
+    const { id, analysis } = await openCase({ allergies: ['青霉素'] });
+    assert.strictEqual((await call('POST', `/api/ai/cases/${id}/pharmacist-decision`, {
+      as: 'pharmacist', body: { action: 'approve', analysisId: analysis.analysisId, comment: 'ok' },
+    })).status, 200);
+    const c = repo.getCase(id);
+    c.factCandidates = [{
+      candidateId: 'cand-preg-1', caseId: id, fieldPath: 'patient.facts.pregnancy',
+      candidateValue: 'yes', proposedStatus: 'reported', status: 'pending_confirmation',
+      caseContentVersion: c.contentVersion, sourceText: '怀孕',
+    }];
+    repo.saveCase(c);
+    const ok = await call('POST', `/api/patient/me/cases/${id}/fact-candidates`, {
+      as: 'patient', body: { candidateId: 'cand-preg-1', action: 'accept' },
+    });
+    assert.strictEqual(ok.status, 200, JSON.stringify(ok.body));
+    assert.ok(ok.body.case && !ok.body.case.analyses);
+    assert.ok(!JSON.stringify(ok.body).includes('secondReview'));
+    const after = repo.getCase(id);
+    assert.ok(after.contentVersion >= 2);
+    assert.strictEqual(after.contentHash, require('../common/hash').hashObject({
+      patient: after.patient, prescriber: after.prescriber, prescription: after.prescription,
+    }));
+    assert.notStrictEqual(after.state, 'pharmacist_approved');
+    assert.ok(!after.approval?.valid);
+    const again = await call('POST', `/api/patient/me/cases/${id}/fact-candidates`, {
+      as: 'patient', body: { candidateId: 'cand-preg-1', action: 'accept' },
+    });
+    assert.strictEqual(again.status, 200, JSON.stringify(again.body));
+    assert.strictEqual(again.body.idempotent, true);
+  });
+
+  it('required pregnancy questions block approve until independently verified', async () => {
+    const { id, analysis, state } = await openCase({ sex: 'female', ageYears: 27, allergies: ['青霉素'] });
+    const c = repo.getCase(id);
+    const required = (c.clarificationTasks || []).filter((t) => t.mandatory || t.requiredForDecision);
+    assert.ok(required.length || state === 'information_incomplete', JSON.stringify({ state, tasks: c.clarificationTasks }));
+    const blocked = await call('POST', `/api/ai/cases/${id}/pharmacist-decision`, {
+      as: 'pharmacist', body: { action: 'approve', analysisId: analysis.analysisId, comment: 'ok' },
+    });
+    assert.ok([409, 400].includes(blocked.status), JSON.stringify(blocked.body));
+    assert.notStrictEqual(repo.getCase(id).state, 'pharmacist_approved');
+    const task = (repo.getCase(id).clarificationTasks || []).find((t) => t.requiredForDecision);
+    if (task) {
+      const verified = await call('POST', `/api/ai/cases/${id}/clarifications/${task.taskId}/review`, {
+        as: 'pharmacist', body: { independentlyVerified: true, source: 'pharmacist_chart', note: '病历已写未孕' },
+      });
+      assert.strictEqual(verified.status, 200, JSON.stringify(verified.body));
+    }
+  });
+
+  it('candidate accept is blocked during dispensing', async () => {
+    const { id, analysis } = await openCase({ allergies: ['青霉素'] });
+    assert.strictEqual((await call('POST', `/api/ai/cases/${id}/pharmacist-decision`, {
+      as: 'pharmacist', body: { action: 'approve', analysisId: analysis.analysisId, comment: 'ok' },
+    })).status, 200);
+    assert.strictEqual((await call('POST', `/api/patient/me/cases/${id}/confirm`, {
+      as: 'patient',
+      body: { decision: 'confirm', identityConfirmed: true, fulfillment: 'pickup', educationReceived: true, educationUnderstood: true },
+    })).status, 200);
+    const lots = require('../workflow/inventoryLots');
+    const huang = getStore().inventory.find((i) => i.name === '黄芪');
+    lots.addLot({
+      inventoryId: huang.id, name: '黄芪', batchNo: 'B-LOCK', expiresAt: '2099-01-01', inspection: 'pass', qty: 200,
+    });
+    const started = await call('POST', `/api/ai/cases/${id}/dispensing`, { as: 'technician', body: { action: 'start' } });
+    assert.strictEqual(started.status, 200, JSON.stringify(started.body));
+    const c = repo.getCase(id);
+    c.factCandidates = [{
+      candidateId: 'cand-disp', caseId: id, fieldPath: 'patient.facts.currentMedications',
+      candidateValue: ['阿司匹林'], proposedStatus: 'reported', status: 'pending_confirmation',
+      caseContentVersion: c.contentVersion, sourceText: '阿司匹林',
+    }];
+    repo.saveCase(c);
+    const locked = await call('POST', `/api/patient/me/cases/${id}/fact-candidates`, {
+      as: 'patient', body: { candidateId: 'cand-disp', action: 'accept' },
+    });
+    assert.strictEqual(locked.status, 409, JSON.stringify(locked.body));
+    assert.ok(repo.getCase(id).approval?.valid);
+  });
+
+  it('AI disable stops extract complete calls and live lots stay quarantined', async () => {
+    runtime.setAiEnabled(false);
+    let calls = 0;
+    const extract = require('../workflow/factExtract');
+    const out = await extract.extractCandidateFacts(
+      { source: { rawText: '我没有怀孕，正在服用阿司匹林。' } },
+      { provider: { id: 'probe', isMock: true, async complete() { calls += 1; return '{}'; } }, aiEnabled: runtime.modelCallsAllowed() },
+    );
+    assert.strictEqual(calls, 0);
+    assert.strictEqual(out.modelCalled, false);
+    assert.strictEqual(out.fallbackReason, 'ai_disabled');
+    runtime.setAiEnabled(true);
+    const prev = process.env.DATA_MODE;
+    process.env.DATA_MODE = 'production';
+    try {
+      const lots = require('../workflow/inventoryLots');
+      const created = lots.ensureLegacyLot({ id: 999001, name: '隔离药', stock: 10 });
+      assert.strictEqual(created[0].usable, false);
+      assert.strictEqual(created[0].inspection, 'unverified');
+      assert.notStrictEqual(created[0].expiresAt, '2099-12-31');
+      assert.ok(!lots.usableLot(created[0]));
+    } finally {
+      process.env.DATA_MODE = prev;
+    }
   });
 });
 

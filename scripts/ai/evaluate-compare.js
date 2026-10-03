@@ -13,6 +13,7 @@ const fs = require('fs');
 const path = require('path');
 const { analyzeCase } = require('../../server/ai/aiOrchestrator');
 const { createProvider } = require('../../server/ai/providerAdapter');
+const { effectiveEnv } = require('../../server/ai/runtimeConfig');
 const { applyFactChange } = require('../../server/workflow/clinicalFacts');
 const clarification = require('../../server/workflow/clarificationService');
 const {
@@ -26,9 +27,10 @@ function fail(msg) {
   process.exit(2);
 }
 
+const env = effectiveEnv();
 const wantLive = process.env.AI_COMPARE_ALLOW_MOCK !== '1';
-if (wantLive && ((process.env.AI_PROVIDER || '') !== 'openai-compatible' || !process.env.AI_BASE_URL || !process.env.AI_MODEL || !process.env.AI_API_KEY)) {
-  fail('Live compare requires AI_PROVIDER=openai-compatible, AI_BASE_URL, AI_MODEL and AI_API_KEY. No placeholder scores were written.');
+if (wantLive && ((env.AI_PROVIDER || '') !== 'openai-compatible' || !env.AI_BASE_URL || !env.AI_MODEL || !env.AI_API_KEY)) {
+  fail('Live compare requires an openai-compatible provider with AI_BASE_URL, AI_MODEL and AI_API_KEY in the environment or the saved runtime overlay. No placeholder scores were written.');
 }
 
 const packRel = process.env.AI_COMPARE_PACK || 'benchmarks/ai-review/cases-interactive-v1.json';
@@ -101,8 +103,9 @@ async function interact(visible, hidden, cfg, provider) {
   let last = null;
   let stopReason = null;
   let round = 0;
+  let burdenUsed = 0;
   const asked = new Set();
-  while (round <= MAX_ROUNDS) {
+  while (round < MAX_ROUNDS && burdenUsed < MAX_BURDEN) {
     const input = { ...visible, patient };
     assertNoHiddenLeak(input);
     last = await analyzeCase(input, {
@@ -114,19 +117,19 @@ async function interact(visible, hidden, cfg, provider) {
       timeoutMs: 20000,
       aiMode: cfg.aiEnabled ? 'live' : 'rules',
     });
+    const remaining = MAX_BURDEN - burdenUsed;
     let selected = [];
     if (cfg.clarificationMode === 'none') {
-      selected = fixedQuestions(patient).filter((q) => !asked.has(q.fieldPaths[0]));
+      selected = fixedQuestions(patient).filter((q) => !asked.has(q.fieldPaths[0])).slice(0, remaining);
     } else {
       const plan = clarification.generateRiskQuestions({
-        ...visible, patient, analyses: [{ output: last }], clarificationRound: round,
-      }, { mode: cfg.clarificationMode, maxBurden: MAX_BURDEN, maxRounds: MAX_ROUNDS });
+        ...visible, patient, analyses: [{ output: last }], clarificationRound: round, clarificationBurden: burdenUsed,
+      }, { mode: cfg.clarificationMode, maxBurden: remaining, maxRounds: MAX_ROUNDS });
       selected = (plan.selected || []).filter((q) => !asked.has(q.fieldPaths[0]));
       stopReason = plan.stopReason;
     }
-    if (!selected.length || round === MAX_ROUNDS) {
-      if (!selected.length) stopReason = stopReason || 'no_remaining_questions';
-      else stopReason = 'round_cap';
+    if (!selected.length) {
+      stopReason = stopReason || 'no_remaining_questions';
       break;
     }
     const applied = applyScriptedAnswers({ ...visible, patient }, hidden, selected);
@@ -134,13 +137,10 @@ async function interact(visible, hidden, cfg, provider) {
     patient = applied.patient;
     turns.push(...applied.turns.map((t) => ({ ...t, round: answeredRound })));
     selected.forEach((q) => asked.add(q.fieldPaths[0]));
+    burdenUsed += selected.length;
     round = answeredRound;
-    if (applied.turns.every((t) => t.kind === 'no_script' || t.kind === 'denied' || t.kind === 'unknown')) {
-      stopReason = stopReason || 'script_stopped';
-      break;
-    }
   }
-  return { patient, turns, last, stopReason, rounds: round };
+  return { patient, turns, last, stopReason, rounds: round, burdenUsed };
 }
 
 async function runGroup(groupId, provider) {
@@ -172,9 +172,22 @@ async function runGroup(groupId, provider) {
         answered: run.turns.filter((t) => t.answered).length,
         asked: run.turns.length,
         rounds: run.rounds,
+        burdenUsed: run.burdenUsed,
         stopReason: run.stopReason,
-        inputHash: require('../../server/common/hash').hashObject({ caseId: visible.caseId, patient: run.patient, rx: visible.prescription }),
-        outputHash: require('../../server/common/hash').hashObject({ risk: out.riskTier, alerts: (out.alerts || []).map((a) => a.code) }),
+        finalPatientHash: require('../../server/common/hash').hashObject(run.patient),
+        inputHash: require('../../server/common/hash').hashObject({
+          caseId: visible.caseId, patient: run.patient, rx: visible.prescription,
+          promptVersion: out.promptVersion, modelVersion: out.modelVersion, knowledgeBaseVersion: out.knowledgeBaseVersion,
+        }),
+        outputHash: require('../../server/common/hash').hashObject({
+          risk: out.riskTier,
+          recommendation: out.recommendation,
+          alerts: (out.alerts || []).map((a) => a.code),
+          hardStops: (out.hardStops || []).map((h) => h.code),
+          pharmacistExplanation: out.pharmacistExplanation || null,
+          retrieved: (out.retrievalTrackResult?.retrieved || []).map((e) => e.sourceId),
+          semanticStatus: out.semanticTrackResult?.status,
+        }),
         retrieved: out.retrievalTrackResult?.retrieved || [],
         providerMeta: out.providerMeta || null,
         modelFailure: ['timeout', 'error', 'schema_invalid', 'policy_violation'].includes(out.semanticTrackResult?.status),

@@ -33,6 +33,7 @@ const TRANSITIONS = {
   },
   information_incomplete: {
     ai_screening: ['system', 'pharmacist', 'technician'],
+    pharmacist_review_required: ['pharmacist', 'ai', 'system'],
     returned_to_prescriber: ['pharmacist'],
   },
   ai_screening: {

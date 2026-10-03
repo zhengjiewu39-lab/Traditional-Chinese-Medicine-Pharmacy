@@ -35,22 +35,28 @@ function PatientRecords() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await patientsApi.getAllPatients({ q: searchTerm || undefined });
+      const res = await patientsApi.getAllPatients();
       setPatients(res.data);
     } catch (e) {
       console.error(e);
     } finally {
       setLoading(false);
     }
-  }, [searchTerm]);
+  }, []);
 
   useEffect(() => { load(); }, [load]);
 
   useEffect(() => { setPage(0); }, [searchTerm]);
 
-  const filtered = patients.filter(p =>
-    !searchTerm || p.name.includes(searchTerm) || p.phone.includes(searchTerm)
-  );
+  const filtered = patients.filter((p) => {
+    if (!searchTerm) return true;
+    const term = searchTerm.trim().toLowerCase();
+    const ref = String(p.patientRef || `P${p.id}`).toLowerCase();
+    return String(p.name || '').toLowerCase().includes(term)
+      || String(p.phone || '').includes(term)
+      || ref.includes(term)
+      || String(p.id).includes(term);
+  });
   const paged = filtered.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
   const openDetail = (patient) => {
@@ -111,7 +117,7 @@ function PatientRecords() {
         <Box>
           <Typography variant="h5" fontWeight={700}>患者档案管理</Typography>
           <Typography variant="body2" color="text.secondary">
-            合成患者可编辑。保存后同步病例、登录名单和患者模式。共 {patients.length} 人
+            合成患者可编辑。保存后同步病例、登录名单和患者模式。共 {patients.length} 人，编号 P1–P{patients.length} 与患者登录一一对应。
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 1 }}>
@@ -123,7 +129,7 @@ function PatientRecords() {
       <Card sx={{ mb: 3 }}>
         <CardContent>
           <TextField
-            placeholder="搜索姓名或电话"
+            placeholder="搜索姓名、电话或编号（如 P500）"
             size="small"
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
@@ -176,7 +182,7 @@ function PatientRecords() {
         onPageChange={(_, p) => setPage(p)}
         rowsPerPage={rowsPerPage}
         onRowsPerPageChange={(e) => { setRowsPerPage(+e.target.value); setPage(0); }}
-        rowsPerPageOptions={[10, 25, 50, 100]}
+        rowsPerPageOptions={[10, 25, 50, 100, 500]}
         labelRowsPerPage="每页"
       />
 

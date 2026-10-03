@@ -48,7 +48,7 @@ export default function PatientProfile() {
   useEffect(() => { load(); }, []);
   useEffect(() => {
     const tmr = setTimeout(() => {
-      authApi.demoPatients({ q: query || undefined, limit: 20 }).then((r) => setDirectory(r.data.patients || [])).catch(() => setDirectory([]));
+      authApi.demoPatients({ q: query || undefined, limit: 500 }).then((r) => setDirectory(r.data.patients || [])).catch(() => setDirectory([]));
     }, 200);
     return () => clearTimeout(tmr);
   }, [query]);

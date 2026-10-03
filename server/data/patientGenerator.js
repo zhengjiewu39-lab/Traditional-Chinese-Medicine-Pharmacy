@@ -176,6 +176,7 @@ function generateDemoPatients(count, options = {}) {
     patients.push({
       id: patientId,
       customerId,
+      patientRef: `P${patientId}`,
       name,
       gender,
       age,
@@ -194,6 +195,8 @@ function generateDemoPatients(count, options = {}) {
     customerId += 1;
   }
 
+  stampPatientRefs({ patients });
+
   return {
     patients,
     customers,
@@ -202,10 +205,24 @@ function generateDemoPatients(count, options = {}) {
   };
 }
 
+function stampPatientRefs(store) {
+  let stamped = 0;
+  for (const p of store.patients || []) {
+    if (p == null || p.id == null || p.id === '') continue;
+    const ref = `P${p.id}`;
+    if (p.patientRef !== ref) {
+      p.patientRef = ref;
+      stamped += 1;
+    }
+  }
+  return stamped;
+}
+
 function ensureDemoPatients(store, targetCount = 500) {
   const existing = store.patients || [];
   if (existing.length >= targetCount) {
-    return { added: 0, total: existing.length, patients: existing };
+    const stamped = stampPatientRefs(store);
+    return { added: 0, total: existing.length, patients: existing, stamped };
   }
 
   const maxCustomerId = (store.customers || []).reduce((m, c) => Math.max(m, c.id), 0);
@@ -227,16 +244,19 @@ function ensureDemoPatients(store, targetCount = 500) {
   store.nextId = store.nextId || {};
   store.nextId.patient = Math.max(store.nextId.patient || 1, nextPatientId);
   store.nextId.customer = Math.max(store.nextId.customer || 1, nextCustomerId);
+  const stamped = stampPatientRefs(store);
 
   return {
     added: patients.length - existing.length,
     total: patients.length,
     patients,
+    stamped,
   };
 }
 
 module.exports = {
   generateDemoPatients,
   ensureDemoPatients,
+  stampPatientRefs,
   DEMO_PATIENT_COUNT: 500,
 };

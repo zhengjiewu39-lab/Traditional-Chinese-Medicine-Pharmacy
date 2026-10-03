@@ -70,7 +70,8 @@ export default function CaseList({ mode = 'all' }) {
   const { t } = useLanguage();
   const [params, setParams] = useSearchParams();
   const [cases, setCases] = useState([]);
-  const [queue, setQueue] = useState({ priority: [], batch: [], fast: [], secondReview: [] });
+  const [total, setTotal] = useState(0);
+  const [queue, setQueue] = useState({ priority: [], batch: [], fast: [], secondReview: [], totals: {} });
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const state = mode === 'queue' ? 'pharmacist_review_required' : params.get('state') || '';
@@ -82,8 +83,9 @@ export default function CaseList({ mode = 'all' }) {
         const q = await aiCasesApi.reviewQueue();
         setQueue(q.data);
       } else {
-        const res = await aiCasesApi.list({ ...(state ? { state } : {}), ...(tier ? { riskTier: tier } : {}) });
+        const res = await aiCasesApi.list({ ...(state ? { state } : {}), ...(tier ? { riskTier: tier } : {}), limit: 40 });
         setCases(res.data.cases);
+        setTotal(res.data.total || res.data.cases.length);
       }
       setError('');
     } catch (e) {
@@ -113,21 +115,23 @@ export default function CaseList({ mode = 'all' }) {
   };
 
   const fastRows = queue.fast || queue.batch || [];
+  const totals = queue.totals || {};
 
   if (mode === 'queue') {
     return (
       <Box>
         <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>{t('ai.cases.queueTitle')}</Typography>
         <Alert severity="info" sx={{ mb: 2 }}>{t('ai.cases.queueIntro')}</Alert>
+        {(totals.pending || 0) > 40 && <Alert severity="warning" sx={{ mb: 2 }}>{t('ai.cases.truncated', { n: 40 })}</Alert>}
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
         {notice && <Alert severity="success" sx={{ mb: 2 }}>{notice}</Alert>}
-        <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>{t('ai.cases.fastTitle', { n: fastRows.length })}</Typography>
+        <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>{t('ai.cases.fastTitle', { n: totals.fast ?? fastRows.length })}</Typography>
         <Alert severity="info" sx={{ mb: 1 }}>{t('ai.cases.fastIntro')}</Alert>
         <QueueTable rows={fastRows} empty={t('ai.cases.emptyFast')} onOpen={open} t={t} showFast onFast={fastApprove} />
-        <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>{t('ai.cases.secondTitle', { n: (queue.secondReview || []).length })}</Typography>
+        <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>{t('ai.cases.secondTitle', { n: totals.secondReview ?? (queue.secondReview || []).length })}</Typography>
         <Alert severity="info" sx={{ mb: 1 }}>{t('ai.cases.secondIntro')}</Alert>
         <QueueTable rows={queue.secondReview || []} empty={t('ai.cases.emptySecond')} onOpen={open} t={t} />
-        <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>{t('ai.cases.priority', { n: (queue.priority || []).length })}</Typography>
+        <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>{t('ai.cases.priority', { n: totals.priority ?? (queue.priority || []).length })}</Typography>
         <QueueTable rows={queue.priority || []} empty={t('ai.cases.emptyPriority')} onOpen={open} t={t} />
       </Box>
     );
@@ -136,7 +140,7 @@ export default function CaseList({ mode = 'all' }) {
   return (
     <Box>
       <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>{t('ai.cases.title')}</Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>{t('ai.cases.intro')}</Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>{t('ai.cases.intro')} {total ? t('ai.cases.showing', { n: cases.length, total }) : ''}</Typography>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
         <TextField select size="small" label={t('ai.status')} value={state} onChange={(e) => setParam('state', e.target.value)} sx={{ minWidth: 180 }}>

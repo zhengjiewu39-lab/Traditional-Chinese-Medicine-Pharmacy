@@ -272,7 +272,7 @@ function issueSelectedQuestions(c, actor) {
       question: q.questionText || q.reason,
       reason: q.reason,
       source: q.mandatory ? 'rule' : 'model',
-      requiredForDecision: false,
+      requiredForDecision: Boolean(q.mandatory),
     }, actor);
     task.questionId = q.questionId;
     task.mandatory = Boolean(q.mandatory);
@@ -291,20 +291,75 @@ function issueSelectedQuestions(c, actor) {
   return issued;
 }
 
-function confirmFactCandidate(caseId, body, actor) {
+const CANDIDATE_LOCKED_STATES = new Set(['dispensing', 'pharmacist_final_check', 'ready_for_pickup', 'completed', 'patient_declined']);
+
+function publicCandidate(cand) {
+  if (!cand) return null;
+  return {
+    candidateId: cand.candidateId,
+    fieldPath: cand.fieldPath,
+    candidateValue: cand.candidateValue,
+    sourceText: cand.sourceText,
+    status: cand.status,
+    extractSource: cand.extractedBy || cand.extractSource || null,
+  };
+}
+
+function confirmFactResponse(c, cand, actor, extra = {}) {
+  if (actor.role === 'patient') {
+    return { case: patientCaseDto(c), candidate: publicCandidate(cand), ...extra };
+  }
+  return {
+    case: {
+      caseId: c.caseId,
+      state: c.state,
+      contentVersion: c.contentVersion,
+      contentHash: c.contentHash,
+      approvalValid: Boolean(c.approval?.valid),
+    },
+    candidate: publicCandidate(cand),
+    ...extra,
+  };
+}
+
+function assertCandidateActor(c, actor) {
+  if (actor?.role === 'patient') {
+    assertBoundPatient(c, actor);
+    return;
+  }
+  if (hasPharmacistCredential(actor) && actor.role === 'pharmacist') return;
+  throw new ServiceError(403, 'candidate_forbidden', 'Only the bound patient or a pharmacist can decide a fact candidate');
+}
+
+async function confirmFactCandidate(caseId, body, actor) {
   const c = getCaseOr404(caseId);
+  assertCandidateActor(c, actor);
   const cand = (c.factCandidates || []).find((x) => x.candidateId === body.candidateId);
-  if (!cand) throw new ServiceError(404, 'candidate_not_found', 'Fact candidate not found');
-  if (cand.caseContentVersion !== c.contentVersion) throw new ServiceError(409, 'stale_candidate', 'Candidate belongs to a previous content version');
-  if (cand.status !== 'pending_confirmation') throw new ServiceError(409, 'candidate_closed', 'Candidate already decided');
+  if (!cand || (cand.caseId && cand.caseId !== c.caseId)) {
+    throw new ServiceError(404, 'candidate_not_found', 'Fact candidate not found');
+  }
   const action = body.action;
+  const already = action === 'deny' ? 'denied_by_patient' : action === 'unknown' ? 'unknown' : 'accepted';
+  if (cand.status !== 'pending_confirmation') {
+    if (cand.status === already) return confirmFactResponse(c, cand, actor, { idempotent: true });
+    throw new ServiceError(409, 'candidate_closed', 'Candidate already decided');
+  }
+  if (cand.caseContentVersion !== c.contentVersion) throw new ServiceError(409, 'stale_candidate', 'Candidate belongs to a previous content version');
   if (action === 'deny' || action === 'unknown') {
-    cand.status = action === 'deny' ? 'denied_by_patient' : 'unknown';
+    cand.status = already;
     cand.decidedBy = String(actor.id);
     cand.decidedAt = new Date().toISOString();
+    cand.closesCandidateOnly = true;
+    cand.doesNotInferDisease = true;
     persistCase(c, c.recordVersion != null ? { expectedRecordVersion: c.recordVersion } : {});
-    return { case: c, candidate: cand };
+    return confirmFactResponse(getCaseOr404(caseId), cand, actor);
   }
+  if (CANDIDATE_LOCKED_STATES.has(c.state)) {
+    throw new ServiceError(409, 'candidate_locked', 'This stage cannot silently change clinical facts from a candidate');
+  }
+  const loadedContentVersion = c.contentVersion;
+  const loadedRecordVersion = c.recordVersion || 0;
+  const before = { hash: c.contentHash, snapshot: structuredClone(contentOf(c)) };
   const applied = facts.applyFactChange(c.patient, {
     changeId: randomId('fch'),
     kind: 'correct',
@@ -317,8 +372,41 @@ function confirmFactCandidate(caseId, body, actor) {
   cand.status = 'accepted';
   cand.decidedBy = String(actor.id);
   cand.decidedAt = new Date().toISOString();
-  persistCase(c, c.recordVersion != null ? { expectedRecordVersion: c.recordVersion } : {});
-  return { case: c, candidate: cand, change: applied.change };
+  const newHash = hashObject(contentOf(c));
+  if (newHash !== before.hash) {
+    const last = c.contentHistory.at(-1);
+    if (last) last.snapshot = before.snapshot;
+    c.contentVersion += 1;
+    c.contentHash = newHash;
+    c.contentHistory.push({
+      version: c.contentVersion, contentHash: newHash, changedBy: { role: actor.role, id: String(actor.id) },
+      at: new Date().toISOString(), reason: 'fact_candidate_accepted', changedFields: [cand.fieldPath],
+    });
+    record(c, 'content_changed', actor, { fromHash: before.hash, toHash: newHash, version: c.contentVersion, reason: 'fact_candidate_accepted' });
+    clarification.retainOpenOnFactChange(c);
+    for (const doc of c.educationDocuments || []) {
+      if (['draft', 'review_required', 'approved', 'published'].includes(doc.status) && doc.caseContentVersion !== c.contentVersion) {
+        doc.status = 'superseded';
+        doc.supersededAt = new Date().toISOString();
+      }
+    }
+    for (const pc of c.patientConfirmations || []) {
+      if (!pc.usedAt && !pc.revokedAt) pc.revokedAt = new Date().toISOString();
+    }
+    invalidateApproval(c, actor, 'fact_candidate_accepted');
+  }
+  persistCase(c, { expectedVersion: loadedContentVersion, expectedRecordVersion: loadedRecordVersion });
+  syncPatientMaster(c);
+  if (newHash !== before.hash) {
+    const fresh = getCaseOr404(caseId);
+    if (['pharmacist_approved', 'patient_confirmation_required', 'patient_confirmed', 'pharmacist_review_required', 'information_incomplete'].includes(fresh.state)
+      || POST_APPROVAL_STATES.has(fresh.state)) {
+      await screen(fresh, 'fact_candidate_accepted');
+      persistScreenResult(caseId, fresh);
+    }
+  }
+  const stored = getCaseOr404(caseId);
+  return confirmFactResponse(stored, (stored.factCandidates || []).find((x) => x.candidateId === body.candidateId), actor, { change: applied.change });
 }
 
 async function screen(c, trigger) {
@@ -327,13 +415,25 @@ async function screen(c, trigger) {
   let issued = 0;
   try {
     if (c.source?.rawText || c.patient?.narrative) {
-      factExtract.attachCandidates(c, await factExtract.extractCandidateFacts(c, { provider: runtime.getProvider() }));
+      factExtract.attachCandidates(c, await factExtract.extractCandidateFacts(c, {
+        provider: runtime.allowedModelProvider(),
+        timeoutMs: runtime.timeoutMs(),
+        aiEnabled: runtime.modelCallsAllowed(),
+      }));
     }
   } catch {
     /* Extraction is advisory; a provider crash must not fail screening. */
   }
   try {
-    c.questionPlan = clarification.generateRiskQuestions(c, { mode: c.clarificationMode || 'risk_adaptive' });
+    const remainingBurden = Math.max(0, Number(c.clarificationBudget || 6) - Number(c.clarificationBurden || 0));
+    c.questionPlan = clarification.generateRiskQuestions(c, {
+      mode: c.clarificationMode || 'risk_adaptive',
+      maxBurden: remainingBurden,
+      maxRounds: Number(c.maxClarificationRounds || 3),
+    });
+    if (c.questionPlan.stopReason === 'mandatory_exceeds_budget_escalate') {
+      clarification.recordStop(c, c.questionPlan);
+    }
     issued = issueSelectedQuestions(c, SYSTEM);
   } catch {
     issued = 0;
@@ -570,6 +670,13 @@ function pharmacistDecision(caseId, body, actor) {
       if (out.abstain && !body.comment && body.action !== 'fast_approve') throw new ServiceError(400, 'comment_required', 'AI abstained; approval requires an independent-review comment');
       if (body.secondReviewerId) {
         throw new ServiceError(400, 'proxy_second_review_forbidden', 'Filling secondReviewerId is not a dual signature; the second pharmacist must log in and submit');
+      }
+      const blocking = clarification.unresolvedRequired(c);
+      if (blocking.length) {
+        throw new ServiceError(409, 'required_information_open', 'Required safety questions are unanswered or not independently verified', {
+          taskIds: blocking.map((t) => t.taskId),
+          fields: blocking.map((t) => t.fieldPath),
+        });
       }
       const target = researchProtocol.signTarget(c, latest);
       const dualPending = c.reviewLane === 'dual' || c.secondReview?.status === 'pending';
@@ -903,15 +1010,25 @@ function getOwnCase(caseId, actor) {
   return patientCaseDto(c);
 }
 
-function reviewClarification(caseId, taskId, actor) {
+function reviewClarification(caseId, taskId, actor, body = {}) {
   if (!hasPharmacistCredential(actor) || actor.role !== 'pharmacist') {
     throw new ServiceError(403, 'pharmacist_credential_required', 'Only a pharmacist can review clarification answers');
   }
   const c = getCaseOr404(caseId);
   const task = clarification.reviewTask(c, taskId, actor);
+  if (body.independentlyVerified) {
+    task.independentlyVerified = true;
+    task.independentSource = body.source || 'pharmacist_chart';
+    task.independentNote = String(body.note || '').slice(0, 300);
+    task.verifiedBy = String(actor.id);
+    task.verifiedAt = new Date().toISOString();
+  }
   const change = (c.patient.factChangeLog || []).find((x) => x.fieldPath === task.fieldPath && x.status === 'pending_verification');
   if (change) c.patient = facts.verifyChange(c.patient, change.changeId, actor);
-  record(c, 'clarification_reviewed', actor, { taskId });
+  record(c, 'clarification_reviewed', actor, { taskId, independentlyVerified: Boolean(body.independentlyVerified) });
+  if (c.state === 'information_incomplete' && !clarification.unresolvedRequired(c).length) {
+    transition(c, 'pharmacist_review_required', actor, 'required_questions_independently_verified');
+  }
   persistCase(c, c.recordVersion != null ? { expectedRecordVersion: c.recordVersion } : {});
   syncPatientMaster(c);
   return task;
@@ -1341,12 +1458,21 @@ function reviewQueue() {
   });
   const dual = pending.filter((c) => (c.reviewLane || researchProtocol.assignLane(c.analyses.at(-1)?.output)) === 'dual' || c.secondReview?.status === 'pending');
   const rest = pending.filter((c) => !dual.includes(c));
+  const fast = rest.filter((c) => (c.reviewLane || researchProtocol.assignLane(c.analyses.at(-1)?.output)) === 'fast').map(toItem);
+  const priority = rest.filter((c) => (c.reviewLane || researchProtocol.assignLane(c.analyses.at(-1)?.output)) !== 'fast').map(toItem);
+  const cap = 40;
   return {
     protocol: researchProtocol.getProtocol(),
-    secondReview: dual.map(toItem),
-    fast: rest.filter((c) => (c.reviewLane || researchProtocol.assignLane(c.analyses.at(-1)?.output)) === 'fast').map(toItem),
-    priority: rest.filter((c) => (c.reviewLane || researchProtocol.assignLane(c.analyses.at(-1)?.output)) !== 'fast').map(toItem),
-    batch: rest.filter((c) => (c.reviewLane || researchProtocol.assignLane(c.analyses.at(-1)?.output)) === 'fast').map(toItem),
+    secondReview: dual.map(toItem).slice(0, cap),
+    fast: fast.slice(0, cap),
+    priority: priority.slice(0, cap),
+    batch: fast.slice(0, cap),
+    totals: {
+      secondReview: dual.length,
+      fast: fast.length,
+      priority: priority.length,
+      pending: pending.length,
+    },
   };
 }
 
@@ -1563,8 +1689,11 @@ function followUpAction(caseId, taskId, body, actor) {
   return task;
 }
 
-function listFollowUps() {
-  return followUp.listOpen(repo.listCases());
+function listFollowUps(cases) {
+  return followUp.listOpen(cases || repo.listCasesInStates([
+    'pharmacist_approved', 'patient_confirmation_required', 'patient_confirmed',
+    'dispensing', 'pharmacist_final_check', 'ready_for_pickup', 'completed',
+  ]));
 }
 
 function issueFeedbackToken(caseId, actor) {

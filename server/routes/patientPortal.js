@@ -9,7 +9,7 @@ const repo = require('../workflow/workflowRepository');
 const audit = require('../audit/auditRepository');
 const facts = require('../workflow/clinicalFacts');
 const { getUserById } = require('../security/auth');
-const { findStorePatient, storeToWorkflow, syncPatientRecord } = require('../workflow/patientIdentity');
+const { findStorePatient, storeToWorkflow, syncPatientRecord, storePrescriptionsForRef } = require('../workflow/patientIdentity');
 
 /**
  * Patient-facing API. Token routes are public but single-use, time-limited and case-scoped;
@@ -117,11 +117,14 @@ router.get('/me/cases', handle(async (req, res) => {
   const actor = requirePatient(req, res);
   if (!actor) return;
   const mine = repo.listCases().filter((c) => c.patient?.patientRef === actor.patientRef);
+  const workflow = mine.map((c) => ({
+    ...service.patientCaseDto(c),
+    events: audit.forCase(c.caseId, { audience: 'patient' }),
+  }));
+  const center = storePrescriptionsForRef(actor.patientRef);
   res.json({
-    cases: mine.map((c) => ({
-      ...service.patientCaseDto(c),
-      events: audit.forCase(c.caseId, { audience: 'patient' }),
-    })),
+    patientRef: actor.patientRef,
+    cases: [...workflow, ...center],
   });
 }));
 
@@ -164,7 +167,7 @@ router.post('/me/cases/:id/fact-candidates', validateBody({
 }), handle(async (req, res) => {
   const actor = requirePatient(req, res);
   if (!actor) return;
-  res.json(service.confirmFactCandidate(req.params.id, req.body, actor));
+  res.json(await service.confirmFactCandidate(req.params.id, req.body, actor));
 }));
 
 router.post('/me/cases/:id/feedback', validateBody(S.PATIENT_FEEDBACK), handle(async (req, res) => {

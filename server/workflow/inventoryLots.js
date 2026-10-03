@@ -5,6 +5,7 @@
 const { randomId } = require('../common/hash');
 const repo = require('./workflowRepository');
 const { ServiceError } = require('./errors');
+const { isSyntheticMode } = require('../config/dataMode');
 
 function validIsoDate(s) {
   if (!s || !/^\d{4}-\d{2}-\d{2}$/.test(String(s))) return false;
@@ -43,7 +44,26 @@ function ensureLegacyLot(item) {
   if (existing.length) return existing;
   const qty = Number(item.stock || 0);
   if (qty <= 0) return [];
-  const expiresAt = validIsoDate(item.expiry) ? item.expiry : '2099-12-31';
+  const knownExpiry = validIsoDate(item.expiry);
+  const knownBatch = Boolean(String(item.batchNo || '').trim());
+  if (!isSyntheticMode()) {
+    const lot = {
+      lotId: randomId('lot'),
+      inventoryId: item.id,
+      name: item.name,
+      batchNo: knownBatch ? item.batchNo : 'unknown',
+      expiresAt: knownExpiry ? item.expiry : null,
+      inspection: 'unverified',
+      qty,
+      usable: false,
+      source: 'live_unverified_catalog',
+      quarantine: true,
+      createdAt: new Date().toISOString(),
+    };
+    saveLot(lot);
+    return [lot];
+  }
+  const expiresAt = knownExpiry ? item.expiry : '2099-12-31';
   const lot = {
     lotId: randomId('lot'),
     inventoryId: item.id,
@@ -53,7 +73,7 @@ function ensureLegacyLot(item) {
     inspection: 'pass',
     qty,
     usable: expiresAt > today(),
-    source: 'legacy_catalog',
+    source: 'legacy_catalog_demo',
     createdAt: new Date().toISOString(),
   };
   saveLot(lot);

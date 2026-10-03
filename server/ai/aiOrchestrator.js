@@ -8,6 +8,7 @@
  */
 const { runRuleTrack, TIER_ORDER, maxTier } = require('./ruleTrack');
 const { retrieve } = require('../knowledge/evidenceRetriever');
+const { searchGaps, mergeRetrieval } = require('../knowledge/gapSearch');
 const { knowledgeBaseVersion } = require('../knowledge/sourceRegistry');
 const { buildScreeningMessages, getPrompt } = require('./promptRegistry');
 const { SEMANTIC_OUTPUT_SCHEMA, UNIFIED_OUTPUT_SCHEMA, describeSemanticSchema } = require('./outputSchema');
@@ -94,6 +95,31 @@ function fallbackPharmacistExplanation(ruleTrack, retrieval, reasonText) {
 
 const FALLBACK_PATIENT_TEXT = '药师正在核对您的处方信息，如需补充信息会与您联系。具体用法请以药师说明为准。';
 
+const DECOCT_HINTS = {
+  附子: '先煎', 乌头: '先煎', 麻黄: '后下或另包核对', 薄荷: '后下', 砂仁: '后下',
+  钩藤: '后下', 大黄: '后下或另包', 车前子: '包煎', 旋覆花: '包煎',
+};
+
+function fallbackDeskNotes(caseRecord, ruleTrack, retrieval) {
+  const herbs = caseRecord.prescription?.herbs || [];
+  const doses = Number(caseRecord.prescription?.doseCount) || null;
+  const lines = herbs.map((h) => {
+    const tip = DECOCT_HINTS[h.name];
+    const total = doses && h.dosage != null ? `${Number(h.dosage) * doses}g/${doses}剂` : `${h.dosage ?? '?'}g/剂`;
+    return `${h.name} ${h.dosage ?? '?'}${h.unit || 'g'}（合计 ${total}${tip ? `，${tip}` : '，常规入煎'}）`;
+  });
+  const unknown = (ruleTrack.unknownHerbs || []).join('、');
+  return {
+    screening: lines.length ? `逐味：${lines.join('；')}。规则轨 ${ruleTrack.tier}。非正式药典，不能批准。` : '处方无药味，需医师补全。',
+    dispensing: lines.length
+      ? `调剂员按处方称量，不得改味改量。${lines.join('；')}。缺味或称量超差不得放行，交药师复核。`
+      : '无药味可配。',
+    admin: unknown
+      ? `规则库未覆盖：${unknown}。可终审后检索题录，不能当药典，也不能开关模型或升 live。`
+      : (retrieval.externalSearch?.used ? '有库外检索草稿待终审，不是药典，不能批准发药。' : '无新的管理待办。补货与知识条目须管理员确认后才生效。'),
+  };
+}
+
 /**
  * @param {object} caseRecord normalised case (patient, prescriber, prescription, source, caseId)
  * @param {{provider?: object|null, aiEnabled?: boolean, timeoutMs?: number, now?: Date}} options
@@ -113,13 +139,25 @@ function emptyRetrieval(ruleHits = []) {
 async function analyzeCase(caseRecord, {
   provider = null, aiEnabled = true, timeoutMs = 8000, now = new Date(), aiMode,
   rulesEnabled = true, retrievalEnabled = true, clarificationMode = 'none',
+  searchExternal, fetchImpl, searchHerbImpl,
 } = {}) {
   const mode = aiMode || getAiMode();
   const ruleTrack = runRuleTrack(caseRecord, { now });
   const herbNames = (caseRecord.prescription?.herbs || []).map((h) => h.name);
-  const retrieval = retrievalEnabled
+  let retrieval = retrievalEnabled
     ? retrieve({ ruleHits: ruleTrack.hits, herbNames })
     : emptyRetrieval(ruleTrack.hits);
+  const wantSearch = searchExternal !== false && retrievalEnabled && provider && !provider.isMock
+    && (retrieval.missingEvidenceFor.length || (ruleTrack.unknownHerbs || []).length);
+  if (wantSearch) {
+    const found = await searchGaps({
+      unknownHerbs: ruleTrack.unknownHerbs,
+      herbNames,
+      fetchImpl,
+      searchHerbImpl,
+    });
+    retrieval = mergeRetrieval(retrieval, found);
+  }
   const inputScreen = screenInput(caseRecord);
   const modelWanted = aiEnabled && (mode === 'shadow' || mode === 'live') && provider;
   const activeProvider = modelWanted ? provider : null;
@@ -153,7 +191,7 @@ async function analyzeCase(caseRecord, {
     if (!abstainReasons.includes(r)) abstainReasons.push(r);
   }
   if (ruleTrack.missingInformation.some((m) => m.critical)) abstainReasons.push('key_information_missing');
-  if (retrieval.missingEvidenceFor.length) abstainReasons.push('no_evidence');
+  if (retrieval.missingEvidenceFor.length && !retrieval.externalSearch?.used) abstainReasons.push('no_evidence');
 
   const semanticOk = showModel;
   const disagreements = semanticOk ? detectDisagreements({ ruleTrack, semantic: semantic.output, canonicalHerbs: caseRecord.prescription?.herbs || [] }) : [];
@@ -178,6 +216,16 @@ async function analyzeCase(caseRecord, {
   if (inputScreen.injectionSuspected) {
     alerts.push({ code: 'INJECTION_SUSPECTED', message: '处方或患者自由文本中疑似包含指令注入，已跳过语言模型，仅保留规则结果', ruleId: 'INJECTION_SUSPECTED', tier: 'A2', evidenceIds: [], source: 'rule' });
   }
+  if (retrieval.externalSearch?.used) {
+    alerts.push({
+      code: 'EXTERNAL_SEARCH_DRAFT',
+      message: '规则库未覆盖的药味已检索到 PubMed 题录（非正式药典）。模型可对照判断这样用药是否常见，但不能批准或发药。',
+      ruleId: null,
+      tier: 'A2',
+      evidenceIds: retrieval.retrieved.filter((e) => e.sourceType === 'pubmed_draft').map((e) => e.sourceId),
+      source: 'search',
+    });
+  }
 
   const missingInformation = [
     ...ruleTrack.missingInformation,
@@ -199,7 +247,18 @@ async function analyzeCase(caseRecord, {
     nextVerificationSteps.push({ code: 'ABSTAIN', tier: riskTier, text: `AI未给出结论（${abstainReasons.join('、')}），需药师独立审核${hardStops.length ? '并处理阻断项' : ''}` });
   }
 
-  const reasonText = semanticOk ? '' : { disabled: 'AI未启用，仅规则', disabled_by_kill_switch: 'AI总开关已关闭，仅规则', timeout: '模型超时，已回退规则', error: '模型不可用，已回退规则', schema_invalid: '模型输出不合规，已回退规则', skipped_injection: '疑似注入，已跳过模型', skipped_input_too_long: '输入过长，已跳过模型', policy_violation: '模型输出违反安全策略，已丢弃', circuit_open: '模型熔断，已回退规则' }[semantic.status];
+  const reasonText = semanticOk ? '' : ({
+    disabled: 'AI未启用，仅规则',
+    disabled_by_kill_switch: 'AI总开关已关闭，仅规则',
+    timeout: '模型超时，已回退规则',
+    error: '模型不可用，已回退规则',
+    schema_invalid: '模型输出不合规，已回退规则',
+    skipped_injection: '疑似注入，已跳过模型',
+    skipped_input_too_long: '输入过长，已跳过模型',
+    policy_violation: '模型输出违反安全策略，已丢弃',
+    circuit_open: '模型熔断，已回退规则',
+    ok: mode === 'shadow' ? '影子对照，以下为规则轨' : '规则轨',
+  }[semantic.status] || semantic.status || '规则轨');
 
   const prompt = getPrompt('rx-screening');
   const result = {
@@ -217,9 +276,12 @@ async function analyzeCase(caseRecord, {
     ruleTrackResult: ruleTrack,
     retrievalTrackResult: {
       knowledgeBaseVersion: knowledgeBaseVersion(),
-      retrieved: retrieval.retrieved.map(({ sourceId, title, version, authority, hash }) => ({ sourceId, title, version, authority, hash })),
+      retrieved: retrieval.retrieved.map(({ sourceId, title, version, authority, hash, sourceType, clinicalUse, sourceUrl }) => ({
+        sourceId, title, version, authority, hash, sourceType: sourceType || null, clinicalUse: clinicalUse === true, sourceUrl: sourceUrl || null,
+      })),
       missingEvidenceFor: retrieval.missingEvidenceFor,
       evidenceStrength: retrieval.evidenceStrength,
+      externalSearch: retrieval.externalSearch || null,
     },
     semanticTrackResult: {
       status: semantic.status,
@@ -249,9 +311,14 @@ async function analyzeCase(caseRecord, {
       semanticOk, isMock: semantic.isMock, degraded: ['timeout', 'error', 'circuit_open'].includes(semantic.status), mode,
     }),
     aiMode: mode,
+    deskNotes: (semantic.status === 'ok' && semantic.output?.deskNotes) ? semantic.output.deskNotes : fallbackDeskNotes(caseRecord, ruleTrack, retrieval),
     shadowResult: mode === 'shadow' && semantic.status === 'ok' ? {
       suggestedRiskTier: semantic.output.suggestedRiskTier,
       warningCodes: (semantic.output.warnings || []).map((w) => w.code),
+      pharmacistExplanation: semantic.output.pharmacistExplanation,
+      patientExplanation: semantic.output.patientExplanation,
+      evidenceStrength: semantic.output.evidenceStrength,
+      deskNotes: semantic.output.deskNotes || null,
       latencyMs: semantic.latencyMs,
       modelVersion: semantic.modelVersion,
       providerRequestId: semantic.providerRequestId || null,

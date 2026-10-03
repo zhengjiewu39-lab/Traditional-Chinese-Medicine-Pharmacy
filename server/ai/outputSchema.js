@@ -56,6 +56,15 @@ const SEMANTIC_OUTPUT_SCHEMA = {
     pharmacistExplanation: text(3000),
     patientExplanation: text(1500),
     evidenceStrength: { type: 'string', enum: ['strong', 'moderate', 'limited', 'none'] },
+    deskNotes: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        screening: text(800),
+        dispensing: text(800),
+        admin: text(800),
+      },
+    },
   },
 };
 

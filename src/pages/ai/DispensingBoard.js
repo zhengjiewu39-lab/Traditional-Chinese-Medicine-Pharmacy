@@ -83,10 +83,14 @@ export default function DispensingBoard() {
 
   const load = useCallback(async () => {
     try {
-      const lists = await Promise.all(COLUMN_KEYS.map((col) => aiCasesApi.list({ state: col.state })));
+      const lists = await Promise.all(COLUMN_KEYS.map((col) => aiCasesApi.list({ state: col.state, limit: 20 })));
       const full = {};
       for (let i = 0; i < COLUMN_KEYS.length; i += 1) {
-        full[COLUMN_KEYS[i].state] = await Promise.all(lists[i].data.cases.map((s) => aiCasesApi.get(s.caseId).then((r) => r.data.case)));
+        full[COLUMN_KEYS[i].state] = lists[i].data.cases.map((s) => ({
+          ...s,
+          prescription: { herbs: s.herbs || [], doseCount: s.doseCount },
+          patient: { name: s.patientName || s.patientLabel, patientRef: s.patientRef },
+        }));
       }
       setCases(full);
       const desk = await aiCasesApi.opsDesk().catch(() => ({ data: { allocations: [] } }));
@@ -143,6 +147,11 @@ export default function DispensingBoard() {
                     </Stack>
                     <Typography variant="body2" sx={{ fontWeight: 600 }}>{t('ai.dispense.patient')}: {patientLabel}</Typography>
                     <Typography variant="caption" display="block">{t('ai.dispense.herbsN', { n: (c.prescription.herbs || []).length, doses: c.prescription.doseCount ?? '?', fulfill })}</Typography>
+                    {(c.deskNotes?.dispensing || t('ai.dispense.aiBriefEmpty')) && (
+                      <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
+                        {t('ai.dispense.aiBrief')}：{c.deskNotes?.dispensing || t('ai.dispense.aiBriefEmpty')}
+                      </Typography>
+                    )}
                     <AllocationLines plan={plan} t={t} />
                     {c.serviceChoices?.substitutionConsent === 'accept' && <Chip size="small" label={t('ai.dispense.subst')} sx={{ mt: 0.5 }} />}
                     {w && <Chip size="small" color={deviations ? 'warning' : 'success'} label={deviations ? t('ai.dispense.weighOff', { n: deviations }) : t('ai.dispense.weighOk')} sx={{ mt: 0.5 }} />}

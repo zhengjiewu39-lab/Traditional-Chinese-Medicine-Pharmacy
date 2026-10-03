@@ -123,6 +123,18 @@ function openRequired(c) {
   return (c.clarificationTasks || []).filter((t) => t.requiredForDecision && ['draft', 'sent'].includes(t.status));
 }
 
+function unresolvedRequired(c) {
+  return (c.clarificationTasks || []).filter((t) => {
+    if (!t.requiredForDecision || t.source === 'model') return false;
+    if (['draft', 'sent'].includes(t.status)) return true;
+    if (t.status === 'answered') {
+      const st = t.response?.status || t.response?.kind;
+      if (['unknown', 'denied', 'declined'].includes(st) && !t.independentlyVerified) return true;
+    }
+    return false;
+  });
+}
+
 const QUESTION_WEIGHTS = {
   version: 1,
   mandatory: 100,
@@ -152,7 +164,7 @@ function mandatoryFromRules(c) {
       trigger: m.critical ? 'critical_missing' : 'missing',
       associatedRisk: m.field,
       evidenceIds: [],
-      mandatory: Boolean(m.critical) || Boolean(m.source === 'rule'),
+      mandatory: Boolean(m.critical),
       estimatedBurden: 1,
       reason: m.message || '规则要求核实',
       weightsVersion: QUESTION_WEIGHTS.version,
@@ -365,6 +377,7 @@ module.exports = {
   expireStale,
   retainOpenOnFactChange,
   openRequired,
+  unresolvedRequired,
   generateRiskQuestions,
   selectQuestions,
   recordStop,

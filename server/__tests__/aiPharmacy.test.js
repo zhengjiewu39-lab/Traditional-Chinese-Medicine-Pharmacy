@@ -254,7 +254,7 @@ describe('AI pharmacy: workflow and authority boundaries', () => {
     assert.strictEqual(mine.status, 200);
     for (const c of mine.body.cases) {
       assert.ok(!('analyses' in c) && !('decisions' in c));
-      for (const e of c.events) assert.ok(!('payload' in e) && e.actorType !== 'ai');
+      for (const e of c.events || []) assert.ok(!('payload' in e) && e.actorType !== 'ai');
     }
   });
 });
@@ -428,6 +428,46 @@ describe('AI pharmacy: three-track engine safety', () => {
     const pair = withHerbs([{ name: '甘草', dosage: 6 }, { name: '甘遂', dosage: 1 }]);
     pair.prescription.prescriberAttestations = ['EIGHTEEN_INCOMPATIBLE'];
     assert.strictEqual((await analyzeCase(pair, { provider: createMockProvider() })).riskTier, 'A3');
+  });
+
+  it('live gap search attaches PubMed drafts and does not abstain only for no_evidence', async () => {
+    const provider = {
+      id: 'openai-compatible',
+      isMock: false,
+      modelVersion: 'test-search',
+      complete: async () => JSON.stringify({
+        ambiguities: [],
+        missingInformation: [],
+        ruleHitSummary: '防风不在规则库，已对照题录',
+        warnings: [{ code: 'USAGE_NOTE', message: '题录未见明确禁忌，非正式药典', evidenceIds: ['KS-PMID-1'] }],
+        suggestedRiskTier: 'A2',
+        pharmacistExplanation: '防风9g常见于解表方。非正式药典，不能批准发药。',
+        patientExplanation: '药师会再核对用法。',
+        evidenceStrength: 'limited',
+      }),
+    };
+    const searchHerbImpl = async (herb) => ({
+      herb,
+      records: [{
+        pmid: '1',
+        title: 'Fangfeng review',
+        content: 'Fangfeng review\nJ Test 2020',
+        hash: 'pmid-1',
+        sourceUrl: 'https://pubmed.ncbi.nlm.nih.gov/1/',
+        retrievedAt: '2026-10-03T00:00:00.000Z',
+        reviewStatus: 'draft',
+      }],
+    });
+    const r = await analyzeCase(withHerbs([{ name: '防风', dosage: 9 }, { name: '黄芪', dosage: 15 }]), {
+      provider, searchExternal: true, searchHerbImpl, aiMode: 'shadow',
+    });
+    assert.ok(r.retrievalTrackResult.externalSearch?.used);
+    assert.ok(r.retrievalTrackResult.retrieved.some((e) => e.sourceId === 'KS-PMID-1'));
+    assert.ok(!r.abstainReasons.includes('no_evidence'));
+    assert.ok(r.alerts.some((a) => a.code === 'EXTERNAL_SEARCH_DRAFT'));
+    assert.match(r.shadowResult.pharmacistExplanation, /非正式药典/);
+    assert.match(r.pharmacistExplanation, /影子对照/);
+    assert.ok(r.deskNotes.screening && r.deskNotes.dispensing && r.deskNotes.admin);
   });
 
   it('replay reproduces the stored analysis', async () => {

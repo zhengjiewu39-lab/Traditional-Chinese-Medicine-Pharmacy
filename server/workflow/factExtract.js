@@ -45,8 +45,12 @@ function heuristicExtract(text) {
     const clause = clauseAround(blob, liver);
     if (FAMILY.test(clause) || HYPOTHESIS.test(clause)) {
       /* skip */
-    } else if (HISTORY.test(clause) || negated(clause)) {
+    } else if (negated(clause) && !HISTORY.test(clause)) {
       push({ fieldPath: 'patient.facts.liverImpairment', candidateValue: false, sourceText: clause.trim(), proposedStatus: 'none' });
+    } else if (HISTORY.test(clause) && /现在|目前|仍在|还在治疗|正在治疗/.test(clause)) {
+      push({ fieldPath: 'patient.facts.liverImpairment', candidateValue: true, sourceText: clause.trim(), proposedStatus: 'reported' });
+    } else if (HISTORY.test(clause)) {
+      /* History alone is not current impairment and is not proof of none. */
     } else {
       push({ fieldPath: 'patient.facts.liverImpairment', candidateValue: true, sourceText: clause.trim(), proposedStatus: 'reported' });
     }
@@ -78,26 +82,31 @@ function whitelistOnly(candidates, sourceText) {
   }));
 }
 
-async function modelExtract(text, provider) {
+async function modelExtract(text, provider, { timeoutMs = 8000 } = {}) {
   if (!provider || typeof provider.complete !== 'function') return { candidates: [], called: false };
   const messages = [
     {
       role: 'system',
-      content: 'Extract only whitelist patient facts as JSON {candidates:[{fieldPath,value,sourceText,negated}]}. sourceText must be a verbatim substring covering the full claim, including negation. Do not invent diagnoses or prescriptions. Do not mark verified.',
+      content: 'Extract only whitelist patient facts as JSON {candidates:[{fieldPath,value,sourceText,negated,temporal}]}. sourceText must be a verbatim substring covering the full claim, including negation and tense. temporal must be current|history|family|hypothesis. Do not emit a current negative fact from history alone. Do not invent diagnoses or prescriptions. Do not mark verified.',
     },
     { role: 'user', content: String(text || '').slice(0, 2000) },
   ];
   let raw;
+  const controller = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
   try {
-    raw = await provider.complete({ messages, jsonSchema: { type: 'object' } });
-  } catch {
-    return { candidates: [], called: true, invalid: true };
+    raw = await provider.complete({ messages, jsonSchema: { type: 'object' }, signal: controller?.signal });
+  } catch (err) {
+    return { candidates: [], called: true, invalid: true, error: err.name === 'AbortError' ? 'timeout' : 'error' };
+  } finally {
+    if (timer) clearTimeout(timer);
   }
   let parsed;
   try { parsed = JSON.parse(raw); } catch { return { candidates: [], called: true, invalid: true }; }
   const rows = [];
   for (const c of parsed.candidates || []) {
     if (!c.sourceText || !spanExists(text, c.sourceText)) continue;
+    if (c.temporal === 'history' || c.temporal === 'family' || c.temporal === 'hypothesis') continue;
     const status = c.negated ? 'none' : 'reported';
     try {
       const coerced = coerceFactValue(c.fieldPath, status, c.negated ? (FIELD_VALUE_SCHEMA[c.fieldPath]?.type === 'list' ? [] : c.value) : c.value);
@@ -117,23 +126,32 @@ async function modelExtract(text, provider) {
   return { candidates: rows, called: true };
 }
 
-async function extractCandidateFacts(c, { provider } = {}) {
+async function extractCandidateFacts(c, { provider, timeoutMs, aiEnabled } = {}) {
   const text = c.source?.rawText || c.patient?.narrative || '';
   if (!text.trim()) {
-    return { candidates: [], provider: 'none', isMock: Boolean(provider?.isMock), modelDidNotVerify: true, extractSource: 'empty' };
+    return { candidates: [], provider: 'none', isMock: Boolean(provider?.isMock), modelDidNotVerify: true, extractSource: 'empty', modelCalled: false };
   }
-  if (provider && typeof provider.complete === 'function') {
-    const modeled = await modelExtract(text, provider);
-    if (modeled.called && !modeled.invalid) {
-      return {
-        candidates: whitelistOnly(modeled.candidates, text),
-        provider: provider.id || 'model',
-        isMock: Boolean(provider.isMock),
-        modelDidNotVerify: true,
-        extractSource: provider.isMock ? 'mock_model' : 'live_model',
-        modelCalled: true,
-      };
-    }
+  if (aiEnabled === false || !provider || typeof provider.complete !== 'function') {
+    return {
+      candidates: whitelistOnly(heuristicExtract(text), text),
+      provider: 'heuristic_fallback',
+      isMock: false,
+      modelDidNotVerify: true,
+      extractSource: 'heuristic_fallback',
+      modelCalled: false,
+      fallbackReason: aiEnabled === false ? 'ai_disabled' : 'no_provider',
+    };
+  }
+  const modeled = await modelExtract(text, provider, { timeoutMs });
+  if (modeled.called && !modeled.invalid) {
+    return {
+      candidates: whitelistOnly(modeled.candidates, text),
+      provider: provider.id || 'model',
+      isMock: Boolean(provider.isMock),
+      modelDidNotVerify: true,
+      extractSource: provider.isMock ? 'mock_model' : 'live_model',
+      modelCalled: true,
+    };
   }
   return {
     candidates: whitelistOnly(heuristicExtract(text), text),
@@ -141,7 +159,8 @@ async function extractCandidateFacts(c, { provider } = {}) {
     isMock: false,
     modelDidNotVerify: true,
     extractSource: 'heuristic_fallback',
-    modelCalled: false,
+    modelCalled: Boolean(modeled.called),
+    fallbackReason: modeled.error || 'invalid_or_failed',
   };
 }
 
@@ -149,6 +168,7 @@ function attachCandidates(c, extracted) {
   c.factCandidates = [...(c.factCandidates || []), ...(extracted.candidates || []).map((row) => ({
     ...row,
     candidateId: row.candidateId || `cand-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    caseId: c.caseId,
     caseContentVersion: c.contentVersion,
     createdAt: new Date().toISOString(),
   }))];

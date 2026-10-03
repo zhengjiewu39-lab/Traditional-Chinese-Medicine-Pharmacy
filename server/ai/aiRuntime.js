@@ -23,6 +23,16 @@ function isAiEnabled() {
   return repo.settings().get().aiEnabled !== false;
 }
 
+function modelCallsAllowed() {
+  const { callsModel } = require('./aiMode');
+  return isAiEnabled() && callsModel();
+}
+
+function allowedModelProvider() {
+  if (!modelCallsAllowed()) return null;
+  return getProvider();
+}
+
 function setAiEnabled(enabled) {
   repo.settings().set({ aiEnabled: Boolean(enabled) });
 }
@@ -56,5 +66,6 @@ function describeRuntime() {
 }
 
 module.exports = {
-  setProviderOverride, clearProviderOverride, getProvider, isAiEnabled, setAiEnabled, timeoutMs, describeRuntime, reloadProvider,
+  setProviderOverride, clearProviderOverride, getProvider, isAiEnabled, setAiEnabled,
+  modelCallsAllowed, allowedModelProvider, timeoutMs, describeRuntime, reloadProvider,
 };

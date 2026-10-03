@@ -4,7 +4,7 @@ const api = attachAuthInterceptors(createApiClient());
 const publicApi = createApiClient();
 
 export const aiCasesApi = {
-  list: (params) => api.get('/ai/cases', { params }),
+  list: (params) => api.get('/ai/cases', { params: { limit: 40, ...params } }),
   get: (id) => api.get(`/ai/cases/${id}`),
   create: (body) => api.post('/ai/cases', body),
   update: (id, body) => api.patch(`/ai/cases/${id}`, body),
@@ -27,6 +27,8 @@ export const aiCasesApi = {
   decideEducation: (id, documentId, body) => api.post(`/ai/cases/${id}/education/${documentId}`, body),
   issueFeedbackToken: (id) => api.post(`/ai/cases/${id}/feedback-token`, {}),
   setFollowUpPlan: (id, body) => api.post(`/ai/cases/${id}/follow-up-plan`, body),
+  deskAssist: (params) => api.get('/ai/desk/assist', { params }),
+  adminConfirm: (body) => api.post('/ai/desk/admin-confirm', body),
 };
 
 export const aiDraftsApi = {

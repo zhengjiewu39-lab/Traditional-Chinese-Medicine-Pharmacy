@@ -168,6 +168,12 @@ function requireAuth(req, res, next) {
   return next();
 }
 
+function demoPatientActorId(ref) {
+  const m = String(ref || '').match(/^P(\d+)$/i);
+  if (!m) return 6;
+  return 100000 + Number(m[1]);
+}
+
 function authenticate(username, password, { patientRef } = {}) {
   if (typeof username !== 'string' || typeof password !== 'string') return null;
   const { bindDemoPatient, parsePatientRef } = require('../workflow/patientIdentity');
@@ -181,6 +187,7 @@ function authenticate(username, password, { patientRef } = {}) {
         user.patientRef = bound.patientRef;
         user.name = bound.name;
         user.username = bound.patientRef === 'P1' && username === 'patient' ? 'patient' : bound.patientRef;
+        if (username !== 'patient' || bound.patientRef !== 'P1') user.id = demoPatientActorId(bound.patientRef);
       }
     }
     return { user, token: signToken(user) };
@@ -190,7 +197,7 @@ function authenticate(username, password, { patientRef } = {}) {
     const bound = bindDemoPatient(ref);
     if (bound) {
       const user = {
-        id: 6,
+        id: demoPatientActorId(bound.patientRef),
         username: bound.patientRef,
         name: bound.name,
         role: 'patient',
@@ -224,6 +231,7 @@ module.exports = {
   verifyToken,
   requireAuth,
   authenticate,
+  demoPatientActorId,
   getUsers,
   getUserById,
   isPublicPath,

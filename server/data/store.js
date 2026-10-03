@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { buildSeed } = require('./seed');
-const { ensureDemoPatients, DEMO_PATIENT_COUNT } = require('./patientGenerator');
+const { ensureDemoPatients, stampPatientRefs, DEMO_PATIENT_COUNT } = require('./patientGenerator');
 const { ensureDemoPrescriptions } = require('./prescriptionGenerator');
 const { ensureCatalogData } = require('./herbCatalog');
 const { ensureTraceabilityData, hydrateTraceability } = require('./traceabilityGenerator');
@@ -66,6 +66,7 @@ function load() {
       delete data.traceability.byCode;
       migrated = true;
     }
+    stampPatientRefs(data);
     if (migrated) save(data);
     return data;
   } catch {

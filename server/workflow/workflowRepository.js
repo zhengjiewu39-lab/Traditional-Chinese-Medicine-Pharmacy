@@ -72,13 +72,79 @@ function getCase(caseId) {
   return row ? JSON.parse(row.document) : null;
 }
 
+function parseCaseRows(rows) {
+  return rows.map((r) => JSON.parse(r.document));
+}
+
 function listCases(filter = {}) {
-  let list = listDocs('cases');
-  if (filter.state) list = list.filter((c) => c.state === filter.state);
+  const db = getDb();
+  const args = [];
+  let sql = 'SELECT document FROM kv_docs WHERE collection = ?';
+  args.push('cases');
+  if (filter.state) {
+    sql += ' AND json_extract(document, \'$.state\') = ?';
+    args.push(filter.state);
+  }
+  if (filter.queue === 'priority') {
+    sql += ' AND json_extract(document, \'$.state\') = ?';
+    args.push('pharmacist_review_required');
+  }
+  if (filter.createdById) {
+    sql += ' AND (json_extract(document, \'$.createdBy.id\') = ? OR json_extract(document, \'$.prescriber.userId\') = ?)';
+    args.push(String(filter.createdById), String(filter.createdById));
+  }
+  sql += ' ORDER BY json_extract(document, \'$.createdAt\') DESC';
+  const limit = filter.limit == null ? null : Math.min(Math.max(Number(filter.limit) || 40, 1), 200);
+  const offset = Math.max(Number(filter.offset) || 0, 0);
+  if (limit != null) {
+    sql += ' LIMIT ? OFFSET ?';
+    args.push(limit, offset);
+  }
+  let list = parseCaseRows(db.prepare(sql).all(...args));
   if (filter.riskTier) list = list.filter((c) => c.analyses?.at(-1)?.output?.riskTier === filter.riskTier);
-  if (filter.createdById) list = list.filter((c) => c.createdBy?.id === String(filter.createdById));
-  if (filter.queue === 'priority') list = list.filter((c) => c.state === 'pharmacist_review_required');
-  return list.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+  if (filter.states) list = list.filter((c) => filter.states.includes(c.state));
+  return list;
+}
+
+function countCases(filter = {}) {
+  const db = getDb();
+  const args = ['cases'];
+  let sql = 'SELECT COUNT(*) AS n FROM kv_docs WHERE collection = ?';
+  if (filter.state) {
+    sql += ' AND json_extract(document, \'$.state\') = ?';
+    args.push(filter.state);
+  }
+  if (filter.createdById) {
+    sql += ' AND (json_extract(document, \'$.createdBy.id\') = ? OR json_extract(document, \'$.prescriber.userId\') = ?)';
+    args.push(String(filter.createdById), String(filter.createdById));
+  }
+  return Number(db.prepare(sql).get(...args).n);
+}
+
+function countCasesByState() {
+  const rows = getDb().prepare(`
+    SELECT json_extract(document, '$.state') AS state, COUNT(*) AS n
+    FROM kv_docs WHERE collection = 'cases' GROUP BY state
+  `).all();
+  return Object.fromEntries(rows.map((r) => [r.state || 'unknown', r.n]));
+}
+
+function countCasesCreatedOn(day) {
+  const prefix = String(day || '').slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(prefix)) return 0;
+  return Number(getDb().prepare(`
+    SELECT COUNT(*) AS n FROM kv_docs
+    WHERE collection = 'cases' AND json_extract(document, '$.createdAt') LIKE ?
+  `).get(`${prefix}%`).n);
+}
+
+function listCasesInStates(states) {
+  if (!states?.length) return [];
+  const placeholders = states.map(() => '?').join(',');
+  return parseCaseRows(getDb().prepare(`
+    SELECT document FROM kv_docs
+    WHERE collection = 'cases' AND json_extract(document, '$.state') IN (${placeholders})
+  `).all(...states));
 }
 
 function saveCase(c, { expectedVersion, expectedRecordVersion } = {}) {
@@ -295,7 +361,8 @@ const _store = {
 };
 
 module.exports = {
-  getCase, listCases, saveCase, appendCaseReplay, tokens, proposals, addPurchaseDraft, purchaseDrafts, settings,
+  getCase, listCases, countCases, countCasesByState, countCasesCreatedOn, listCasesInStates,
+  saveCase, appendCaseReplay, tokens, proposals, addPurchaseDraft, purchaseDrafts, settings,
   getDraft, listDrafts, saveDraft, getSuggestion, listSuggestions, saveSuggestion,
   listDocs, saveDoc, getDoc,
   pickupTokens, pickupFailures, learning, recordStockMovement, upsertPatient, getPatient, listPatients,

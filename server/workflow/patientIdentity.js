@@ -65,6 +65,8 @@ function normalizePatientIdentity(patient) {
 
 function listDemoPatients({ q = '', limit = 40, offset = 0 } = {}) {
   const term = String(q || '').trim().toLowerCase();
+  const cap = Math.min(Math.max(Number(limit) || 40, 1), 500);
+  const skip = Math.max(Number(offset) || 0, 0);
   const all = (getStore().patients || []).map((p) => ({
     patientRef: refForStorePatient(p),
     id: p.id,
@@ -75,12 +77,46 @@ function listDemoPatients({ q = '', limit = 40, offset = 0 } = {}) {
     allergyCount: Array.isArray(p.allergies) ? p.allergies.length : 0,
   }));
   const filtered = term
-    ? all.filter((p) => String(p.name || '').toLowerCase().includes(term) || String(p.patientRef || '').toLowerCase().includes(term))
+    ? all.filter((p) => String(p.name || '').toLowerCase().includes(term)
+      || String(p.patientRef || '').toLowerCase().includes(term)
+      || String(p.id).includes(term))
     : all;
   return {
     total: filtered.length,
-    patients: filtered.slice(Number(offset) || 0, (Number(offset) || 0) + (Number(limit) || 40)),
+    directorySize: all.length,
+    patients: filtered.slice(skip, skip + cap),
   };
+}
+
+function storePrescriptionsForRef(patientRef) {
+  const storePt = findStorePatient(patientRef);
+  if (!storePt) return [];
+  return (getStore().prescriptions || [])
+    .filter((rx) => Number(rx.patientId) === Number(storePt.id))
+    .map((rx) => ({
+      caseId: `center-${rx.id}`,
+      caseRef: `CENTER-${rx.id}`,
+      source: 'patient_center',
+      state: 'center_record',
+      synthetic: true,
+      patientRef: refForStorePatient(storePt),
+      prescription: {
+        herbs: rx.herbs || [],
+        diagnosisText: rx.diagnosis || null,
+        text: rx.prescriptionText || null,
+      },
+      explanation: {
+        text: '患者中心演示登记。不是本系统药师签署，不能据此取药。',
+      },
+      actions: {},
+      recordedInformation: {},
+      center: {
+        id: rx.id,
+        date: rx.date || null,
+        doctor: rx.doctor || null,
+        status: rx.status || null,
+      },
+    }));
 }
 
 function parseList(value) {
@@ -246,6 +282,7 @@ module.exports = {
   storeToWorkflow,
   normalizePatientIdentity,
   listDemoPatients,
+  storePrescriptionsForRef,
   bindDemoPatient,
   sanitizePatientPatch,
   overlayStoreOnWorkflowPatient,

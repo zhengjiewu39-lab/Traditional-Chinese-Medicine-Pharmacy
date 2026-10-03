@@ -29,9 +29,9 @@ export default function Workbench() {
 
   const load = useCallback(async () => {
     try {
-      const [s, c] = await Promise.all([aiCasesApi.workbench(), aiCasesApi.list()]);
+      const s = await aiCasesApi.workbench();
       setSummary(s.data);
-      setCases(c.data.cases.slice(0, 10));
+      setCases((s.data.recent || []).slice(0, 10));
       setError('');
     } catch (e) {
       setError(formatApiError(e));

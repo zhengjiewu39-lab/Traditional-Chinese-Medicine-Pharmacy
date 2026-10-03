@@ -56,6 +56,7 @@
     "ai:evaluate:live": "node scripts/ai/evaluate-live.js",
     "ai:evaluate:compare": "node scripts/ai/evaluate-compare.js",
     "ai:migrate-legacy": "node scripts/ai/migrate-legacy.js",
+    "ai:screen:demo-500": "node scripts/ai/screen-demo-patients.js --resume --concurrency 1",
     "ai:seal-knowledge": "node scripts/ai/seal-knowledge.js",
     "restart": "node scripts/stop-dev.js --wait && concurrently --kill-others-on-fail false \"npm run server\" \"npm run start\"",
     "predev": "node scripts/stop-dev.js --wait",

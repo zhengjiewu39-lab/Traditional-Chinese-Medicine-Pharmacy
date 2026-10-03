@@ -30,6 +30,7 @@ const emptyForm = {
 };
 
 function matchesView(c, view) {
+  if (c.source === 'patient_center' || c.state === 'center_record') return view === 'all';
   if (view === 'clarifications') return Boolean(c.actions?.canClarify || (c.clarifications || []).length);
   if (view === 'education') return c.educationStatus === 'published' || Boolean((c.education || []).length);
   if (view === 'feedback') return Boolean(c.actions?.canFeedback || (c.followUps || []).length);
@@ -74,6 +75,7 @@ export default function MyPrescriptions({ view = 'all' }) {
     <Box>
       <Typography variant="h5" sx={{ fontWeight: 700, mb: 2 }}>{t(VIEW_TITLE[view] || VIEW_TITLE.all)}</Typography>
       <Alert severity="info" sx={{ mb: 2 }}>{t('ai.mine.inboxHint')}</Alert>
+      {view === 'all' && <Alert severity="warning" sx={{ mb: 2 }}>{t('ai.mine.centerHint')}</Alert>}
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       {notice && <Alert severity="success" sx={{ mb: 2 }}>{notice}</Alert>}
       {cases && !cases.filter((c) => matchesView(c, view)).length && <Alert severity="info">{t(VIEW_EMPTY[view] || VIEW_EMPTY.all)}</Alert>}
@@ -90,7 +92,11 @@ export default function MyPrescriptions({ view = 'all' }) {
               <Chip size="small" label={t(STATE_LABELS[c.state] || c.state)} />
               {c.educationStatus === 'published' && <Chip size="small" variant="outlined" label={t('nav.myEducation')} />}
             </Stack>
-            <Typography variant="body2" sx={{ mt: 1 }}>{(c.prescription?.herbs || []).map((h) => `${h.name}${h.dosage ?? ''}${h.unit || ''}`).join(', ')}</Typography>
+            <Typography variant="body2" sx={{ mt: 1 }}>
+              {(c.prescription?.herbs || []).map((h) => `${h.name}${h.dosage ?? ''}${h.unit || ''}`).join(', ')
+                || c.prescription?.text
+                || ''}
+            </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>{c.explanation?.text || t('ai.mine.educationPending')}</Typography>
 
             {c.actions?.canConfirm && (

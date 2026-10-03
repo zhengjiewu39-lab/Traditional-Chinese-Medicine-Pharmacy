@@ -12,4 +12,8 @@ To produce a live report locally (still synthetic cases, still not a clinical va
 AI_PROVIDER=openai-compatible AI_BASE_URL=... AI_MODEL=... AI_API_KEY=... npm run ai:evaluate:live
 ```
 
+`npm run ai:evaluate:compare` also accepts the admin-saved runtime overlay (`runtime-provider.json`) when those env vars are unset. Overlay mode stays **shadow** until a dual pharmacist/governance promote. JSON under this directory is gitignored.
+
+A local smoke on 2026-10-03 (`AI_COMPARE_SMOKE=1`) wrote `compare-smoke.json` (4 cases). That file is not committed and is not a clinical result.
+
 Hard-risk recall on this set still does not prove sensitivity to unseen prescriptions.

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Box, Paper, Typography, Grid, Alert, Chip, Stack, Button, TextField, Table, TableBody, TableCell, TableRow, CircularProgress,
 } from '@mui/material';
-import { aiGovernanceApi } from '../../services/aiApi';
+import { aiGovernanceApi, aiCasesApi } from '../../services/aiApi';
 import { formatApiError } from '../../config/httpClient';
 import { useAuth } from '../../contexts/AuthContext';
 import { SEMANTIC_STATUS_LABELS, OVERRIDE_REASONS } from '../../config/aiLabels';
@@ -27,19 +27,41 @@ export default function Governance() {
   const { t } = useLanguage();
   const navigate = useNavigate();
   const [m, setM] = useState(null);
+  const [assist, setAssist] = useState(null);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
   const [reason, setReason] = useState('');
+  const [busy, setBusy] = useState('');
 
   const load = useCallback(async () => {
     try {
-      setM((await aiGovernanceApi.metrics()).data);
+      const [metrics, draft] = await Promise.all([
+        aiGovernanceApi.metrics(),
+        user?.role === 'admin' ? aiCasesApi.deskAssist({ lane: 'admin' }).catch(() => ({ data: null })) : Promise.resolve({ data: null }),
+      ]);
+      setM(metrics.data);
+      setAssist(draft.data?.brief || null);
       setError('');
     } catch (e) {
       setError(formatApiError(e));
     }
-  }, []);
+  }, [user?.role]);
 
   useEffect(() => { load(); }, [load]);
+
+  const decide = async (p, decision) => {
+    setBusy(p.id);
+    setNotice('');
+    try {
+      await aiCasesApi.adminConfirm({ type: p.type, decision, payload: p.payload || {} });
+      setNotice(decision === 'accept' ? t('ai.gov.confirmed') : t('ai.gov.rejected'));
+      await load();
+    } catch (e) {
+      setError(formatApiError(e));
+    } finally {
+      setBusy('');
+    }
+  };
 
   const toggle = async () => {
     try {
@@ -63,7 +85,28 @@ export default function Governance() {
         <Button size="small" onClick={() => navigate('/ai/knowledge')}>{t('nav.aiKnowledge')}</Button>
       </Stack>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      {notice && <Alert severity="success" sx={{ mb: 2 }}>{notice}</Alert>}
       {m.label && <Alert severity="warning" sx={{ mb: 2 }}>{m.label}</Alert>}
+      {user?.role === 'admin' && assist && (
+        <Paper sx={{ p: 2, mb: 2 }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>{t('ai.gov.assistTitle')}</Typography>
+          <Alert severity="info" sx={{ my: 1 }}>{t('ai.gov.assistHint')}</Alert>
+          {(assist.proposals || []).map((p) => (
+            <Stack key={p.id} direction="row" spacing={1} alignItems="flex-start" sx={{ mb: 1 }}>
+              <Box sx={{ flex: 1 }}>
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>{p.title}</Typography>
+                <Typography variant="caption" color="text.secondary">{p.detail}</Typography>
+              </Box>
+              {p.needsConfirm && (
+                <>
+                  <Button size="small" variant="contained" disabled={Boolean(busy)} onClick={() => decide(p, 'accept')}>{t('ai.gov.confirm')}</Button>
+                  <Button size="small" disabled={Boolean(busy)} onClick={() => decide(p, 'reject')}>{t('ai.gov.reject')}</Button>
+                </>
+              )}
+            </Stack>
+          ))}
+        </Paper>
+      )}
       {user?.role === 'admin' && (
         <Paper sx={{ p: 2, mb: 2 }}>
           <ConnectRealAi onSaved={load} />

@@ -376,6 +376,33 @@ export default function ReviewDetail() {
                 </Section>
               )}
 
+              {out.shadowResult?.pharmacistExplanation && (
+                <Section title={t('ai.review.shadowTitle')}>
+                  <Alert severity="info" sx={{ mb: 1 }}>{t('ai.review.shadowHint')}</Alert>
+                  <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>{out.shadowResult.pharmacistExplanation}</Typography>
+                  {(out.deskNotes || out.shadowResult.deskNotes) && (
+                    <Box sx={{ mt: 1 }}>
+                      {['screening', 'dispensing', 'admin'].map((k) => {
+                        const text = (out.deskNotes || out.shadowResult.deskNotes || {})[k];
+                        if (!text) return null;
+                        const titleKey = k === 'screening' ? 'ai.review.deskScreening' : k === 'dispensing' ? 'ai.review.deskDispensing' : 'ai.review.deskAdmin';
+                        return (
+                          <Box key={k} sx={{ mt: 1 }}>
+                            <Typography variant="caption" color="text.secondary">{t(titleKey)}</Typography>
+                            <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>{text}</Typography>
+                          </Box>
+                        );
+                      })}
+                    </Box>
+                  )}
+                  {out.shadowResult.suggestedRiskTier && (
+                    <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
+                      {t('ai.review.evidenceStrength', { v: out.shadowResult.evidenceStrength || '—', model: out.shadowResult.modelVersion || out.modelVersion, prompt: out.promptVersion, rules: out.ruleSetVersion, kb: out.knowledgeBaseVersion })}
+                    </Typography>
+                  )}
+                </Section>
+              )}
+
               <Section title={t('ai.review.explain')} action={<Chip size="small" label={t(SEMANTIC_STATUS_LABELS[out.semanticTrackResult.status] || out.semanticTrackResult.status)} />}>
                 <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>{out.pharmacistExplanation}</Typography>
                 <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
@@ -397,7 +424,12 @@ export default function ReviewDetail() {
               <Section title={t('ai.review.cites')}>
                 <List dense>
                   {out.retrievalTrackResult.retrieved.map((e) => (
-                    <ListItem key={e.sourceId} disableGutters><ListItemText primary={`${e.sourceId} · ${e.title}`} secondary={`${e.authority} · v${e.version} · sha256 ${e.hash.slice(0, 12)}…`} /></ListItem>
+                    <ListItem key={e.sourceId} disableGutters>
+                      <ListItemText
+                        primary={`${e.sourceId} · ${e.title}`}
+                        secondary={`${e.authority} · v${e.version || '—'} · ${e.clinicalUse ? '' : t('ai.review.searchDraft')} · sha256 ${String(e.hash || '').slice(0, 12)}…`}
+                      />
+                    </ListItem>
                   ))}
                 </List>
                 {out.retrievalTrackResult.missingEvidenceFor.length > 0 && <Alert severity="info">{t('ai.review.missingEvid', { v: out.retrievalTrackResult.missingEvidenceFor.join(', ') })}</Alert>}

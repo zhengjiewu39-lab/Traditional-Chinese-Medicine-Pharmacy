@@ -301,7 +301,7 @@ function runRuleTrack(caseRecord, { now = new Date() } = {}) {
 
   // ---- herbs the rule set cannot judge
   const unknown = names.filter((n) => !isKnownHerb(n, herbRules));
-  unknown.forEach((n) => hits.push(hit('HERB_NOT_IN_RULESET', 'A2', `${n} 不在规则库中，系统无法判断其剂量与禁忌`, { herbs: [n] })));
+  unknown.forEach((n) => hits.push(hit('HERB_NOT_IN_RULESET', 'A2', `${n} 不在规则库中，交模型结合检索对照判断剂量与禁忌（非正式药典，需药师复核）`, { herbs: [n] })));
   const highRiskPopulation = patient.pregnancy === 'yes' || (typeof age === 'number' && (age < 6 || age >= L.veryElderlyAge));
   if (unknown.length && highRiskPopulation) {
     hits.push(hit('UNJUDGEABLE_HIGH_RISK', 'A3', `高风险人群处方含规则库未覆盖药材：${unknown.join('、')}`, {

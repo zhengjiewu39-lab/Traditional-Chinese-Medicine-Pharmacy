@@ -4,14 +4,15 @@ These are not software defects that Cursor can honestly close, plus engineering 
 
 ## Needs professional or external conditions
 
-1. **Clinical gold labels** for miss rate / citation-support rate — no pharmacist annotation in this pass (`not_evaluated`).
+1. **Clinical gold labels** for miss rate / citation-support rate — worksheet `benchmarks/ai-review/expert-label-worksheet.md` is blank; pack remains `unreviewed` (`not_evaluated`).
 2. **Authoritative knowledge** — 中国药典仍无开放全文 API，系统已登记该限制并接入 NCBI PubMed 题录检索。抓回的文献是草稿，不是药典正文，药师审核前不能当临床规则证据。捆绑库仍是 `synthetic-demo-kb.json`。不得把 PubMed 条数写成临床验证。
 3. **Emergency thresholds and on-call contacts** — not invented. Severe-symptom escalation stays in-app (`仅站内待办，未发送`). New symptoms are not auto-diagnosed as ADR.
-4. **Live LLM comparison (A/B/C/D)** — the compare runner now executes groups A–D when a live provider is configured. Without `AI_API_KEY` / provider, `npm run ai:evaluate:compare` exits 2 and writes no placeholder scores. Clinical outcome remains `not_evaluated`.
+4. **Live LLM comparison (A/B/C/D)** — a DeepSeek overlay is saved in shadow mode. A 4-case smoke ran (`results-live/compare-smoke.json`, gitignored): 0 engineering failures, 2 schema-invalid model rows. Full IT01–IT06 test split was not run. Clinical outcome remains `not_evaluated`. Promotion to `AI_MODE=live` still needs a shadow report, pharmacist approval, and governance sign-off.
 5. **MedWear** — no real interface; Observation is a reserved disabled stub. Not FHIR-certified.
 6. **Identity proofing** — checkbox `identityConfirmed` is not professional verification.
 7. **Independent pharmacist review of education text and second-review workflow in a live clinic** — not_evaluated.
-8. **Browser acceptance of the full patient–pharmacist path** — APIs and pages are wired; this pass did not complete a logged-in browser walkthrough.
+8. **Browser acceptance** — seven demo roles were walked on 2026-10-03 (`benchmarks/ai-review/browser-role-e2e-2026-10-03.md`). That is a local demo login check, not a clinic path with real patients.
+9. **500-person live screen** — model was invoked for all 500 (441 ok / 53 schema_invalid / 6 policy_violation) on existing store prescriptions. Shadow mode; nobody approved; `AI_MODE` not promoted. Not a clinical validation. Independent labels still blank.
 
 ## Engineering leftovers
 

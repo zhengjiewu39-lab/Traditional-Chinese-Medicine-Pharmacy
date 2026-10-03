@@ -32,6 +32,7 @@ function Login() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [directory, setDirectory] = useState([]);
+  const [directoryTotal, setDirectoryTotal] = useState(0);
   const [dirLoading, setDirLoading] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -53,10 +54,12 @@ function Login() {
   const loadDirectory = async (q) => {
     setDirLoading(true);
     try {
-      const r = await authApi.demoPatients({ q: q || undefined, limit: 40 });
+      const r = await authApi.demoPatients({ q: q || undefined, limit: 500 });
       setDirectory(r.data.patients || []);
+      setDirectoryTotal(r.data.directorySize ?? r.data.total ?? (r.data.patients || []).length);
     } catch {
       setDirectory([]);
+      setDirectoryTotal(0);
     } finally {
       setDirLoading(false);
     }
@@ -144,7 +147,10 @@ function Login() {
       <Dialog open={pickerOpen} onClose={() => setPickerOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>{t('login.pickPatient')}</DialogTitle>
         <DialogContent>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>{t('login.pickPatientHint')}</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+            {t('login.pickPatientHint')}
+            {directoryTotal ? ` ${t('login.pickPatientCount', { n: directoryTotal })}` : ''}
+          </Typography>
           <TextField
             autoFocus
             fullWidth

@@ -261,7 +261,12 @@ export default function DoctorWorkbench() {
             {!analysis && <Typography color="text.secondary">{t('ai.doctor.resultEmpty')}</Typography>}
             {analysis && (
               <>
-                <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', mb: 2 }}>{analysis.pharmacistExplanation}</Typography>
+                {analysis.shadowResult?.pharmacistExplanation && (
+                  <Alert severity="info" sx={{ mb: 1 }}>{t('ai.review.shadowHint')}</Alert>
+                )}
+                <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', mb: 2 }}>
+                  {analysis.shadowResult?.pharmacistExplanation || analysis.pharmacistExplanation}
+                </Typography>
                 {hard.map((h) => <Alert key={h.code} severity="error" sx={{ mb: 1 }}>{h.message}</Alert>)}
                 {alerts.map((a) => <Alert key={a.code} severity="warning" sx={{ mb: 1 }}>{a.message}</Alert>)}
                 {candidates.map((s) => (

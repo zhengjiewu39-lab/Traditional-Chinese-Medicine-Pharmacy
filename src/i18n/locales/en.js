@@ -107,9 +107,10 @@ const en = {
     supportGroup: 'Support (do not approve prescriptions)',
     demoAccounts: 'Clinical: prescriber/doc123 · pharmacist/pharm123 · pharmacist2/pharm456 · pick a synthetic patient (password patient123, e.g. P1). Support: technician/tech123 · admin/admin123 · researcher/research123',
     pickPatient: 'Choose a synthetic patient',
-    pickPatientHint: 'Each synthetic patient is one patient-mode identity. Prescribe to someone, then sign in as that ID.',
+    pickPatientHint: 'Each synthetic patient is one patient-mode identity. The ID matches the patient-center record. Prescribe to someone, then sign in as that ID.',
     pickPatientSearch: 'Search by name or ID',
     pickPatientMeta: '{age} y · {gender}',
+    pickPatientCount: '{n} people, P1–P{n}, one-to-one with the patient center.',
   },
   overview: {
     title: 'Overview',

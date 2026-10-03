@@ -1,6 +1,6 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert');
-const { generateDemoPatients, ensureDemoPatients, DEMO_PATIENT_COUNT } = require('../data/patientGenerator');
+const { generateDemoPatients, ensureDemoPatients, stampPatientRefs, DEMO_PATIENT_COUNT } = require('../data/patientGenerator');
 
 describe('demo patient generator', () => {
   it('generates requested count with unique phones', () => {
@@ -24,5 +24,21 @@ describe('demo patient generator', () => {
     assert.strictEqual(r.total, 500);
     assert.strictEqual(store.patients.length, 500);
     assert.strictEqual(DEMO_PATIENT_COUNT, 500);
+  });
+
+  it('stamps P1–P500 one-to-one on existing rows without changing ids', () => {
+    const store = {
+      patients: [
+        { id: 1, name: '张三' },
+        { id: 2, name: '李四', patientRef: 'P2' },
+        { id: 500, name: '末位' },
+      ],
+    };
+    const stamped = stampPatientRefs(store);
+    assert.strictEqual(stamped, 2);
+    assert.deepStrictEqual(store.patients.map((p) => p.patientRef), ['P1', 'P2', 'P500']);
+    const full = generateDemoPatients(500, { seed: 42 });
+    assert.strictEqual(full.patients.length, 500);
+    assert.ok(full.patients.every((p, i) => p.id === i + 1 && p.patientRef === `P${p.id}`));
   });
 });

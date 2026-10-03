@@ -21,6 +21,21 @@ describe('auth helpers', () => {
     assert.equal(result.user.patientRef, 'P1');
   });
 
+  it('maps P1, P250 and P500 logins to distinct patient-center identities', () => {
+    const a = authenticate('P1', 'patient123');
+    const b = authenticate('P250', 'patient123');
+    const c = authenticate('P500', 'patient123');
+    assert.ok(a && b && c);
+    assert.equal(a.user.patientRef, 'P1');
+    assert.equal(b.user.patientRef, 'P250');
+    assert.equal(c.user.patientRef, 'P500');
+    assert.notEqual(a.user.id, b.user.id);
+    assert.notEqual(b.user.id, c.user.id);
+    assert.ok(a.user.name);
+    assert.ok(c.user.name);
+    assert.notEqual(a.user.name, c.user.name);
+  });
+
   it('rejects invalid credentials and non-string input', () => {
     assert.equal(authenticate('admin', 'wrong'), null);
     assert.equal(authenticate('admin', undefined), null);
