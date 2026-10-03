@@ -19,6 +19,7 @@ export const aiCasesApi = {
   reviewQueue: () => api.get('/ai/review-queue'),
   opsDesk: () => api.get('/ai/ops/desk'),
   restock: (body) => api.post('/ai/ops/restock', body || {}),
+  receiveStock: (body) => api.post('/ai/ops/receive', body || {}),
   issueClarification: (id, body) => api.post(`/ai/cases/${id}/clarifications`, body),
   reviewClarification: (id, taskId) => api.post(`/ai/cases/${id}/clarifications/${taskId}/review`, {}),
   createEducation: (id, body) => api.post(`/ai/cases/${id}/education`, body),

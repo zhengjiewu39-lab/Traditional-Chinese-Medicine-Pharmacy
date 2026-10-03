@@ -19,7 +19,13 @@ function deductForCase(c, actor, { idempotencyKey } = {}) {
   if (findSuccess(`${key}:ok`)) return { replayed: true, movements: [] };
 
   const store = getStore();
-  if (!(store.inventory || []).length) return { replayed: false, movements: [], skipped: 'no_inventory_catalog' };
+  if (!(store.inventory || []).length) {
+    const { isSyntheticMode } = require('../config/dataMode');
+    if (!isSyntheticMode()) {
+      throw new ServiceError(409, 'inventory_catalog_missing', 'Live inventory catalog is missing; dispensing is blocked');
+    }
+    return { replayed: false, movements: [], skipped: 'no_inventory_catalog', demoOnly: true };
+  }
   const plan = [];
   for (const herb of c.prescription?.herbs || []) {
     const qty = Number(herb.dosage || 0) * Number(c.prescription.doseCount || 1);

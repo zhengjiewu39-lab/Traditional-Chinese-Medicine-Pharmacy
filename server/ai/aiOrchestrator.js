@@ -98,18 +98,39 @@ const FALLBACK_PATIENT_TEXT = '药师正在核对您的处方信息，如需补�
  * @param {object} caseRecord normalised case (patient, prescriber, prescription, source, caseId)
  * @param {{provider?: object|null, aiEnabled?: boolean, timeoutMs?: number, now?: Date}} options
  */
+function emptyRetrieval(ruleHits = []) {
+  return {
+    hits: ruleHits.map((h) => ({ ...h, evidenceIds: [] })),
+    retrieved: [],
+    missingEvidenceFor: [],
+    evidenceStrength: 'none',
+    retrievalCoverage: 'off',
+    evidenceQuality: 'not_assessed',
+    note: 'retrievalEnabled=false; evidence was not attached to the model context.',
+  };
+}
+
 async function analyzeCase(caseRecord, {
   provider = null, aiEnabled = true, timeoutMs = 8000, now = new Date(), aiMode,
+  rulesEnabled = true, retrievalEnabled = true, clarificationMode = 'none',
 } = {}) {
   const mode = aiMode || getAiMode();
   const ruleTrack = runRuleTrack(caseRecord, { now });
   const herbNames = (caseRecord.prescription?.herbs || []).map((h) => h.name);
-  const retrieval = retrieve({ ruleHits: ruleTrack.hits, herbNames });
+  const retrieval = retrievalEnabled
+    ? retrieve({ ruleHits: ruleTrack.hits, herbNames })
+    : emptyRetrieval(ruleTrack.hits);
   const inputScreen = screenInput(caseRecord);
   const modelWanted = aiEnabled && (mode === 'shadow' || mode === 'live') && provider;
   const activeProvider = modelWanted ? provider : null;
+  const semanticRetrieval = retrievalEnabled ? retrieval : emptyRetrieval([]);
   const semantic = await runSemanticTrack({
-    provider: activeProvider, caseRecord, ruleTrack, retrieval, timeoutMs, inputScreen,
+    provider: activeProvider,
+    caseRecord,
+    ruleTrack: rulesEnabled ? ruleTrack : { ...ruleTrack, hits: [], missingInformation: [], tier: 'A0' },
+    retrieval: semanticRetrieval,
+    timeoutMs,
+    inputScreen,
   });
   if (!aiEnabled && provider) semantic.status = 'disabled_by_kill_switch';
 
@@ -138,7 +159,7 @@ async function analyzeCase(caseRecord, {
   const disagreements = semanticOk ? detectDisagreements({ ruleTrack, semantic: semantic.output, canonicalHerbs: caseRecord.prescription?.herbs || [] }) : [];
   if (disagreements.some((d) => d.type === 'hard_rule_conflict')) abstainReasons.push('hard_rule_model_conflict');
 
-  let riskTier = ruleTrack.tier;
+  let riskTier = rulesEnabled ? ruleTrack.tier : 'A0';
   if (semanticOk) riskTier = maxTier(riskTier, TIER_ORDER[semantic.output.suggestedRiskTier] >= TIER_ORDER.A2 ? 'A2' : 'A1');
   if (inputScreen.injectionSuspected) riskTier = maxTier(riskTier, 'A2');
   if (abstainReasons.length) riskTier = maxTier(riskTier, 'A2');
@@ -241,6 +262,12 @@ async function analyzeCase(caseRecord, {
     ruleSetVersion: ruleTrack.version,
     knowledgeBaseVersion: knowledgeBaseVersion(),
     generatedAt: now.toISOString(),
+  };
+  result.experimentControl = {
+    rulesEnabled: Boolean(rulesEnabled),
+    retrievalEnabled: Boolean(retrievalEnabled),
+    clarificationMode,
+    retrievalUsed: Boolean(retrievalEnabled && (semanticRetrieval.retrieved || []).length > 0),
   };
   const unified = check(UNIFIED_OUTPUT_SCHEMA, result);
   if (!unified.valid) throw new Error(`unified output failed schema: ${JSON.stringify(unified.errors.slice(0, 3))}`);

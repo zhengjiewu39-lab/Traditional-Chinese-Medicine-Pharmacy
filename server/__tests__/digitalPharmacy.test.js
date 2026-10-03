@@ -117,6 +117,9 @@ describe('clinical facts', () => {
     const migrated = facts.attachFacts({ allergies: [] });
     assert.strictEqual(facts.allergyIsMissing(migrated), true);
     assert.strictEqual(facts.allergyIsExplicitNone(migrated), false);
+    const denied = facts.fact({ status: 'denied', value: ['青霉素'], source: 'patient' });
+    assert.notDeepStrictEqual(denied.value, []);
+    assert.notStrictEqual(denied.status, 'none');
     const { id, state } = await openCase({});
     assert.ok(['pharmacist_review_required', 'information_incomplete'].includes(state));
     const clar = await call('POST', `/api/ai/cases/${id}/clarifications`, {
@@ -298,6 +301,17 @@ describe('P1 review fixes', () => {
     assert.strictEqual(herb.status, 403);
     const factsRow = education.structuredFacts(repo.getCase(id));
     assert.strictEqual(education.factsMatchText(factsRow, '黄芪150g，每日7剂').ok, false);
+    assert.strictEqual(education.factsMatchText(factsRow, '黄芪17g，水煎服，共7剂').ok, false);
+    assert.strictEqual(education.factsMatchText(factsRow, '黄芪15mg，水煎服，共7剂').ok, false);
+    assert.strictEqual(education.factsMatchText(factsRow, '黄芪15g，水煎服，共8剂').ok, false);
+    const decoctFacts = {
+      herbs: [
+        { name: '附子', dosage: 6, unit: 'g', decoctionTiming: '先煎' },
+        { name: '薄荷', dosage: 3, unit: 'g', decoctionTiming: '后下' },
+      ],
+      doseCount: 7,
+    };
+    assert.strictEqual(education.factsMatchText(decoctFacts, '附子6g先煎，薄荷3g后下，共7剂').ok, true);
     const draft = await call('POST', `/api/ai/cases/${id}/education`, {
       as: 'pharmacist', body: { text: '黄芪15g，水煎服，日一剂，共7剂' },
     });
@@ -446,20 +460,53 @@ describe('P1 review fixes', () => {
     const before = getStore().inventory.find((i) => i.name === '黄芪').stock;
     const picked = await call('POST', `/api/ai/cases/${id}/dispensing`, { as: 'technician', body: { action: 'auto_pick' } });
     assert.strictEqual(picked.status, 200, JSON.stringify(picked.body));
-    assert.strictEqual(picked.body.case.state, 'pharmacist_final_check');
+    assert.strictEqual(picked.body.case.state, 'dispensing');
     assert.strictEqual(repo.getCase(id).allocation.patientRef, 'P1');
-    assert.ok((repo.getCase(id).dispensingRecords || []).some((r) => r.autoPick));
+    const recs = repo.getCase(id).dispensingRecords || [];
+    assert.ok(recs.some((r) => r.type === 'picking_plan' && r.autoPick));
+    assert.ok(!recs.some((r) => r.type === 'weighed'));
     const afterPick = getStore().inventory.find((i) => i.name === '黄芪').stock;
     assert.ok(afterPick < before, `stock ${before} -> ${afterPick}`);
+    const again = await call('POST', `/api/ai/cases/${id}/dispensing`, { as: 'technician', body: { action: 'start' } });
+    assert.strictEqual(again.status, 200, JSON.stringify(again.body));
+    assert.strictEqual(getStore().inventory.find((i) => i.name === '黄芪').stock, afterPick);
+
+    const noWeigh = await call('POST', `/api/ai/cases/${id}/dispensing`, { as: 'pharmacist', body: { action: 'final_check_pass' } });
+    assert.ok(noWeigh.status >= 400);
+
+    const weighed = await call('POST', `/api/ai/cases/${id}/dispensing`, {
+      as: 'technician', body: { action: 'record_weigh', weighSource: 'manual', weighedItems: [{ name: '黄芪', grams: 15, unit: 'g' }] },
+    });
+    assert.strictEqual(weighed.status, 200, JSON.stringify(weighed.body));
+    assert.strictEqual(repo.getCase(id).state, 'pharmacist_final_check');
+    const self = await call('POST', `/api/ai/cases/${id}/dispensing`, { as: 'technician', body: { action: 'final_check_pass' } });
+    assert.ok([403, 409].includes(self.status));
 
     updateStore((data) => {
       const item = data.inventory.find((i) => i.name === '甘草');
       if (item) { item.stock = 2; item.minStock = 40; }
     });
+    const beforeGan = getStore().inventory.find((i) => i.name === '甘草').stock;
     const restock = await call('POST', '/api/ai/ops/restock', { as: 'technician', body: {} });
     assert.strictEqual(restock.status, 200, JSON.stringify(restock.body));
-    assert.ok(restock.body.applied.some((a) => a.name === '甘草' && a.added > 0), JSON.stringify(restock.body.applied));
-    assert.ok(getStore().inventory.find((i) => i.name === '甘草').stock >= 40);
+    assert.ok((restock.body.requests || []).some((a) => a.name === '甘草'), JSON.stringify(restock.body));
+    assert.deepStrictEqual(restock.body.applied, []);
+    assert.strictEqual(getStore().inventory.find((i) => i.name === '甘草').stock, beforeGan);
+    const req = restock.body.requests.find((a) => a.name === '甘草');
+    const ganId = getStore().inventory.find((i) => i.name === '甘草').id;
+    const failLot = await call('POST', '/api/ai/ops/receive', {
+      as: 'technician',
+      body: { inventoryId: ganId, requestId: req.id, quantity: 50, inspection: 'fail', batchNo: 'B-FAIL', expiresAt: '2099-01-01' },
+    });
+    assert.strictEqual(failLot.status, 200, JSON.stringify(failLot.body));
+    assert.strictEqual(failLot.body.receipt.usable, false);
+    assert.strictEqual(getStore().inventory.find((i) => i.name === '甘草').stock, beforeGan);
+    const okLot = await call('POST', '/api/ai/ops/receive', {
+      as: 'technician',
+      body: { inventoryId: ganId, requestId: req.id, quantity: 50, inspection: 'pass', batchNo: 'B-OK', expiresAt: '2099-01-01' },
+    });
+    assert.strictEqual(okLot.status, 200, JSON.stringify(okLot.body));
+    assert.ok(getStore().inventory.find((i) => i.name === '甘草').stock >= beforeGan + 50);
   });
 
   it('editing a synthetic patient updates store, cases and patient-mode profile', async () => {
@@ -604,6 +651,49 @@ describe('role lanes and research protocol', () => {
     assert.strictEqual(repo.getCase(id).secondReview.status, 'completed');
   });
 
+  it('content change or re-analysis archives dual signs; stale analysis cannot finish', async () => {
+    const created = await call('POST', '/api/ai/cases', {
+      as: 'prescriber',
+      body: {
+        ...caseBody({ allergies: ['青霉素'], currentMedications: ['华法林'] }),
+        prescription: {
+          herbs: [{ name: '丹参', dosage: 10, unit: 'g' }, { name: '黄芪', dosage: 15, unit: 'g' }],
+          doseCount: 7,
+          usage: '水煎服，日一剂',
+          form: 'decoction',
+          issuedAt: new Date().toISOString().slice(0, 10),
+        },
+      },
+    });
+    const id = created.body.case.caseId;
+    let c = repo.getCase(id);
+    if (c.reviewLane !== 'dual') {
+      c.reviewLane = 'dual';
+      c.secondReview = { status: 'pending', requestedBy: 'research_protocol', mode: 'dual', firstSigner: null };
+      repo.saveCase(c);
+    }
+    const firstId = repo.getCase(id).analyses.at(-1).analysisId;
+    const first = await call('POST', `/api/ai/cases/${id}/pharmacist-decision`, {
+      as: 'pharmacist', body: { action: 'approve', analysisId: firstId, comment: '一审' },
+    });
+    assert.strictEqual(first.status, 200, JSON.stringify(first.body));
+    const patched = await call('PATCH', `/api/ai/cases/${id}`, {
+      as: 'pharmacist', body: { reason: '补充体重', patient: { weightKg: 68 } },
+    });
+    assert.strictEqual(patched.status, 200, JSON.stringify(patched.body));
+    const after = repo.getCase(id);
+    assert.notStrictEqual(after.secondReview?.status, 'completed');
+    assert.ok(!after.secondReview?.signs?.length);
+    const stale = await call('POST', `/api/ai/cases/${id}/pharmacist-decision`, {
+      as: 'pharmacist2', body: { action: 'approve', analysisId: firstId, comment: '旧分析' },
+    });
+    assert.strictEqual(stale.status, 409);
+    const proxy = await call('POST', `/api/ai/cases/${id}/pharmacist-decision`, {
+      as: 'pharmacist', body: { action: 'approve', analysisId: after.analyses.at(-1).analysisId, comment: 'ok', secondReviewerId: '3' },
+    });
+    assert.strictEqual(proxy.status, 400);
+  });
+
   it('A3 cannot be approved or fast-approved', async () => {
     const created = await call('POST', '/api/ai/cases', {
       as: 'prescriber',
@@ -647,6 +737,32 @@ describe('role lanes and research protocol', () => {
     assert.ok(!String(detail.body.case.patient.name).includes('**'));
     assert.ok(detail.body.case.patient.patientRef);
     assert.ok(detail.body.summary.patientName);
+  });
+
+  it('protocol cannot lift A3; live empty catalog blocks deduct', async () => {
+    const lifted = await call('PUT', '/api/research/evaluation/protocol', {
+      as: 'researcher',
+      body: { dualReview: { minTier: 'A3' } },
+    });
+    assert.strictEqual(lifted.status, 200, JSON.stringify(lifted.body));
+    assert.notStrictEqual(lifted.body.protocol.dualReview.minTier, 'A3');
+    const snap = JSON.parse(JSON.stringify(getStore().inventory));
+    const prev = process.env.DATA_MODE;
+    process.env.DATA_MODE = 'production';
+    try {
+      updateStore((data) => { data.inventory = []; });
+      assert.throws(
+        () => deductForCase({
+          caseId: 'live-empty',
+          contentVersion: 1,
+          prescription: { herbs: [{ name: '黄芪', dosage: 15, unit: 'g' }], doseCount: 1 },
+        }, { id: 4, role: 'technician' }),
+        (err) => err.code === 'inventory_catalog_missing',
+      );
+    } finally {
+      process.env.DATA_MODE = prev;
+      updateStore((data) => { data.inventory = snap; });
+    }
   });
 });
 

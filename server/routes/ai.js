@@ -161,12 +161,23 @@ router.get('/ops/desk', requirePermission('ops:read'), handle(async (req, res) =
 }));
 
 router.post('/ops/restock', requirePermission('ops:execute'), validateBody(S.RESTOCK_APPLY), handle(async (req, res) => {
-  const out = pharmacyOps.applyRestock(actorOf(req), req.body);
+  const out = pharmacyOps.proposeRestock(actorOf(req), req.body);
   audit.append({
-    eventType: 'ops_restock_applied',
+    eventType: 'ops_restock_requested',
     actorType: req.user.role,
     actorId: req.user.id,
-    payload: { added: out.applied.length, items: out.applied.map((a) => a.name) },
+    payload: { requests: (out.requests || []).map((r) => r.name) },
+  });
+  res.json(out);
+}));
+
+router.post('/ops/receive', requirePermission('ops:execute'), validateBody(S.STOCK_RECEIVE), handle(async (req, res) => {
+  const out = pharmacyOps.receiveStock(actorOf(req), req.body);
+  audit.append({
+    eventType: 'ops_stock_received',
+    actorType: req.user.role,
+    actorId: req.user.id,
+    payload: { name: out.receipt.name, usable: out.receipt.usable, qty: out.receipt.quantity },
   });
   res.json(out);
 }));

@@ -1,0 +1,1679 @@
+{
+  "generatedAt": "2026-10-03T01:31:20.324Z",
+  "inferenceMode": "mock",
+  "clinicalLabels": "not_evaluated",
+  "pharmacistTime": "not_evaluated",
+  "clinicalEffect": "not_estimated",
+  "protocol": {
+    "generatedAt": "2026-10-03T01:31:20.312Z",
+    "frozenCasePack": {
+      "path": "benchmarks/ai-review/cases-v1.json",
+      "version": "1.0.0",
+      "frozenAt": "2026-09-28"
+    },
+    "groups": {
+      "A": "fixed questionnaire + rules",
+      "B": "fixed questionnaire + rules + live LLM + retrieval",
+      "C": "same as B + generic clarification",
+      "D": "same as B + risk-related active questions and stop",
+      "RAG_off": "ablation: B with retrieval disabled in model context"
+    },
+    "primaryComparison": "D vs C",
+    "interactionBudget": {
+      "maxBurden": 6,
+      "maxRounds": 3,
+      "note": "Experimental parameter, not a clinical standard."
+    },
+    "smoke": true,
+    "note": "Unsafe-suggestion rate needs independent professional labels. Clinical outcomes are not_evaluated. Stopping questions is not approval."
+  },
+  "groups": {
+    "A": [
+      {
+        "groupId": "A",
+        "caseId": "C01",
+        "ok": true,
+        "latencyMs": 3,
+        "rawRisk": null,
+        "filteredRisk": "A2",
+        "pharmacistApprovedRisk": "not_evaluated",
+        "ruleRisk": "A2",
+        "semanticStatus": "disabled",
+        "retrievalUsed": false,
+        "retrievalEnabled": false,
+        "rulesEnabled": true,
+        "clarificationMode": "none",
+        "clarificationTurns": [],
+        "stopReason": null,
+        "remainingUnknown": [],
+        "modelFailure": false,
+        "engineeringFailure": false
+      },
+      {
+        "groupId": "A",
+        "caseId": "C02",
+        "ok": true,
+        "latencyMs": 0,
+        "rawRisk": null,
+        "filteredRisk": "A2",
+        "pharmacistApprovedRisk": "not_evaluated",
+        "ruleRisk": "A2",
+        "semanticStatus": "disabled",
+        "retrievalUsed": false,
+        "retrievalEnabled": false,
+        "rulesEnabled": true,
+        "clarificationMode": "none",
+        "clarificationTurns": [],
+        "stopReason": null,
+        "remainingUnknown": [],
+        "modelFailure": false,
+        "engineeringFailure": false
+      },
+      {
+        "groupId": "A",
+        "caseId": "C03",
+        "ok": true,
+        "latencyMs": 1,
+        "rawRisk": null,
+        "filteredRisk": "A2",
+        "pharmacistApprovedRisk": "not_evaluated",
+        "ruleRisk": "A2",
+        "semanticStatus": "disabled",
+        "retrievalUsed": false,
+        "retrievalEnabled": false,
+        "rulesEnabled": true,
+        "clarificationMode": "none",
+        "clarificationTurns": [],
+        "stopReason": null,
+        "remainingUnknown": [],
+        "modelFailure": false,
+        "engineeringFailure": false
+      },
+      {
+        "groupId": "A",
+        "caseId": "C04",
+        "ok": true,
+        "latencyMs": 0,
+        "rawRisk": null,
+        "filteredRisk": "A2",
+        "pharmacistApprovedRisk": "not_evaluated",
+        "ruleRisk": "A2",
+        "semanticStatus": "disabled",
+        "retrievalUsed": false,
+        "retrievalEnabled": false,
+        "rulesEnabled": true,
+        "clarificationMode": "none",
+        "clarificationTurns": [],
+        "stopReason": null,
+        "remainingUnknown": [],
+        "modelFailure": false,
+        "engineeringFailure": false
+      },
+      {
+        "groupId": "A",
+        "caseId": "C05",
+        "ok": true,
+        "latencyMs": 0,
+        "rawRisk": null,
+        "filteredRisk": "A2",
+        "pharmacistApprovedRisk": "not_evaluated",
+        "ruleRisk": "A2",
+        "semanticStatus": "disabled",
+        "retrievalUsed": false,
+        "retrievalEnabled": false,
+        "rulesEnabled": true,
+        "clarificationMode": "none",
+        "clarificationTurns": [],
+        "stopReason": null,
+        "remainingUnknown": [],
+        "modelFailure": false,
+        "engineeringFailure": false
+      },
+      {
+        "groupId": "A",
+        "caseId": "C06",
+        "ok": true,
+        "latencyMs": 0,
+        "rawRisk": null,
+        "filteredRisk": "A2",
+        "pharmacistApprovedRisk": "not_evaluated",
+        "ruleRisk": "A2",
+        "semanticStatus": "disabled",
+        "retrievalUsed": false,
+        "retrievalEnabled": false,
+        "rulesEnabled": true,
+        "clarificationMode": "none",
+        "clarificationTurns": [],
+        "stopReason": null,
+        "remainingUnknown": [],
+        "modelFailure": false,
+        "engineeringFailure": false
+      },
+      {
+        "groupId": "A",
+        "caseId": "C07",
+        "ok": true,
+        "latencyMs": 0,
+        "rawRisk": null,
+        "filteredRisk": "A2",
+        "pharmacistApprovedRisk": "not_evaluated",
+        "ruleRisk": "A2",
+        "semanticStatus": "disabled",
+        "retrievalUsed": false,
+        "retrievalEnabled": false,
+        "rulesEnabled": true,
+        "clarificationMode": "none",
+        "clarificationTurns": [],
+        "stopReason": null,
+        "remainingUnknown": [],
+        "modelFailure": false,
+        "engineeringFailure": false
+      },
+      {
+        "groupId": "A",
+        "caseId": "C08",
+        "ok": true,
+        "latencyMs": 0,
+        "rawRisk": null,
+        "filteredRisk": "A2",
+        "pharmacistApprovedRisk": "not_evaluated",
+        "ruleRisk": "A2",
+        "semanticStatus": "disabled",
+        "retrievalUsed": false,
+        "retrievalEnabled": false,
+        "rulesEnabled": true,
+        "clarificationMode": "none",
+        "clarificationTurns": [],
+        "stopReason": null,
+        "remainingUnknown": [],
+        "modelFailure": false,
+        "engineeringFailure": false
+      }
+    ],
+    "B": [
+      {
+        "groupId": "B",
+        "caseId": "C01",
+        "ok": true,
+        "latencyMs": 1,
+        "rawRisk": "A2",
+        "filteredRisk": "A2",
+        "pharmacistApprovedRisk": "not_evaluated",
+        "ruleRisk": "A2",
+        "semanticStatus": "ok",
+        "retrievalUsed": true,
+        "retrievalEnabled": true,
+        "rulesEnabled": true,
+        "clarificationMode": "none",
+        "clarificationTurns": [],
+        "stopReason": null,
+        "remainingUnknown": [],
+        "modelFailure": false,
+        "engineeringFailure": false
+      },
+      {
+        "groupId": "B",
+        "caseId": "C02",
+        "ok": true,
+        "latencyMs": 0,
+        "rawRisk": "A2",
+        "filteredRisk": "A2",
+        "pharmacistApprovedRisk": "not_evaluated",
+        "ruleRisk": "A2",
+        "semanticStatus": "ok",
+        "retrievalUsed": true,
+        "retrievalEnabled": true,
+        "rulesEnabled": true,
+        "clarificationMode": "none",
+        "clarificationTurns": [],
+        "stopReason": null,
+        "remainingUnknown": [],
+        "modelFailure": false,
+        "engineeringFailure": false
+      },
+      {
+        "groupId": "B",
+        "caseId": "C03",
+        "ok": true,
+        "latencyMs": 1,
+        "rawRisk": "A2",
+        "filteredRisk": "A2",
+        "pharmacistApprovedRisk": "not_evaluated",
+        "ruleRisk": "A2",
+        "semanticStatus": "ok",
+        "retrievalUsed": false,
+        "retrievalEnabled": true,
+        "rulesEnabled": true,
+        "clarificationMode": "none",
+        "clarificationTurns": [],
+        "stopReason": null,
+        "remainingUnknown": [],
+        "modelFailure": false,
+        "engineeringFailure": false
+      },
+      {
+        "groupId": "B",
+        "caseId": "C04",
+        "ok": true,
+        "latencyMs": 0,
+        "rawRisk": "A2",
+        "filteredRisk": "A2",
+        "pharmacistApprovedRisk": "not_evaluated",
+        "ruleRisk": "A2",
+        "semanticStatus": "ok",
+        "retrievalUsed": true,
+        "retrievalEnabled": true,
+        "rulesEnabled": true,
+        "clarificationMode": "none",
+        "clarificationTurns": [],
+        "stopReason": null,
+        "remainingUnknown": [],
+        "modelFailure": false,
+        "engineeringFailure": false
+      },
+      {
+        "groupId": "B",
+        "caseId": "C05",
+        "ok": true,
+        "latencyMs": 0,
+        "rawRisk": "A2",
+        "filteredRisk": "A2",
+        "pharmacistApprovedRisk": "not_evaluated",
+        "ruleRisk": "A2",
+        "semanticStatus": "ok",
+        "retrievalUsed": true,
+        "retrievalEnabled": true,
+        "rulesEnabled": true,
+        "clarificationMode": "none",
+        "clarificationTurns": [],
+        "stopReason": null,
+        "remainingUnknown": [],
+        "modelFailure": false,
+        "engineeringFailure": false
+      },
+      {
+        "groupId": "B",
+        "caseId": "C06",
+        "ok": true,
+        "latencyMs": 0,
+        "rawRisk": "A2",
+        "filteredRisk": "A2",
+        "pharmacistApprovedRisk": "not_evaluated",
+        "ruleRisk": "A2",
+        "semanticStatus": "ok",
+        "retrievalUsed": true,
+        "retrievalEnabled": true,
+        "rulesEnabled": true,
+        "clarificationMode": "none",
+        "clarificationTurns": [],
+        "stopReason": null,
+        "remainingUnknown": [],
+        "modelFailure": false,
+        "engineeringFailure": false
+      },
+      {
+        "groupId": "B",
+        "caseId": "C07",
+        "ok": true,
+        "latencyMs": 0,
+        "rawRisk": "A2",
+        "filteredRisk": "A2",
+        "pharmacistApprovedRisk": "not_evaluated",
+        "ruleRisk": "A2",
+        "semanticStatus": "ok",
+        "retrievalUsed": true,
+        "retrievalEnabled": true,
+        "rulesEnabled": true,
+        "clarificationMode": "none",
+        "clarificationTurns": [],
+        "stopReason": null,
+        "remainingUnknown": [],
+        "modelFailure": false,
+        "engineeringFailure": false
+      },
+      {
+        "groupId": "B",
+        "caseId": "C08",
+        "ok": true,
+        "latencyMs": 1,
+        "rawRisk": "A2",
+        "filteredRisk": "A2",
+        "pharmacistApprovedRisk": "not_evaluated",
+        "ruleRisk": "A2",
+        "semanticStatus": "ok",
+        "retrievalUsed": false,
+        "retrievalEnabled": true,
+        "rulesEnabled": true,
+        "clarificationMode": "none",
+        "clarificationTurns": [],
+        "stopReason": null,
+        "remainingUnknown": [],
+        "modelFailure": false,
+        "engineeringFailure": false
+      }
+    ],
+    "C": [
+      {
+        "groupId": "C",
+        "caseId": "C01",
+        "ok": true,
+        "latencyMs": 0,
+        "rawRisk": "A2",
+        "filteredRisk": "A2",
+        "pharmacistApprovedRisk": "not_evaluated",
+        "ruleRisk": "A2",
+        "semanticStatus": "ok",
+        "retrievalUsed": true,
+        "retrievalEnabled": true,
+        "rulesEnabled": true,
+        "clarificationMode": "generic",
+        "clarificationTurns": [
+          {
+            "fieldPath": "patient.facts.pregnancy",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.allergies",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.currentMedications",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.lactation",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.liverImpairment",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.renalImpairment",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          }
+        ],
+        "stopReason": null,
+        "remainingUnknown": [
+          "patient.facts.allergies",
+          "patient.facts.currentMedications",
+          "patient.facts.pregnancy",
+          "patient.facts.lactation",
+          "patient.facts.liverImpairment",
+          "patient.facts.renalImpairment",
+          "patient.facts.ageYears",
+          "patient.facts.weightKg"
+        ],
+        "modelFailure": false,
+        "engineeringFailure": false
+      },
+      {
+        "groupId": "C",
+        "caseId": "C02",
+        "ok": true,
+        "latencyMs": 0,
+        "rawRisk": "A2",
+        "filteredRisk": "A2",
+        "pharmacistApprovedRisk": "not_evaluated",
+        "ruleRisk": "A2",
+        "semanticStatus": "ok",
+        "retrievalUsed": true,
+        "retrievalEnabled": true,
+        "rulesEnabled": true,
+        "clarificationMode": "generic",
+        "clarificationTurns": [
+          {
+            "fieldPath": "patient.facts.allergies",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.currentMedications",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.pregnancy",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.lactation",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.liverImpairment",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.renalImpairment",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          }
+        ],
+        "stopReason": null,
+        "remainingUnknown": [
+          "patient.facts.allergies",
+          "patient.facts.currentMedications",
+          "patient.facts.pregnancy",
+          "patient.facts.lactation",
+          "patient.facts.liverImpairment",
+          "patient.facts.renalImpairment",
+          "patient.facts.ageYears",
+          "patient.facts.weightKg"
+        ],
+        "modelFailure": false,
+        "engineeringFailure": false
+      },
+      {
+        "groupId": "C",
+        "caseId": "C03",
+        "ok": true,
+        "latencyMs": 1,
+        "rawRisk": "A2",
+        "filteredRisk": "A2",
+        "pharmacistApprovedRisk": "not_evaluated",
+        "ruleRisk": "A2",
+        "semanticStatus": "ok",
+        "retrievalUsed": false,
+        "retrievalEnabled": true,
+        "rulesEnabled": true,
+        "clarificationMode": "generic",
+        "clarificationTurns": [
+          {
+            "fieldPath": "patient.facts.allergies",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.currentMedications",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.pregnancy",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.lactation",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.liverImpairment",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.renalImpairment",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          }
+        ],
+        "stopReason": null,
+        "remainingUnknown": [
+          "patient.facts.allergies",
+          "patient.facts.currentMedications",
+          "patient.facts.pregnancy",
+          "patient.facts.lactation",
+          "patient.facts.liverImpairment",
+          "patient.facts.renalImpairment",
+          "patient.facts.ageYears",
+          "patient.facts.weightKg"
+        ],
+        "modelFailure": false,
+        "engineeringFailure": false
+      },
+      {
+        "groupId": "C",
+        "caseId": "C04",
+        "ok": true,
+        "latencyMs": 0,
+        "rawRisk": "A2",
+        "filteredRisk": "A2",
+        "pharmacistApprovedRisk": "not_evaluated",
+        "ruleRisk": "A2",
+        "semanticStatus": "ok",
+        "retrievalUsed": true,
+        "retrievalEnabled": true,
+        "rulesEnabled": true,
+        "clarificationMode": "generic",
+        "clarificationTurns": [
+          {
+            "fieldPath": "patient.facts.allergies",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.currentMedications",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.pregnancy",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.lactation",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.liverImpairment",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.renalImpairment",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          }
+        ],
+        "stopReason": null,
+        "remainingUnknown": [
+          "patient.facts.allergies",
+          "patient.facts.currentMedications",
+          "patient.facts.pregnancy",
+          "patient.facts.lactation",
+          "patient.facts.liverImpairment",
+          "patient.facts.renalImpairment",
+          "patient.facts.ageYears",
+          "patient.facts.weightKg"
+        ],
+        "modelFailure": false,
+        "engineeringFailure": false
+      },
+      {
+        "groupId": "C",
+        "caseId": "C05",
+        "ok": true,
+        "latencyMs": 0,
+        "rawRisk": "A2",
+        "filteredRisk": "A2",
+        "pharmacistApprovedRisk": "not_evaluated",
+        "ruleRisk": "A2",
+        "semanticStatus": "ok",
+        "retrievalUsed": true,
+        "retrievalEnabled": true,
+        "rulesEnabled": true,
+        "clarificationMode": "generic",
+        "clarificationTurns": [
+          {
+            "fieldPath": "patient.facts.pregnancy",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.allergies",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.currentMedications",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.lactation",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.liverImpairment",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.renalImpairment",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          }
+        ],
+        "stopReason": null,
+        "remainingUnknown": [
+          "patient.facts.allergies",
+          "patient.facts.currentMedications",
+          "patient.facts.pregnancy",
+          "patient.facts.lactation",
+          "patient.facts.liverImpairment",
+          "patient.facts.renalImpairment",
+          "patient.facts.ageYears",
+          "patient.facts.weightKg"
+        ],
+        "modelFailure": false,
+        "engineeringFailure": false
+      },
+      {
+        "groupId": "C",
+        "caseId": "C06",
+        "ok": true,
+        "latencyMs": 1,
+        "rawRisk": "A2",
+        "filteredRisk": "A2",
+        "pharmacistApprovedRisk": "not_evaluated",
+        "ruleRisk": "A2",
+        "semanticStatus": "ok",
+        "retrievalUsed": true,
+        "retrievalEnabled": true,
+        "rulesEnabled": true,
+        "clarificationMode": "generic",
+        "clarificationTurns": [
+          {
+            "fieldPath": "patient.facts.allergies",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.currentMedications",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.pregnancy",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.lactation",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.liverImpairment",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.renalImpairment",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          }
+        ],
+        "stopReason": null,
+        "remainingUnknown": [
+          "patient.facts.allergies",
+          "patient.facts.currentMedications",
+          "patient.facts.pregnancy",
+          "patient.facts.lactation",
+          "patient.facts.liverImpairment",
+          "patient.facts.renalImpairment",
+          "patient.facts.ageYears",
+          "patient.facts.weightKg"
+        ],
+        "modelFailure": false,
+        "engineeringFailure": false
+      },
+      {
+        "groupId": "C",
+        "caseId": "C07",
+        "ok": true,
+        "latencyMs": 0,
+        "rawRisk": "A2",
+        "filteredRisk": "A2",
+        "pharmacistApprovedRisk": "not_evaluated",
+        "ruleRisk": "A2",
+        "semanticStatus": "ok",
+        "retrievalUsed": true,
+        "retrievalEnabled": true,
+        "rulesEnabled": true,
+        "clarificationMode": "generic",
+        "clarificationTurns": [
+          {
+            "fieldPath": "patient.facts.pregnancy",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.allergies",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.currentMedications",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.lactation",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.liverImpairment",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.renalImpairment",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          }
+        ],
+        "stopReason": null,
+        "remainingUnknown": [
+          "patient.facts.allergies",
+          "patient.facts.currentMedications",
+          "patient.facts.pregnancy",
+          "patient.facts.lactation",
+          "patient.facts.liverImpairment",
+          "patient.facts.renalImpairment",
+          "patient.facts.ageYears",
+          "patient.facts.weightKg"
+        ],
+        "modelFailure": false,
+        "engineeringFailure": false
+      },
+      {
+        "groupId": "C",
+        "caseId": "C08",
+        "ok": true,
+        "latencyMs": 0,
+        "rawRisk": "A2",
+        "filteredRisk": "A2",
+        "pharmacistApprovedRisk": "not_evaluated",
+        "ruleRisk": "A2",
+        "semanticStatus": "ok",
+        "retrievalUsed": false,
+        "retrievalEnabled": true,
+        "rulesEnabled": true,
+        "clarificationMode": "generic",
+        "clarificationTurns": [
+          {
+            "fieldPath": "patient.facts.allergies",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.currentMedications",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.pregnancy",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.lactation",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.liverImpairment",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.renalImpairment",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          }
+        ],
+        "stopReason": null,
+        "remainingUnknown": [
+          "patient.facts.allergies",
+          "patient.facts.currentMedications",
+          "patient.facts.pregnancy",
+          "patient.facts.lactation",
+          "patient.facts.liverImpairment",
+          "patient.facts.renalImpairment",
+          "patient.facts.ageYears",
+          "patient.facts.weightKg"
+        ],
+        "modelFailure": false,
+        "engineeringFailure": false
+      }
+    ],
+    "D": [
+      {
+        "groupId": "D",
+        "caseId": "C01",
+        "ok": true,
+        "latencyMs": 0,
+        "rawRisk": "A2",
+        "filteredRisk": "A2",
+        "pharmacistApprovedRisk": "not_evaluated",
+        "ruleRisk": "A2",
+        "semanticStatus": "ok",
+        "retrievalUsed": true,
+        "retrievalEnabled": true,
+        "rulesEnabled": true,
+        "clarificationMode": "risk_adaptive",
+        "clarificationTurns": [
+          {
+            "fieldPath": "patient.facts.pregnancy",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.allergies",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.currentMedications",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.lactation",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.liverImpairment",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.renalImpairment",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          }
+        ],
+        "stopReason": "burden_cap",
+        "remainingUnknown": [
+          "patient.facts.allergies",
+          "patient.facts.currentMedications",
+          "patient.facts.pregnancy",
+          "patient.facts.lactation",
+          "patient.facts.liverImpairment",
+          "patient.facts.renalImpairment",
+          "patient.facts.ageYears",
+          "patient.facts.weightKg"
+        ],
+        "modelFailure": false,
+        "engineeringFailure": false
+      },
+      {
+        "groupId": "D",
+        "caseId": "C02",
+        "ok": true,
+        "latencyMs": 0,
+        "rawRisk": "A2",
+        "filteredRisk": "A2",
+        "pharmacistApprovedRisk": "not_evaluated",
+        "ruleRisk": "A2",
+        "semanticStatus": "ok",
+        "retrievalUsed": true,
+        "retrievalEnabled": true,
+        "rulesEnabled": true,
+        "clarificationMode": "risk_adaptive",
+        "clarificationTurns": [
+          {
+            "fieldPath": "patient.facts.allergies",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.currentMedications",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.pregnancy",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.lactation",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.liverImpairment",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.renalImpairment",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          }
+        ],
+        "stopReason": "burden_cap",
+        "remainingUnknown": [
+          "patient.facts.allergies",
+          "patient.facts.currentMedications",
+          "patient.facts.pregnancy",
+          "patient.facts.lactation",
+          "patient.facts.liverImpairment",
+          "patient.facts.renalImpairment",
+          "patient.facts.ageYears",
+          "patient.facts.weightKg"
+        ],
+        "modelFailure": false,
+        "engineeringFailure": false
+      },
+      {
+        "groupId": "D",
+        "caseId": "C03",
+        "ok": true,
+        "latencyMs": 1,
+        "rawRisk": "A2",
+        "filteredRisk": "A2",
+        "pharmacistApprovedRisk": "not_evaluated",
+        "ruleRisk": "A2",
+        "semanticStatus": "ok",
+        "retrievalUsed": false,
+        "retrievalEnabled": true,
+        "rulesEnabled": true,
+        "clarificationMode": "risk_adaptive",
+        "clarificationTurns": [
+          {
+            "fieldPath": "patient.facts.allergies",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.currentMedications",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.pregnancy",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.lactation",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.liverImpairment",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.renalImpairment",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          }
+        ],
+        "stopReason": "burden_cap",
+        "remainingUnknown": [
+          "patient.facts.allergies",
+          "patient.facts.currentMedications",
+          "patient.facts.pregnancy",
+          "patient.facts.lactation",
+          "patient.facts.liverImpairment",
+          "patient.facts.renalImpairment",
+          "patient.facts.ageYears",
+          "patient.facts.weightKg"
+        ],
+        "modelFailure": false,
+        "engineeringFailure": false
+      },
+      {
+        "groupId": "D",
+        "caseId": "C04",
+        "ok": true,
+        "latencyMs": 0,
+        "rawRisk": "A2",
+        "filteredRisk": "A2",
+        "pharmacistApprovedRisk": "not_evaluated",
+        "ruleRisk": "A2",
+        "semanticStatus": "ok",
+        "retrievalUsed": true,
+        "retrievalEnabled": true,
+        "rulesEnabled": true,
+        "clarificationMode": "risk_adaptive",
+        "clarificationTurns": [
+          {
+            "fieldPath": "patient.facts.allergies",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.currentMedications",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.pregnancy",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.lactation",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.liverImpairment",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.renalImpairment",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          }
+        ],
+        "stopReason": "burden_cap",
+        "remainingUnknown": [
+          "patient.facts.allergies",
+          "patient.facts.currentMedications",
+          "patient.facts.pregnancy",
+          "patient.facts.lactation",
+          "patient.facts.liverImpairment",
+          "patient.facts.renalImpairment",
+          "patient.facts.ageYears",
+          "patient.facts.weightKg"
+        ],
+        "modelFailure": false,
+        "engineeringFailure": false
+      },
+      {
+        "groupId": "D",
+        "caseId": "C05",
+        "ok": true,
+        "latencyMs": 0,
+        "rawRisk": "A2",
+        "filteredRisk": "A2",
+        "pharmacistApprovedRisk": "not_evaluated",
+        "ruleRisk": "A2",
+        "semanticStatus": "ok",
+        "retrievalUsed": true,
+        "retrievalEnabled": true,
+        "rulesEnabled": true,
+        "clarificationMode": "risk_adaptive",
+        "clarificationTurns": [
+          {
+            "fieldPath": "patient.facts.pregnancy",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.allergies",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.currentMedications",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.lactation",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.liverImpairment",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.renalImpairment",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          }
+        ],
+        "stopReason": "burden_cap",
+        "remainingUnknown": [
+          "patient.facts.allergies",
+          "patient.facts.currentMedications",
+          "patient.facts.pregnancy",
+          "patient.facts.lactation",
+          "patient.facts.liverImpairment",
+          "patient.facts.renalImpairment",
+          "patient.facts.ageYears",
+          "patient.facts.weightKg"
+        ],
+        "modelFailure": false,
+        "engineeringFailure": false
+      },
+      {
+        "groupId": "D",
+        "caseId": "C06",
+        "ok": true,
+        "latencyMs": 0,
+        "rawRisk": "A2",
+        "filteredRisk": "A2",
+        "pharmacistApprovedRisk": "not_evaluated",
+        "ruleRisk": "A2",
+        "semanticStatus": "ok",
+        "retrievalUsed": true,
+        "retrievalEnabled": true,
+        "rulesEnabled": true,
+        "clarificationMode": "risk_adaptive",
+        "clarificationTurns": [
+          {
+            "fieldPath": "patient.facts.allergies",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.currentMedications",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.pregnancy",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.lactation",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.liverImpairment",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.renalImpairment",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          }
+        ],
+        "stopReason": "burden_cap",
+        "remainingUnknown": [
+          "patient.facts.allergies",
+          "patient.facts.currentMedications",
+          "patient.facts.pregnancy",
+          "patient.facts.lactation",
+          "patient.facts.liverImpairment",
+          "patient.facts.renalImpairment",
+          "patient.facts.ageYears",
+          "patient.facts.weightKg"
+        ],
+        "modelFailure": false,
+        "engineeringFailure": false
+      },
+      {
+        "groupId": "D",
+        "caseId": "C07",
+        "ok": true,
+        "latencyMs": 0,
+        "rawRisk": "A2",
+        "filteredRisk": "A2",
+        "pharmacistApprovedRisk": "not_evaluated",
+        "ruleRisk": "A2",
+        "semanticStatus": "ok",
+        "retrievalUsed": true,
+        "retrievalEnabled": true,
+        "rulesEnabled": true,
+        "clarificationMode": "risk_adaptive",
+        "clarificationTurns": [
+          {
+            "fieldPath": "patient.facts.pregnancy",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.allergies",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.currentMedications",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.lactation",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.liverImpairment",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.renalImpairment",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          }
+        ],
+        "stopReason": "burden_cap",
+        "remainingUnknown": [
+          "patient.facts.allergies",
+          "patient.facts.currentMedications",
+          "patient.facts.pregnancy",
+          "patient.facts.lactation",
+          "patient.facts.liverImpairment",
+          "patient.facts.renalImpairment",
+          "patient.facts.ageYears",
+          "patient.facts.weightKg"
+        ],
+        "modelFailure": false,
+        "engineeringFailure": false
+      },
+      {
+        "groupId": "D",
+        "caseId": "C08",
+        "ok": true,
+        "latencyMs": 0,
+        "rawRisk": "A2",
+        "filteredRisk": "A2",
+        "pharmacistApprovedRisk": "not_evaluated",
+        "ruleRisk": "A2",
+        "semanticStatus": "ok",
+        "retrievalUsed": false,
+        "retrievalEnabled": true,
+        "rulesEnabled": true,
+        "clarificationMode": "risk_adaptive",
+        "clarificationTurns": [
+          {
+            "fieldPath": "patient.facts.allergies",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.currentMedications",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.pregnancy",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.lactation",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.liverImpairment",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          },
+          {
+            "fieldPath": "patient.facts.renalImpairment",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script"
+          }
+        ],
+        "stopReason": "burden_cap",
+        "remainingUnknown": [
+          "patient.facts.allergies",
+          "patient.facts.currentMedications",
+          "patient.facts.pregnancy",
+          "patient.facts.lactation",
+          "patient.facts.liverImpairment",
+          "patient.facts.renalImpairment",
+          "patient.facts.ageYears",
+          "patient.facts.weightKg"
+        ],
+        "modelFailure": false,
+        "engineeringFailure": false
+      }
+    ],
+    "RAG_off": [
+      {
+        "groupId": "RAG_off",
+        "caseId": "C01",
+        "ok": true,
+        "latencyMs": 0,
+        "rawRisk": "A2",
+        "filteredRisk": "A2",
+        "pharmacistApprovedRisk": "not_evaluated",
+        "ruleRisk": "A2",
+        "semanticStatus": "ok",
+        "retrievalUsed": false,
+        "retrievalEnabled": false,
+        "rulesEnabled": true,
+        "clarificationMode": "none",
+        "clarificationTurns": [],
+        "stopReason": null,
+        "remainingUnknown": [],
+        "modelFailure": false,
+        "engineeringFailure": false
+      },
+      {
+        "groupId": "RAG_off",
+        "caseId": "C02",
+        "ok": true,
+        "latencyMs": 1,
+        "rawRisk": "A2",
+        "filteredRisk": "A2",
+        "pharmacistApprovedRisk": "not_evaluated",
+        "ruleRisk": "A2",
+        "semanticStatus": "ok",
+        "retrievalUsed": false,
+        "retrievalEnabled": false,
+        "rulesEnabled": true,
+        "clarificationMode": "none",
+        "clarificationTurns": [],
+        "stopReason": null,
+        "remainingUnknown": [],
+        "modelFailure": false,
+        "engineeringFailure": false
+      },
+      {
+        "groupId": "RAG_off",
+        "caseId": "C03",
+        "ok": true,
+        "latencyMs": 0,
+        "rawRisk": "A2",
+        "filteredRisk": "A2",
+        "pharmacistApprovedRisk": "not_evaluated",
+        "ruleRisk": "A2",
+        "semanticStatus": "ok",
+        "retrievalUsed": false,
+        "retrievalEnabled": false,
+        "rulesEnabled": true,
+        "clarificationMode": "none",
+        "clarificationTurns": [],
+        "stopReason": null,
+        "remainingUnknown": [],
+        "modelFailure": false,
+        "engineeringFailure": false
+      },
+      {
+        "groupId": "RAG_off",
+        "caseId": "C04",
+        "ok": true,
+        "latencyMs": 0,
+        "rawRisk": "A2",
+        "filteredRisk": "A2",
+        "pharmacistApprovedRisk": "not_evaluated",
+        "ruleRisk": "A2",
+        "semanticStatus": "ok",
+        "retrievalUsed": false,
+        "retrievalEnabled": false,
+        "rulesEnabled": true,
+        "clarificationMode": "none",
+        "clarificationTurns": [],
+        "stopReason": null,
+        "remainingUnknown": [],
+        "modelFailure": false,
+        "engineeringFailure": false
+      },
+      {
+        "groupId": "RAG_off",
+        "caseId": "C05",
+        "ok": true,
+        "latencyMs": 0,
+        "rawRisk": "A2",
+        "filteredRisk": "A2",
+        "pharmacistApprovedRisk": "not_evaluated",
+        "ruleRisk": "A2",
+        "semanticStatus": "ok",
+        "retrievalUsed": false,
+        "retrievalEnabled": false,
+        "rulesEnabled": true,
+        "clarificationMode": "none",
+        "clarificationTurns": [],
+        "stopReason": null,
+        "remainingUnknown": [],
+        "modelFailure": false,
+        "engineeringFailure": false
+      },
+      {
+        "groupId": "RAG_off",
+        "caseId": "C06",
+        "ok": true,
+        "latencyMs": 0,
+        "rawRisk": "A2",
+        "filteredRisk": "A2",
+        "pharmacistApprovedRisk": "not_evaluated",
+        "ruleRisk": "A2",
+        "semanticStatus": "ok",
+        "retrievalUsed": false,
+        "retrievalEnabled": false,
+        "rulesEnabled": true,
+        "clarificationMode": "none",
+        "clarificationTurns": [],
+        "stopReason": null,
+        "remainingUnknown": [],
+        "modelFailure": false,
+        "engineeringFailure": false
+      },
+      {
+        "groupId": "RAG_off",
+        "caseId": "C07",
+        "ok": true,
+        "latencyMs": 0,
+        "rawRisk": "A2",
+        "filteredRisk": "A2",
+        "pharmacistApprovedRisk": "not_evaluated",
+        "ruleRisk": "A2",
+        "semanticStatus": "ok",
+        "retrievalUsed": false,
+        "retrievalEnabled": false,
+        "rulesEnabled": true,
+        "clarificationMode": "none",
+        "clarificationTurns": [],
+        "stopReason": null,
+        "remainingUnknown": [],
+        "modelFailure": false,
+        "engineeringFailure": false
+      },
+      {
+        "groupId": "RAG_off",
+        "caseId": "C08",
+        "ok": true,
+        "latencyMs": 0,
+        "rawRisk": "A2",
+        "filteredRisk": "A2",
+        "pharmacistApprovedRisk": "not_evaluated",
+        "ruleRisk": "A2",
+        "semanticStatus": "ok",
+        "retrievalUsed": false,
+        "retrievalEnabled": false,
+        "rulesEnabled": true,
+        "clarificationMode": "none",
+        "clarificationTurns": [],
+        "stopReason": null,
+        "remainingUnknown": [],
+        "modelFailure": false,
+        "engineeringFailure": false
+      }
+    ]
+  },
+  "engineering": {
+    "cases": 8,
+    "failures": 0,
+    "modelFailures": 0
+  }
+}

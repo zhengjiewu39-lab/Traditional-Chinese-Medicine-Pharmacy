@@ -1,38 +1,51 @@
 # Validation report
 
-Research prototype only. Passing tests is not clinical validation and is not evidence of reduced adverse reactions, improved adherence, or better outcomes.
+Research prototype only. Passing tests is not clinical validation and is not evidence of reduced adverse reactions, improved adherence, or better outcomes. Demo, synthetic and real-use data must stay labelled separately. Simulated runs are not clinical validation. The system cannot auto-train or auto-deploy a new model.
 
-Checked on this machine after the 2026-10-02 repair pass (local Node may be newer than `engines.node`; CI uses Node 20):
+Checked locally after the 2026-10-03 brief (local Node may be newer than `engines.node`; CI uses Node 20):
 
 | Check | Result |
 |---|---|
-| `node --test server/__tests__/*.test.js` | 110 pass / 0 fail |
+| `npm run verify:pharmacy` | 78 pass / 0 fail |
 | `npm run lint` | pass, 0 warnings |
-| `CI=true npm run build` | compiled |
-| `npm run ai:evaluate:compare` without key | exit 2, no placeholder scores |
-| Freeze tags | `v1.0.0-research`, `legacy-cdss-v1` exist |
+| `AI_COMPARE_ALLOW_MOCK=1 AI_COMPARE_SMOKE=1 npm run ai:evaluate:compare` | mock, 8 clean cases, 0 engineering failures, wrote `benchmarks/ai-review/results-mock/` |
+| Live A/B/C/D | **未验证** — no API key was supplied; do not treat mock scores as live results |
+
+## Phase 1 (safety)
 
 | Scenario | Implemented | Verified | Notes |
 |---|---|---|---|
-| 1 Missing allergy ≠ no allergy; clarify before approval | Yes | `digitalPharmacy` 1 | Empty array migrates to unknown; confirmation page uses fact adapter |
-| 2 Stop/correct does not re-append; stale token fails | Yes | Test 2 | Confirmation token binds `contentVersion` |
-| 3 Patient/admin/AI cannot approve or change dose | Yes | Test 3 + pharmacist herb PATCH 403 | Pharmacist cannot change herbs; prescriber-only clinical edits |
-| 4 Model failure shows real status; mock stays mock | Yes | Provider adapter + test 4/12 | Default provider is `disabled`; live eval refuses mock |
-| 5 Citation presence ≠ supporting claim | Yes | Retriever `evidenceQuality=not_assessed` | Demo KB remains synthetic |
-| 6 Unpublished education hidden; 15 vs 150 rejected | Yes | Test 6 + P1 education test | Patient DTO only published docs; substring 15⊂150 fails |
-| 7 Repeat feedback; AI cannot close follow-up | Yes | Test 7 | New feedback token after each submit |
-| 8 Concurrent same-version writes: one 200, one 409 | Yes | P1 concurrent test | Two overlapping PATCH with same `expectedVersion` |
-| 9 Proxy `secondReviewerId` rejected | Yes | Test 9 + learning labels | Two logins required; admin cannot fill pharmacistApproverId |
-| 10 Research/simulation endpoints gone | Yes | Test 10 + 410 handlers | Researcher hitting `/api/simulation` is 403 or 410 |
-| 11 Migration rerun does not duplicate | Yes | Test 11 | Also imports settings/registry/datasets/exports/sampling/pickupFailures |
-| 12 Eval separates model vs rules; no invented live file | Yes | evaluate-live / evaluate-compare | Compare runner exists; live A–D not run without key |
-| P1 two clarifications persist independently | Yes | P1 test | Answered response remains; sibling stays `sent` |
-| P1 inventory missing herb fails all | Yes | P1 inventory test | Zero deduct on missing herb |
-| P1 billing role / positive qty / no case deduct | Yes | P1 billing test | Prescriber 403; qty ≤0 rejected; `caseId` 409 |
-| Browser E2E: create→clarify→answer→review→education→dispense→feedback | No | Not run | Pages and APIs are wired; this was not a logged-in browser acceptance |
-| Live A/B/C/D model experiment | No | Runner only | Blocked without provider key; clinical labels `not_evaluated` |
-| AI-generated education draft / follow-up summary | No | README corrected | Human pharmacist text / fixed template only |
+| Dual-sign binds contentVersion/hash/analysisId/protocolVersion | Yes | digitalPharmacy dual + content-change test | Content change archives signs; stale analysisId 409; proxy secondReviewerId 400 |
+| Education template vs AI paragraph; 17g/15mg/8剂; 附子先煎薄荷后下 | Yes | education factsMatchText tests | Per-herb window; superseded cannot revive |
+| auto_pick writes picking_plan only | Yes | digitalPharmacy auto-pick | State stays `dispensing`; no `type=weighed`; start reuses reservation |
+| Restock propose ≠ inbound | Yes | digitalPharmacy restock | `applied=[]`; fail inspection does not increase stock |
+| Analyze CAS / replay append-only | Yes | workflowService runAnalysis + replay | Stale model result stored in `staleAnalyses` |
+| Live empty catalog blocks deduct | Yes | digitalPharmacy live-empty test | `skipped` is demo-only |
 
-Default CI job `digital-pharmacy`: lint, `test:server`, mock `ai:evaluate`, frontend build. Supply-simulation CI jobs removed.
+## Phase 2 (facts / questions)
 
-Frontend routes now expose clarification, education, follow-up plan, and feedback-token actions on Review Detail, and typed clarification / intake feedback on patient pages. That is not a browser acceptance.
+| Scenario | Implemented | Verified | Notes |
+|---|---|---|---|
+| Fact statuses include denied/verified/conflicting | Yes | digitalPharmacy fact test | Denied allergy is not `[]` / `none` |
+| NL extract is candidate, not verified | Yes | factExtract heuristic | Source span must exist in text |
+| Risk questions: mandatory + adaptive + stop | Yes | clarificationService generateRiskQuestions | Weights are uncalibrated heuristics |
+| Live model small run | No | 未验证 | Requires an authorized person to set provider keys and run compare |
+
+## Phase 3 (experiment)
+
+| Scenario | Implemented | Verified | Notes |
+|---|---|---|---|
+| Orchestrator reads rulesEnabled/retrievalEnabled/clarificationMode | Yes | architectureConvergence | `retrievalUsed` from actual retrieved evidence |
+| Case constructor + hidden label isolation | Yes | architectureConvergence | `hiddenPatientFacts` / scripts / expert labels stay off the visible case |
+| Main groups A/B/C/D + RAG_off | Yes | evaluate-compare.js | Primary comparison D vs C |
+| Independent unsafe-suggestion labels | No | not_evaluated | Need independent professional review |
+| Pharmacist time / clinical effect / fairness | No | not_evaluated | No participant or real-use data |
+
+## Honest leftovers
+
+- Browser role E2E (create → clarify → dual-sign after edit → weigh → receive → deliver) was not logged in this pass as a full UI acceptance.
+- JSON inventory catalog and SQLite movements still coexist; deduct/receive share a SQLite transaction for movements, catalog rows remain in the JSON store.
+- No real weighing device is connected; manual entry is labelled `weighSource=manual`.
+- No live model key was used. Live results must stay in `benchmarks/ai-review/results-live/` and must not be copied from mock.
+
+Backup: `./scripts/backup-data.sh` then restore from `data/backups/<stamp>/RESTORE.txt`.

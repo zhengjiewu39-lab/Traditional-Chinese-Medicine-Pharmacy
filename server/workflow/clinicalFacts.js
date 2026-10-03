@@ -2,7 +2,7 @@
  * Clinical facts: false / [] is not "explicitly none".
  * Legacy booleans and empty arrays migrate to unknown.
  */
-const FACT_STATUSES = ['not_asked', 'unknown', 'none', 'reported', 'not_applicable'];
+const FACT_STATUSES = ['not_asked', 'unknown', 'none', 'denied', 'reported', 'verified', 'conflicting', 'not_applicable'];
 const MED_STATUSES = ['active', 'stopped', 'unknown'];
 const CHANGE_KINDS = ['add', 'stop', 'correct'];
 
@@ -10,18 +10,26 @@ function fact({
   status = 'not_asked', value = null, unit = null,
   reportedBy = null, reportedAt = null, verifiedBy = null, verifiedAt = null,
   source = 'legacy_unknown', version = 1,
+  fieldPath = null, sourceText = null, contentVersion = null,
+  previousValues = null, candidateScore = null,
 } = {}) {
   const st = FACT_STATUSES.includes(status) ? status : 'unknown';
+  const keepValue = ['reported', 'verified', 'none', 'denied', 'conflicting', 'not_applicable'].includes(st);
   return {
     status: st,
-    value: st === 'reported' || st === 'none' ? value : (st === 'unknown' || st === 'not_asked' ? null : value),
+    value: keepValue ? value : null,
     unit,
     reportedBy,
     reportedAt,
-    verifiedBy,
-    verifiedAt,
+    verifiedBy: st === 'verified' ? verifiedBy : null,
+    verifiedAt: st === 'verified' ? verifiedAt : null,
     source,
     version,
+    fieldPath,
+    sourceText,
+    contentVersion,
+    previousValues: Array.isArray(previousValues) ? previousValues : undefined,
+    candidateScore: typeof candidateScore === 'number' ? candidateScore : undefined,
   };
 }
 
@@ -144,6 +152,10 @@ function coerceFactValue(fieldPath, status, raw) {
   if (status === 'unknown' || status === 'not_asked' || status === 'not_applicable') {
     return { status, value: null };
   }
+  if (status === 'denied') {
+    if (spec.type === 'list') return { status: 'denied', value: Array.isArray(raw) ? raw.map(String) : (raw ? [String(raw)] : []) };
+    return { status: 'denied', value: raw ?? null };
+  }
   if (status === 'none') {
     if (spec.type === 'list') return { status: 'none', value: [] };
     if (spec.type === 'tri') return { status: 'none', value: 'no' };
@@ -187,24 +199,24 @@ function coerceFactValue(fieldPath, status, raw) {
 
 function projectFromFacts(p) {
   const f = p.facts || {};
-  if (f.ageYears?.status === 'reported' && f.ageYears.value != null) p.ageYears = Number(f.ageYears.value);
+  if (['reported', 'verified', 'conflicting'].includes(f.ageYears?.status) && f.ageYears.value != null) p.ageYears = Number(f.ageYears.value);
   else if (f.ageYears?.status === 'not_asked' || f.ageYears?.status === 'unknown') p.ageYears = undefined;
-  if (f.weightKg?.status === 'reported' && f.weightKg.value != null) p.weightKg = Number(f.weightKg.value);
+  if ((f.weightKg?.status === 'reported' || f.weightKg?.status === 'verified') && f.weightKg.value != null) p.weightKg = Number(f.weightKg.value);
   else if (f.weightKg) p.weightKg = undefined;
-  if (f.pregnancy?.status === 'reported') p.pregnancy = f.pregnancy.value;
+  if (f.pregnancy?.status === 'reported' || f.pregnancy?.status === 'verified') p.pregnancy = f.pregnancy.value;
   else if (f.pregnancy?.status === 'none') p.pregnancy = 'no';
   else if (f.pregnancy) p.pregnancy = 'unknown';
-  if (f.lactation?.status === 'reported') p.lactation = f.lactation.value;
+  if (f.lactation?.status === 'reported' || f.lactation?.status === 'verified') p.lactation = f.lactation.value;
   else if (f.lactation?.status === 'none') p.lactation = 'no';
   else if (f.lactation) p.lactation = 'unknown';
-  p.allergies = f.allergies?.status === 'reported'
+  p.allergies = (f.allergies?.status === 'reported' || f.allergies?.status === 'verified' || f.allergies?.status === 'conflicting')
     ? (p.allergyItems || []).filter((i) => i.status === 'reported').map((i) => i.name)
-    : (f.allergies?.status === 'none' ? [] : null);
-  p.currentMedications = f.currentMedications?.status === 'reported'
+    : (f.allergies?.status === 'none' ? [] : (f.allergies?.status === 'denied' ? f.allergies.value : null));
+  p.currentMedications = (f.currentMedications?.status === 'reported' || f.currentMedications?.status === 'verified')
     ? activeMedicationsRaw(p).map((i) => i.name)
     : (f.currentMedications?.status === 'none' ? [] : null);
-  p.liverImpairment = f.liverImpairment?.status === 'reported' && f.liverImpairment.value === true ? true : undefined;
-  p.renalImpairment = f.renalImpairment?.status === 'reported' && f.renalImpairment.value === true ? true : undefined;
+  p.liverImpairment = (f.liverImpairment?.status === 'reported' || f.liverImpairment?.status === 'verified') && f.liverImpairment.value === true ? true : undefined;
+  p.renalImpairment = (f.renalImpairment?.status === 'reported' || f.renalImpairment?.status === 'verified') && f.renalImpairment.value === true ? true : undefined;
   return p;
 }
 
@@ -240,8 +252,10 @@ function factLabel(factObj, { noneText = '明确没有', unknownText = '未知',
   if (!factObj || typeof factObj !== 'object') return { status: 'unknown', text: unknownText, names: [] };
   const st = factObj.status || 'unknown';
   if (st === 'none') return { status: 'none', text: noneText, names: [] };
+  if (st === 'denied') return { status: 'denied', text: '已否认', names: Array.isArray(factObj.value) ? factObj.value : [] };
   if (st === 'not_asked') return { status: 'not_asked', text: notAskedText, names: [] };
   if (st === 'unknown' || st === 'not_applicable') return { status: st, text: unknownText, names: [] };
+  if (st === 'conflicting') return { status: 'conflicting', text: '存在冲突', names: Array.isArray(factObj.value) ? factObj.value : [] };
   const names = Array.isArray(factObj.value) ? factObj.value : (factObj.value != null ? [factObj.value] : []);
   return { status: 'reported', text: names.join('、') || String(factObj.value ?? ''), names };
 }
@@ -440,15 +454,25 @@ function applyFactChange(patient, change, actor) {
     const incoming = (typeof change.newValue === 'object' && change.newValue && !Array.isArray(change.newValue) && change.newValue.status)
       ? change.newValue
       : { status: change.newStatus || 'reported', value: change.newValue };
-    const coerced = coerceFactValue(change.fieldPath, incoming.status, incoming.value);
+    let status = incoming.status;
+    if (status === 'verified' && actor.role === 'patient') status = 'reported';
+    if (status === 'denied' && incoming.value == null && actor.role === 'patient') status = 'denied';
+    const coerced = coerceFactValue(change.fieldPath, status, incoming.value);
+    const prev = p.facts[key];
+    const conflict = prev && ['reported', 'verified', 'conflicting'].includes(prev.status) && coerced.status === 'reported'
+      && JSON.stringify(prev.value) !== JSON.stringify(coerced.value);
     p.facts[key] = fact({
-      status: coerced.status,
+      status: conflict && change.kind !== 'correct' ? 'conflicting' : coerced.status,
       value: coerced.value,
-      unit: coerced.unit || p.facts[key]?.unit || null,
+      unit: coerced.unit || prev?.unit || null,
       reportedBy: String(actor.id),
       reportedAt: now,
-      source: 'patient_correction',
-      version: (p.facts[key]?.version || 1) + 1,
+      source: incoming.sourceText ? 'patient_or_model_text' : 'patient_correction',
+      sourceText: incoming.sourceText || null,
+      fieldPath: change.fieldPath,
+      contentVersion: change.contentVersion || null,
+      previousValues: conflict ? [...(prev.previousValues || []), { value: prev.value, status: prev.status, source: prev.source, at: prev.reportedAt }] : prev?.previousValues,
+      version: (prev?.version || 1) + 1,
     });
   }
   if (change.newStatus === 'none' && (change.fieldPath === 'patient.facts.allergies' || change.fieldPath === 'allergies')) {

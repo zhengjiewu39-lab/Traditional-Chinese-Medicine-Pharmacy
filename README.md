@@ -8,7 +8,7 @@
 
 **工作题目。** *面向线上中药药学服务的证据支持型AI决策辅助：系统开发与合成病例评估。*
 
-本轮研究问题：患者信息缺失或矛盾时，证据检索和结构化澄清是否能提高 AI 药学审核提示的可靠性。供应仿真与配货 Agent 已归档（标签 `v1.0.0-research`）。
+本轮研究问题：风险相关主动追问（相对通用澄清）是否降低独立评审判定的不安全最终建议比例。供应仿真与配货 Agent 已归档（标签 `v1.0.0-research`）。模拟运行不是临床验证。系统不能在自动学习后自行部署新模型。
 
 研究员首页：`/research/evaluation`。默认 CI 只跑数字药学核心检查。真实模型比较是显式步骤，缺密钥时如实退出。
 
@@ -56,8 +56,13 @@ npm run dev          # API :3002 + 前端 :3000
 
 ```bash
 npm run ai:evaluate          # 合成病例 + mock，工程回归
-npm run ai:evaluate:compare  # 真实模型 A/B/C/D；缺密钥退出码 2，不写占位成绩
+npm run ai:evaluate:compare  # 真实模型主实验 A/B/C/D + RAG_off；缺密钥退出码 2，不写占位成绩
+AI_COMPARE_ALLOW_MOCK=1 npm run ai:evaluate:compare   # 仅工程 mock，写入 benchmarks/ai-review/results-mock/
+AI_COMPARE_SMOKE=1 AI_COMPARE_ALLOW_MOCK=1 npm run ai:evaluate:compare  # 前 8 个 clean 病例冒烟
+./scripts/backup-data.sh     # 迁移前备份 JSON/SQLite
 ```
+
+主实验组：A 固定问卷+规则；B 固定问卷+规则+真实 LLM+检索；C 同 B + 通用澄清；D 同 B + 风险相关主动追问与停止。主要比较 D 与 C。关闭检索是独立消融组 `RAG_off`，不再把 B 写成无检索。
 
 ## 验收命令
 

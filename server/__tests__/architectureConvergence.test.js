@@ -484,3 +484,53 @@ describe('architecture convergence: pickup, data mode, learning, queue', () => {
     assert.strictEqual(created.body.status, '待审核');
   });
 });
+
+describe('experiment controls and case constructor', () => {
+  it('reads rulesEnabled and retrievalEnabled instead of inferring from group names', async () => {
+    const input = { caseId: 'exp-1', ...caseInput() };
+    const off = await analyzeCase(input, {
+      provider: createMockProvider(), aiMode: 'live', rulesEnabled: true, retrievalEnabled: false, clarificationMode: 'none',
+    });
+    assert.strictEqual(off.experimentControl.retrievalEnabled, false);
+    assert.strictEqual(off.experimentControl.retrievalUsed, false);
+    const on = await analyzeCase(input, {
+      provider: createMockProvider(), aiMode: 'live', rulesEnabled: true, retrievalEnabled: true, clarificationMode: 'none',
+    });
+    assert.strictEqual(on.experimentControl.retrievalEnabled, true);
+    const a3 = await analyzeCase({
+      caseId: 'exp-a3',
+      ...caseInput(),
+      prescription: { herbs: [{ name: '甘草', dosage: 6 }, { name: '甘遂', dosage: 1 }], doseCount: 7, usage: '水煎服' },
+    }, { provider: createMockProvider(), aiMode: 'live', rulesEnabled: false, retrievalEnabled: false });
+    assert.ok(a3.hardStops.some((h) => h.code === 'EIGHTEEN_INCOMPATIBLE') || a3.riskTier === 'A3');
+  });
+
+  it('case constructor hides labels and merges issuedAtOffsetDays', () => {
+    const ctor = require('../research/caseConstructor');
+    const pack = {
+      defaults: {
+        patient: { ageYears: 45, sex: 'male' },
+        prescriber: { name: '合成医师', licenseVerified: true },
+        prescription: { doseCount: 7, issuedAtOffsetDays: 0 },
+        source: { channel: 'counter' },
+      },
+    };
+    const raw = {
+      id: 'X01',
+      initialObservedFacts: { ageYears: 30, sex: 'female' },
+      hiddenPatientFacts: { pregnancy: 'yes' },
+      patientAnswerScript: { 'patient.facts.pregnancy': { status: 'reported', value: 'yes' } },
+      expertReferenceLabels: { unsafe: true },
+      expected: { tier: 'A3' },
+      prescription: { herbs: [{ name: '红花', dosage: 6 }], issuedAtOffsetDays: -12 },
+    };
+    const visible = ctor.buildVisibleCase(pack, raw, { now: new Date('2026-10-03T00:00:00.000Z') });
+    assert.strictEqual(visible.patient.ageYears, 30);
+    assert.strictEqual(visible.prescription.issuedAt, '2026-09-21');
+    ctor.assertNoHiddenLeak(visible);
+    const hidden = ctor.hiddenBundle(raw);
+    assert.strictEqual(hidden.hiddenPatientFacts.pregnancy, 'yes');
+    assert.ok(!JSON.stringify(visible).includes('expertReferenceLabels'));
+    assert.ok(!JSON.stringify(visible).includes('hiddenPatientFacts'));
+  });
+});

@@ -188,7 +188,7 @@ const DISPENSING_ACTION = {
   additionalProperties: false,
   required: ['action'],
   properties: {
-    action: { type: 'string', enum: ['start', 'auto_pick', 'submit_final_check', 'final_check_pass', 'final_check_fail', 'handover'] },
+    action: { type: 'string', enum: ['start', 'auto_pick', 'record_weigh', 'submit_final_check', 'final_check_pass', 'final_check_fail', 'handover'] },
     note: str(500),
     weighedItems: {
       type: 'array',
@@ -197,9 +197,17 @@ const DISPENSING_ACTION = {
         type: 'object',
         additionalProperties: false,
         required: ['name', 'grams'],
-        properties: { name: str(40), grams: { type: 'number', minimum: 0, maximum: 5000 } },
+        properties: {
+          name: str(40),
+          grams: { type: 'number', minimum: 0, maximum: 5000 },
+          unit: str(8),
+        },
       },
     },
+    weighSource: { type: 'string', enum: ['manual', 'device'] },
+    deviceId: str(40),
+    batchNo: str(40),
+    exceptionCode: { type: 'string', enum: ['reweigh_accepted', 'shortage_documented', 'other'] },
     expectedVersion: { type: 'integer', minimum: 1 },
     idempotencyKey: str(80),
   },
@@ -214,6 +222,22 @@ const RESTOCK_APPLY = {
       maxItems: 200,
       items: { type: 'integer', minimum: 1 },
     },
+  },
+};
+
+const STOCK_RECEIVE = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['inventoryId', 'quantity', 'inspection'],
+  properties: {
+    inventoryId: { type: 'integer', minimum: 1 },
+    quantity: { type: 'number', minimum: 0.01, maximum: 100000 },
+    inspection: { type: 'string', enum: ['pass', 'fail'] },
+    batchNo: str(40),
+    expiresAt: str(20),
+    requestId: str(40),
+    demoInbound: { type: 'boolean' },
+    idempotencyKey: str(80),
   },
 };
 
@@ -286,6 +310,7 @@ module.exports = {
   PATIENT_FEEDBACK,
   DISPENSING_ACTION,
   RESTOCK_APPLY,
+  STOCK_RECEIVE,
   OVERRIDE_REASONS,
   FORBIDDEN_CLIENT_FIELDS,
   forbiddenFieldsIn,

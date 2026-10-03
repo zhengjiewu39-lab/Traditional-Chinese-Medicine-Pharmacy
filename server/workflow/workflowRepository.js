@@ -39,6 +39,11 @@ function listDocs(collection) {
   return getDb().prepare('SELECT document FROM kv_docs WHERE collection = ?').all(collection).map((r) => JSON.parse(r.document));
 }
 
+function saveDoc(collection, key, document) {
+  writeDoc(collection, key, document, Number(document?.version) || 1);
+  return document;
+}
+
 function data() {
   return {
     cases: readCollection('cases'),
@@ -274,6 +279,7 @@ const _store = {
 module.exports = {
   getCase, listCases, saveCase, tokens, proposals, addPurchaseDraft, purchaseDrafts, settings,
   getDraft, listDrafts, saveDraft, getSuggestion, listSuggestions, saveSuggestion,
+  listDocs, saveDoc,
   pickupTokens, pickupFailures, learning, recordStockMovement, upsertPatient, getPatient, listPatients,
   _store, INITIAL, DOC_MAP,
 };

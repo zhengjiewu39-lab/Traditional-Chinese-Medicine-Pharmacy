@@ -21,6 +21,7 @@ const suggestions = require('./suggestionService');
 const { prescriberFields } = require('../security/prescriberLicense');
 const facts = require('./clinicalFacts');
 const clarification = require('./clarificationService');
+const factExtract = require('./factExtract');
 const education = require('./educationService');
 const followUp = require('./followUpService');
 const { deductForCase } = require('./inventoryDeduct');
@@ -205,6 +206,8 @@ function syncPatientMaster(c) {
 }
 
 async function runAnalysis(c, trigger) {
+  const expectedHash = c.contentHash;
+  const expectedVersion = c.contentVersion;
   const provider = runtime.getProvider();
   let output;
   try {
@@ -212,6 +215,22 @@ async function runAnalysis(c, trigger) {
   } catch (err) {
     audit.append({ caseId: c.caseId, eventType: 'ai_analysis_failed', actorType: 'system', actorId: 'orchestrator', payload: { message: err.message } });
     throw new ServiceError(500, 'analysis_failed', 'Screening failed; case left for pharmacist review without AI output');
+  }
+  const fresh = repo.getCase(c.caseId);
+  if (fresh && (fresh.contentHash !== expectedHash || fresh.contentVersion !== expectedVersion)) {
+    fresh.staleAnalyses = fresh.staleAnalyses || [];
+    fresh.staleAnalyses.push({
+      analysisId: output.analysisId,
+      contentHash: expectedHash,
+      contentVersion: expectedVersion,
+      at: output.generatedAt,
+      trigger,
+      stale: true,
+      reason: 'content_changed_during_analysis',
+      output,
+    });
+    repo.saveCase(fresh);
+    throw new ServiceError(409, 'stale_analysis_discarded', 'Content changed while screening; the model result was kept as history and not applied');
   }
   const analysis = { analysisId: output.analysisId, contentHash: c.contentHash, contentVersion: c.contentVersion, at: output.generatedAt, trigger, output };
   c.analyses.push(analysis);
@@ -243,6 +262,13 @@ async function runAnalysis(c, trigger) {
 async function screen(c, trigger) {
   if (c.state !== 'ai_screening') transition(c, 'ai_screening', SYSTEM, trigger);
   const analysis = await runAnalysis(c, trigger);
+  if (c.source?.rawText) {
+    factExtract.attachCandidates(c, factExtract.extractCandidateFacts(c));
+  }
+  c.questionPlan = clarification.generateRiskQuestions(c, { mode: 'risk_adaptive' });
+  if (c.questionPlan.stopReason && !c.questionPlan.selected?.length) {
+    clarification.recordStop(c, c.questionPlan);
+  }
   const aiActor = { role: 'ai', id: analysis.output.modelVersion };
   const to = (c.clarificationTasks || []).some((t) => t.requiredForDecision && t.status === 'sent')
     ? 'information_incomplete'
@@ -257,9 +283,10 @@ async function analyze(caseId) {
   if (!['received', 'information_incomplete', 'ai_screening', 'pharmacist_review_required'].includes(c.state)) {
     throw new ServiceError(409, 'analysis_not_allowed', `Cannot re-screen a case in state ${c.state}`);
   }
+  const loadedRecordVersion = c.recordVersion || 0;
   const analysis = await screen(c, 'analyze_requested');
-  repo.saveCase(c);
-  return { case: c, analysis };
+  persistCase(c, { expectedRecordVersion: loadedRecordVersion });
+  return { case: repo.getCase(caseId), analysis };
 }
 
 /** Reproduce a stored analysis on the same content without touching the workflow state. */
@@ -283,10 +310,12 @@ async function replay(caseId, analysisId, actor) {
 }
 
 function invalidateApproval(c, actor, reason) {
-  if (!c.approval?.valid) return;
-  c.approval = { ...c.approval, valid: false, invalidatedAt: new Date().toISOString(), invalidatedReason: reason };
-  c.approvalHistory.push({ ...c.approval });
-  record(c, 'approval_invalidated', actor, { decisionId: c.approval.decisionId, reason });
+  if (c.approval?.valid) {
+    c.approval = { ...c.approval, valid: false, invalidatedAt: new Date().toISOString(), invalidatedReason: reason };
+    c.approvalHistory.push({ ...c.approval });
+    record(c, 'approval_invalidated', actor, { decisionId: c.approval.decisionId, reason });
+  }
+  if (c.secondReview) researchProtocol.archiveDual(c, reason || 'content_or_analysis_changed');
 }
 
 function assertVersion(c, expectedVersion) {
@@ -421,24 +450,60 @@ function pharmacistDecision(caseId, body, actor) {
       if (body.secondReviewerId) {
         throw new ServiceError(400, 'proxy_second_review_forbidden', 'Filling secondReviewerId is not a dual signature; the second pharmacist must log in and submit');
       }
+      const target = researchProtocol.signTarget(c, latest);
       const dualPending = c.reviewLane === 'dual' || c.secondReview?.status === 'pending';
-      if (dualPending && c.secondReview?.status !== 'completed') {
-        if (!c.secondReview) {
-          c.secondReview = { status: 'pending', requestedBy: 'research_protocol', requestedAt: decision.at, reason: body.comment || 'dual_review', mode: 'dual' };
+      if (dualPending) {
+        if (c.secondReview?.status === 'completed') {
+          const valid = (c.secondReview.signs || []).filter((s) => researchProtocol.signMatches(s, target));
+          if (new Set(valid.map((s) => s.actorId)).size < 2) {
+            researchProtocol.archiveDual(c, 'stale_completed_on_approve');
+          }
         }
-        const protocolDual = c.secondReview.mode === 'dual' || c.secondReview.requestedBy === 'research_protocol';
-        if (protocolDual && !c.secondReview.firstSigner) {
-          c.secondReview = { ...c.secondReview, status: 'pending', firstSigner: String(actor.id), firstSignedAt: decision.at, signedInAs: actor.username || null };
-          break;
+        if (!c.secondReview || c.secondReview.status !== 'completed') {
+          if (!c.secondReview) {
+            c.secondReview = {
+              status: 'pending', requestedBy: 'research_protocol', requestedAt: decision.at,
+              reason: body.comment || 'dual_review', mode: 'dual', target, signs: [],
+            };
+          }
+          c.secondReview.signs = (c.secondReview.signs || []).filter((s) => researchProtocol.signMatches(s, target));
+          c.secondReview.target = target;
+          if (c.secondReview.signs.some((s) => s.actorId === String(actor.id))) {
+            throw new ServiceError(409, 'second_review_pending', 'A different pharmacist must complete the requested second review');
+          }
+          const sign = { actorId: String(actor.id), username: actor.username || null, role: actor.role, at: decision.at, ...target };
+          if (!c.secondReview.signs.length) {
+            c.secondReview = {
+              ...c.secondReview, status: 'pending', firstSigner: String(actor.id), firstSignedAt: decision.at,
+              signedInAs: actor.username || null, signs: [sign], target,
+            };
+            break;
+          }
+          c.secondReview.signs.push(sign);
+          c.secondReview = {
+            ...c.secondReview, status: 'completed', completedBy: String(actor.id), completedAt: decision.at,
+            signedInAs: actor.username || null,
+          };
         }
-        const blocked = String(c.secondReview.firstSigner || c.secondReview.requestedBy) === String(actor.id);
-        if (blocked) {
-          throw new ServiceError(409, 'second_review_pending', 'A different pharmacist must complete the requested second review');
+      }
+      if (c.reviewLane === 'dual' || c.secondReview?.status === 'completed') {
+        const valid = (c.secondReview?.signs || []).filter((s) => researchProtocol.signMatches(s, target));
+        if (new Set(valid.map((s) => s.actorId)).size < 2) {
+          throw new ServiceError(409, 'dual_sign_incomplete', 'Dual review requires two current-version signatures');
         }
-        c.secondReview = { ...c.secondReview, status: 'completed', completedBy: String(actor.id), completedAt: decision.at, signedInAs: actor.username || null };
       }
       transition(c, 'pharmacist_approved', actor, body.comment || (body.action === 'fast_approve' ? 'fast_track' : 'approved'));
-      c.approval = { decisionId: decision.decisionId, pharmacistId: String(actor.id), contentHash: c.contentHash, analysisId: latest.analysisId, at: decision.at, valid: true };
+      c.approval = {
+        decisionId: decision.decisionId,
+        pharmacistId: String(actor.id),
+        secondPharmacistId: c.secondReview?.firstSigner && c.secondReview.firstSigner !== String(actor.id) ? c.secondReview.firstSigner : (c.secondReview?.signs || []).map((s) => s.actorId).find((id) => id !== String(actor.id)) || null,
+        contentHash: c.contentHash,
+        contentVersion: c.contentVersion,
+        analysisId: latest.analysisId,
+        protocolVersion: target.protocolVersion,
+        at: decision.at,
+        valid: true,
+      };
       c.approvalHistory.push({ ...c.approval });
       break;
     }
@@ -478,14 +543,21 @@ function pharmacistDecision(caseId, body, actor) {
     }
     case 'request_second_review':
       needState(reviewStates);
-      c.secondReview = {
-        status: 'pending',
-        requestedBy: String(actor.id),
-        requestedAt: decision.at,
-        reason: body.comment || null,
-        firstSigner: String(actor.id),
-        firstSignedAt: decision.at,
-      };
+      {
+        const target = researchProtocol.signTarget(c, latest);
+        const sign = { actorId: String(actor.id), username: actor.username || null, role: actor.role, at: decision.at, ...target };
+        c.secondReview = {
+          status: 'pending',
+          requestedBy: String(actor.id),
+          requestedAt: decision.at,
+          reason: body.comment || null,
+          firstSigner: String(actor.id),
+          firstSignedAt: decision.at,
+          mode: 'manual',
+          target,
+          signs: [sign],
+        };
+      }
       break;
     default:
       throw new ServiceError(400, 'unknown_action', `Unknown action ${body.action}`);
@@ -938,57 +1010,88 @@ function dispensingAction(caseId, body, actor) {
   const idempotencyKey = body.idempotencyKey || `${body.action}:${c.caseId}:${c.contentVersion}:${c.state}`;
   switch (body.action) {
     case 'start': {
-      const already = (c.dispensingRecords || []).find((r) => r.type === 'start' && r.idempotencyKey === idempotencyKey);
-      if (already && c.state === 'dispensing') return c;
+      const alreadyStart = (c.dispensingRecords || []).find((r) => r.type === 'start');
+      if (alreadyStart && c.state === 'dispensing') return c;
+      if (alreadyStart && c.allocation) {
+        if (c.state === 'patient_confirmed') transition(c, 'dispensing', actor, body.note || '继续已预留调剂');
+        break;
+      }
       const plan = pharmacyOps.planAllocation(c);
       c.allocation = { ...plan, at, by: String(actor.id) };
       transition(c, 'dispensing', actor, body.note || '开始调剂');
-      const stock = deductForCase(c, actor, { idempotencyKey: `stock:${idempotencyKey}` });
+      const stock = deductForCase(c, actor, { idempotencyKey: `stock:${c.caseId}:${c.contentVersion}` });
       c.dispensingRecords.push({ type: 'start', by: String(actor.id), role: actor.role, at, idempotencyKey, stock, allocation: plan });
       break;
     }
     case 'auto_pick': {
-      const alreadyPick = (c.dispensingRecords || []).find((r) => r.type === 'weighed' && r.autoPick);
-      if (alreadyPick && c.state === 'pharmacist_final_check') return c;
-      const plan = pharmacyOps.assertFillable(c);
+      const alreadyPlan = (c.dispensingRecords || []).find((r) => r.type === 'picking_plan' && r.contentVersion === c.contentVersion);
+      if (alreadyPlan && c.state === 'dispensing') return c;
+      const started = (c.dispensingRecords || []).find((r) => r.type === 'start');
+      const plan = started?.allocation || pharmacyOps.assertFillable(c);
       c.allocation = { ...plan, at, by: String(actor.id), autoPick: true };
       if (c.state === 'patient_confirmed') {
-        transition(c, 'dispensing', actor, body.note || '按方自动配药');
-        const stock = deductForCase(c, actor, { idempotencyKey: `stock:${idempotencyKey}` });
-        c.dispensingRecords.push({ type: 'start', by: String(actor.id), role: actor.role, at, idempotencyKey, stock, allocation: plan });
+        transition(c, 'dispensing', actor, body.note || '生成配药计划');
+        if (!started) {
+          const stock = deductForCase(c, actor, { idempotencyKey: `stock:${c.caseId}:${c.contentVersion}` });
+          c.dispensingRecords.push({ type: 'start', by: String(actor.id), role: actor.role, at, idempotencyKey, stock, allocation: plan });
+        }
       } else if (c.state !== 'dispensing') {
         throw new ServiceError(409, 'invalid_state', 'Auto-pick is only available after the patient confirms');
       }
-      const weighedItems = (c.prescription.herbs || []).map((h) => ({ name: h.name, grams: Number(h.dosage || 0) }));
-      const perDose = new Map((c.prescription.herbs || []).map((h) => [h.name, h.dosage]));
-      const deviations = weighedItems.map((w) => {
-        const expected = perDose.get(w.name);
-        const dev = expected ? Math.abs(w.grams - expected) / expected : null;
-        return { name: w.name, grams: w.grams, expected: expected ?? null, deviation: dev, outOfTolerance: expected == null || dev > DOSE_DEVIATION_TOLERANCE };
+      const doseCount = Number(c.prescription.doseCount || 1);
+      const planned = (c.prescription.herbs || []).map((h) => ({
+        name: h.name,
+        unit: h.unit || 'g',
+        perDose: Number(h.dosage || 0),
+        doseCount,
+        total: Number(h.dosage || 0) * doseCount,
+      }));
+      c.dispensingRecords.push({
+        type: 'picking_plan', by: String(actor.id), role: actor.role, at, planned, doseCount,
+        contentVersion: c.contentVersion, autoPick: true, source: 'prescription_plan',
       });
-      const missing = [...perDose.keys()].filter((n) => !weighedItems.some((w) => w.name === n));
-      transition(c, 'pharmacist_final_check', actor, body.note || '按方自动配药，待药师复核');
-      c.dispensingRecords.push({ type: 'weighed', by: String(actor.id), role: actor.role, at, items: deviations, missing, autoPick: true });
       break;
     }
+    case 'record_weigh':
     case 'submit_final_check': {
+      const source = body.weighSource === 'device' ? 'device' : 'manual';
+      if (source === 'device' && !body.deviceId) {
+        throw new ServiceError(400, 'device_id_required', 'Device weigh records need a device id; otherwise use manual entry');
+      }
       const perDose = new Map((c.prescription.herbs || []).map((h) => [h.name, h.dosage]));
-      const deviations = (body.weighedItems || []).map((w) => {
+      const items = body.weighedItems || [];
+      if (!items.length) throw new ServiceError(400, 'weigh_required', 'Actual weigh records are required; a picking plan is not a measurement');
+      const deviations = items.map((w) => {
         const expected = perDose.get(w.name);
         const dev = expected ? Math.abs(w.grams - expected) / expected : null;
-        return { name: w.name, grams: w.grams, expected: expected ?? null, deviation: dev, outOfTolerance: expected == null || dev > DOSE_DEVIATION_TOLERANCE };
+        return {
+          name: w.name, grams: w.grams, expected: expected ?? null, unit: w.unit || 'g',
+          deviation: dev, outOfTolerance: expected == null || dev > DOSE_DEVIATION_TOLERANCE,
+        };
       });
-      const missing = [...perDose.keys()].filter((n) => !(body.weighedItems || []).some((w) => w.name === n));
-      transition(c, 'pharmacist_final_check', actor, body.note || '提交复核');
-      c.dispensingRecords.push({ type: 'weighed', by: String(actor.id), role: actor.role, at, items: deviations, missing });
+      const missing = [...perDose.keys()].filter((n) => !items.some((w) => w.name === n));
+      if (missing.length && !body.exceptionCode) {
+        throw new ServiceError(409, 'weigh_incomplete', 'Every prescribed herb needs a weigh record, or a controlled exception');
+      }
+      if (c.state === 'dispensing') {
+        transition(c, 'pharmacist_final_check', actor, body.note || '提交实测复核');
+      } else if (c.state !== 'pharmacist_final_check') {
+        throw new ServiceError(409, 'invalid_state', 'Weigh records are only accepted during dispensing');
+      }
+      c.dispensingRecords.push({
+        type: 'weighed', by: String(actor.id), role: actor.role, at, items: deviations, missing,
+        source, deviceId: body.deviceId || null, batchNo: body.batchNo || null,
+        exceptionCode: body.exceptionCode || null, autoPick: false,
+      });
       break;
     }
     case 'final_check_pass': {
       if (!hasPharmacistCredential(actor)) throw new ServiceError(403, 'pharmacist_only', 'Final check requires a pharmacist credential');
-      const weighed = [...c.dispensingRecords].reverse().find((r) => r.type === 'weighed');
-      if (weighed && weighed.by === String(actor.id)) throw new ServiceError(409, 'same_person_check', 'Final check must be done by someone other than the dispenser');
-      if (weighed && (weighed.missing.length || weighed.items.some((i) => i.outOfTolerance)) && !body.note) {
-        throw new ServiceError(400, 'comment_required', 'Weighing deviations present; explain the release');
+      const weighed = [...c.dispensingRecords].reverse().find((r) => r.type === 'weighed' && r.autoPick !== true);
+      if (!weighed) throw new ServiceError(409, 'weigh_required', 'Final check needs an actual weigh record, not a picking plan');
+      if (weighed.by === String(actor.id)) throw new ServiceError(409, 'same_person_check', 'Final check must be done by someone other than the dispenser');
+      if ((weighed.missing.length || weighed.items.some((i) => i.outOfTolerance)) && !(body.note && body.exceptionCode)) {
+        throw new ServiceError(400, 'comment_required', 'Weighing deviations require a note and a controlled exception code');
       }
       transition(c, 'ready_for_pickup', actor, body.note || '复核通过');
       c.dispensingRecords.push({ type: 'final_check_pass', by: String(actor.id), role: actor.role, at });

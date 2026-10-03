@@ -18,14 +18,16 @@ const COLUMN_KEYS = [
 ];
 
 function WeighForm({ c, onSubmit, busy, t }) {
-  const [grams, setGrams] = useState(() => Object.fromEntries((c.prescription.herbs || []).map((h) => [h.name, h.dosage ?? ''])));
+  const doseCount = Number(c.prescription.doseCount || 1);
+  const [grams, setGrams] = useState(() => Object.fromEntries((c.prescription.herbs || []).map((h) => [h.name, ''])));
   return (
     <Box>
       <Table size="small">
         <TableHead>
           <TableRow>
             <TableCell>{t('ai.herb')}</TableCell>
-            <TableCell>{t('ai.dispense.prescribed')}</TableCell>
+            <TableCell>{t('ai.dispense.perDose')}</TableCell>
+            <TableCell>{t('ai.dispense.planned')}</TableCell>
             <TableCell>{t('ai.dispense.actual')}</TableCell>
           </TableRow>
         </TableHead>
@@ -33,13 +35,14 @@ function WeighForm({ c, onSubmit, busy, t }) {
           {(c.prescription.herbs || []).map((h) => (
             <TableRow key={h.name}>
               <TableCell>{h.name}</TableCell>
-              <TableCell>{h.dosage}g</TableCell>
+              <TableCell>{h.dosage}{h.unit || 'g'}</TableCell>
+              <TableCell>{Number(h.dosage || 0) * doseCount}{h.unit || 'g'} × {doseCount}</TableCell>
               <TableCell><TextField size="small" type="number" value={grams[h.name]} onChange={(e) => setGrams((g) => ({ ...g, [h.name]: e.target.value }))} sx={{ width: 90 }} /></TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
-      <Button sx={{ mt: 1 }} size="small" variant="contained" disabled={busy} onClick={() => onSubmit(Object.entries(grams).filter(([, v]) => v !== '').map(([name, v]) => ({ name, grams: Number(v) })))}>
+      <Button sx={{ mt: 1 }} size="small" variant="contained" disabled={busy} onClick={() => onSubmit(Object.entries(grams).filter(([, v]) => v !== '').map(([name, v]) => ({ name, grams: Number(v), unit: (c.prescription.herbs || []).find((h) => h.name === name)?.unit || 'g' })))}>
         {t('ai.dispense.submitCheck')}
       </Button>
     </Box>
@@ -154,7 +157,7 @@ export default function DispensingBoard() {
                         </>
                       )}
                       {col.state === 'dispensing' && (open === c.caseId
-                        ? <WeighForm t={t} c={c} busy={busy} onSubmit={(items) => act(c.caseId, { action: 'submit_final_check', weighedItems: items })} />
+                        ? <WeighForm t={t} c={c} busy={busy} onSubmit={(items) => act(c.caseId, { action: 'record_weigh', weighSource: 'manual', weighedItems: items })} />
                         : (
                           <Stack spacing={1}>
                             <Button size="small" variant="contained" disabled={busy || plan?.ready === false} onClick={() => act(c.caseId, { action: 'auto_pick' })}>

@@ -1,6 +1,7 @@
 /**
  * Researcher-owned review protocol. Routes pharmacist work (fast vs dual)
  * from AI screening results. Does not approve prescriptions or change doses.
+ * A3 hard stops cannot be relaxed by protocol edits.
  */
 const repo = require('./workflowRepository');
 const { ServiceError } = require('./errors');
@@ -43,7 +44,7 @@ function saveProtocol(body, actor) {
     },
     dualReview: {
       enabled: body.dualReview?.enabled ?? cur.dualReview.enabled,
-      minTier: ['A1', 'A2', 'A3'].includes(body.dualReview?.minTier) ? body.dualReview.minTier : cur.dualReview.minTier,
+      minTier: ['A1', 'A2'].includes(body.dualReview?.minTier) ? body.dualReview.minTier : cur.dualReview.minTier,
       onAbstain: body.dualReview?.onAbstain ?? cur.dualReview.onAbstain,
     },
     version: (cur.version || 1) + 1,
@@ -52,6 +53,20 @@ function saveProtocol(body, actor) {
   };
   repo.settings().set({ researchProtocol: next });
   return next;
+}
+
+function freezeProtocol(c) {
+  if (!c.protocolSnapshot) {
+    const proto = getProtocol();
+    c.protocolSnapshot = {
+      version: proto.version,
+      fastTrack: { ...proto.fastTrack },
+      dualReview: { ...proto.dualReview },
+      note: proto.note,
+      frozenAt: new Date().toISOString(),
+    };
+  }
+  return c.protocolSnapshot;
 }
 
 function assignLane(output, protocol = getProtocol()) {
@@ -75,20 +90,72 @@ function assignLane(output, protocol = getProtocol()) {
   return 'priority';
 }
 
+function signTarget(c, analysis) {
+  const latest = analysis || c.analyses?.at(-1);
+  return {
+    contentVersion: c.contentVersion,
+    contentHash: c.contentHash,
+    analysisId: latest?.analysisId || null,
+    protocolVersion: freezeProtocol(c).version,
+  };
+}
+
+function signMatches(sign, target) {
+  return Boolean(
+    sign
+    && target
+    && sign.contentVersion === target.contentVersion
+    && sign.contentHash === target.contentHash
+    && sign.analysisId === target.analysisId
+    && sign.protocolVersion === target.protocolVersion,
+  );
+}
+
+function archiveDual(c, reason) {
+  if (!c.secondReview) return;
+  c.secondReviewHistory = c.secondReviewHistory || [];
+  c.secondReviewHistory.push({
+    ...c.secondReview,
+    archivedAt: new Date().toISOString(),
+    archivedReason: reason,
+  });
+  c.secondReview = null;
+}
+
 function applyReviewProtocol(c) {
+  const proto = freezeProtocol(c);
   const out = c.analyses?.at(-1)?.output;
-  const lane = assignLane(out);
+  const lane = assignLane(out, proto);
   c.reviewLane = lane;
-  if (lane === 'dual' && c.state === 'pharmacist_review_required') {
-    if (c.secondReview?.status === 'completed') return lane;
+  const target = signTarget(c, c.analyses?.at(-1));
+  if (c.secondReview) {
+    const signs = (c.secondReview.signs || []).filter((s) => signMatches(s, target));
+    if (c.secondReview.status === 'completed') {
+      const people = new Set(signs.map((s) => s.actorId));
+      if (people.size >= 2) return lane;
+      archiveDual(c, 'stale_completed_signature');
+    } else if (c.secondReview.target && !signMatches(c.secondReview.target, target) && !signs.length) {
+      archiveDual(c, 'stale_pending_signature');
+    } else {
+      c.secondReview.signs = signs;
+      c.secondReview.target = target;
+      if (!signs.length) {
+        c.secondReview.firstSigner = null;
+        c.secondReview.firstSignedAt = null;
+      }
+    }
+  }
+  if (lane === 'dual' && c.state === 'pharmacist_review_required' && c.secondReview?.status !== 'pending') {
     c.secondReview = {
       status: 'pending',
       requestedBy: 'research_protocol',
-      requestedAt: c.secondReview?.requestedAt || new Date().toISOString(),
-      reason: c.secondReview?.reason || 'dual_review_uncertain_or_severe',
+      requestedAt: new Date().toISOString(),
+      reason: 'dual_review_uncertain_or_severe',
       mode: 'dual',
-      firstSigner: c.secondReview?.firstSigner || null,
-      firstSignedAt: c.secondReview?.firstSignedAt || null,
+      target,
+      signs: [],
+      firstSigner: null,
+      firstSignedAt: null,
     };
   }
   return lane;
@@ -100,4 +167,8 @@ module.exports = {
   saveProtocol,
   assignLane,
   applyReviewProtocol,
+  freezeProtocol,
+  signTarget,
+  signMatches,
+  archiveDual,
 };
