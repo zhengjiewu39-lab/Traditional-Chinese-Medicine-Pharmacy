@@ -48,7 +48,7 @@ function createMockProvider({ behavior = 'normal' } = {}) {
     id: 'mock',
     isMock: true,
     modelVersion: MODEL_VERSION,
-    async complete({ context, signal }) {
+    async complete({ context, signal, messages } = {}) {
       if (behavior === 'timeout') {
         return new Promise((_, reject) => {
           signal?.addEventListener('abort', () => reject(Object.assign(new Error('aborted'), { name: 'AbortError' })));
@@ -56,6 +56,9 @@ function createMockProvider({ behavior = 'normal' } = {}) {
       }
       if (behavior === 'error') throw new Error('mock provider failure');
       if (behavior === 'invalid_json') return '{"ruleHitSummary": "unterminated';
+      if (!context) {
+        return JSON.stringify({ candidates: [], source: 'mock_extract_without_screening_context', messages: (messages || []).length });
+      }
       const out = normalOutput(context);
       if (behavior === 'fabricated_citation') {
         out.warnings.push({ code: 'MODEL_WARNING', message: '模型声称存在额外风险', evidenceIds: ['KS-FAKE-999'], severity: 'high' });

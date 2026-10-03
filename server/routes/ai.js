@@ -362,6 +362,18 @@ router.post('/cases/:id/follow-up-plan', requirePermission('rx:followup'), requi
   res.json({ plan: service.setFollowUpPlan(req.params.id, req.body, actorOf(req)) });
 }));
 
+router.post('/cases/:id/fact-candidates', requirePermission('patient:clarification'), validateBody({
+  type: 'object', additionalProperties: false, required: ['candidateId', 'action'],
+  properties: {
+    candidateId: { type: 'string', maxLength: 80 },
+    action: { type: 'string', enum: ['accept', 'correct', 'deny', 'unknown'] },
+    value: {},
+    status: { type: 'string', maxLength: 20 },
+  },
+}), handle(async (req, res) => {
+  res.json(service.confirmFactCandidate(req.params.id, req.body, actorOf(req)));
+}));
+
 router.post('/cases/:id/clarifications', requirePermission('patient:clarification'), requirePharmacistCredential, validateBody({
   type: 'object', additionalProperties: false, required: ['fieldPath', 'question'],
   properties: {
@@ -377,8 +389,12 @@ router.post('/cases/:id/clarifications', requirePermission('patient:clarificatio
 }));
 
 router.post('/cases/:id/education', requirePermission('rx:education_publish'), requirePharmacistCredential, validateBody({
-  type: 'object', additionalProperties: false, required: ['text'],
-  properties: { text: { type: 'string', minLength: 1, maxLength: 4000 }, source: { type: 'string', enum: ['pharmacist', 'fixed_template'] } },
+  type: 'object', additionalProperties: false,
+  properties: {
+    text: { type: 'string', maxLength: 4000 },
+    aiExplanation: { type: 'string', maxLength: 2000 },
+    source: { type: 'string', enum: ['pharmacist', 'fixed_template'] },
+  },
 }), handle(async (req, res) => {
   res.status(201).json({ document: service.createEducation(req.params.id, req.body, actorOf(req)) });
 }));

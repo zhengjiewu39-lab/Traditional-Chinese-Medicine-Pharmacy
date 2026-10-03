@@ -42,7 +42,7 @@ router.post('/clarification/:token', validateBody({
   additionalProperties: false,
   required: ['status'],
   properties: {
-    status: { type: 'string', enum: ['not_asked', 'unknown', 'none', 'reported', 'not_applicable'] },
+    status: { type: 'string', enum: ['not_asked', 'unknown', 'none', 'denied', 'reported', 'not_applicable'] },
     value: {},
     kind: { type: 'string', enum: ['add', 'stop', 'correct'] },
     oldValue: {},
@@ -142,7 +142,7 @@ router.post('/me/cases/:id/clarifications/:taskId', validateBody({
   additionalProperties: false,
   required: ['status'],
   properties: {
-    status: { type: 'string', enum: ['not_asked', 'unknown', 'none', 'reported', 'not_applicable'] },
+    status: { type: 'string', enum: ['not_asked', 'unknown', 'none', 'denied', 'reported', 'not_applicable'] },
     value: {},
     kind: { type: 'string', enum: ['add', 'stop', 'correct'] },
     oldValue: {},
@@ -151,6 +151,20 @@ router.post('/me/cases/:id/clarifications/:taskId', validateBody({
   const actor = requirePatient(req, res);
   if (!actor) return;
   res.json(await service.submitOwnClarification(req.params.id, req.params.taskId, req.body, actor));
+}));
+
+router.post('/me/cases/:id/fact-candidates', validateBody({
+  type: 'object', additionalProperties: false, required: ['candidateId', 'action'],
+  properties: {
+    candidateId: { type: 'string', maxLength: 80 },
+    action: { type: 'string', enum: ['accept', 'correct', 'deny', 'unknown'] },
+    value: {},
+    status: { type: 'string', maxLength: 20 },
+  },
+}), handle(async (req, res) => {
+  const actor = requirePatient(req, res);
+  if (!actor) return;
+  res.json(service.confirmFactCandidate(req.params.id, req.body, actor));
 }));
 
 router.post('/me/cases/:id/feedback', validateBody(S.PATIENT_FEEDBACK), handle(async (req, res) => {

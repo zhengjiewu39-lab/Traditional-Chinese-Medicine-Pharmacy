@@ -36,7 +36,7 @@ function WeighForm({ c, onSubmit, busy, t }) {
             <TableRow key={h.name}>
               <TableCell>{h.name}</TableCell>
               <TableCell>{h.dosage}{h.unit || 'g'}</TableCell>
-              <TableCell>{Number(h.dosage || 0) * doseCount}{h.unit || 'g'} × {doseCount}</TableCell>
+              <TableCell>{Number(h.dosage || 0) * doseCount}{h.unit || 'g'}（{doseCount}剂合计）</TableCell>
               <TableCell><TextField size="small" type="number" value={grams[h.name]} onChange={(e) => setGrams((g) => ({ ...g, [h.name]: e.target.value }))} sx={{ width: 90 }} /></TableCell>
             </TableRow>
           ))}

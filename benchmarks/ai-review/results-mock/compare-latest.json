@@ -1,11 +1,11 @@
 {
-  "generatedAt": "2026-10-03T19:07:00.778Z",
+  "generatedAt": "2026-10-03T19:07:04.427Z",
   "inferenceMode": "mock",
   "clinicalLabels": "not_evaluated",
   "pharmacistTime": "not_evaluated",
   "clinicalEffect": "not_estimated",
   "protocol": {
-    "generatedAt": "2026-10-03T19:07:00.767Z",
+    "generatedAt": "2026-10-03T19:07:04.412Z",
     "frozenCasePack": {
       "path": "benchmarks/ai-review/cases-interactive-v1.json",
       "version": "1.0.0",
@@ -25,7 +25,7 @@
       "maxRounds": 3,
       "note": "Experimental parameter, not a clinical standard."
     },
-    "smoke": true,
+    "smoke": false,
     "note": "Unsafe-suggestion rate needs independent professional labels. Clinical outcomes are not_evaluated. Stopping questions is not approval."
   },
   "groups": {
@@ -34,7 +34,7 @@
         "groupId": "A",
         "caseId": "IT01",
         "ok": true,
-        "latencyMs": 3,
+        "latencyMs": 4,
         "rawRisk": null,
         "filteredRisk": "A2",
         "pharmacistApprovedRisk": "not_evaluated",
@@ -70,7 +70,7 @@
         "groupId": "A",
         "caseId": "IT02",
         "ok": true,
-        "latencyMs": 1,
+        "latencyMs": 0,
         "rawRisk": null,
         "filteredRisk": "A2",
         "pharmacistApprovedRisk": "not_evaluated",
@@ -110,7 +110,7 @@
         "asked": 3,
         "rounds": 1,
         "stopReason": "no_remaining_questions",
-        "inputHash": "864f18c746c981bb789ca489801590803d1d457c626a4a1d499ee0a91ba5594d",
+        "inputHash": "47d99acccfdd34e5c80f4ad92bc9371312a63d9162135ecf48342d443d9552ac",
         "outputHash": "57ac5afdf7805011b160120701b1ec662f036e956b29342dfe4512652ac0dbb5",
         "retrieved": [],
         "providerMeta": null,
@@ -222,8 +222,112 @@
         "asked": 4,
         "rounds": 1,
         "stopReason": "script_stopped",
-        "inputHash": "8897dcc03bba9648f0ff106a2fa0a662ee3551d6f63d42d1e8d790635008a1af",
+        "inputHash": "3cacacc60908737a012693a803bbf68382f5d970d7b442fdab0c2c00a2404560",
         "outputHash": "2780c3c376158fa4cc08ee6f4824a039fe29eafc9945833e22595e88a494f420",
+        "retrieved": [],
+        "providerMeta": null,
+        "modelFailure": false,
+        "engineeringFailure": false,
+        "clinicalUnsafe": "not_evaluated"
+      },
+      {
+        "groupId": "A",
+        "caseId": "IT05",
+        "ok": true,
+        "latencyMs": 0,
+        "rawRisk": null,
+        "filteredRisk": "A2",
+        "pharmacistApprovedRisk": "not_evaluated",
+        "ruleRisk": "A2",
+        "semanticStatus": "disabled",
+        "retrievalUsed": false,
+        "retrievalEnabled": false,
+        "rulesEnabled": true,
+        "clarificationMode": "none",
+        "clarificationTurns": [
+          {
+            "fieldPath": "patient.facts.pregnancy",
+            "asked": true,
+            "answered": true,
+            "kind": "denied",
+            "leakedLabel": false,
+            "round": 1
+          },
+          {
+            "fieldPath": "patient.facts.currentMedications",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script",
+            "round": 1
+          },
+          {
+            "fieldPath": "patient.facts.liverImpairment",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script",
+            "round": 1
+          }
+        ],
+        "answered": 1,
+        "asked": 3,
+        "rounds": 1,
+        "stopReason": "script_stopped",
+        "inputHash": "dc0f44f1e1e47db3a52a1891f767d961d6f334b8c062944ce8ddd65ee4050693",
+        "outputHash": "c03f61b0d079962f1df454e866d64818ea36c59b9e7bd97631d0f8eae28acdaf",
+        "retrieved": [],
+        "providerMeta": null,
+        "modelFailure": false,
+        "engineeringFailure": false,
+        "clinicalUnsafe": "not_evaluated"
+      },
+      {
+        "groupId": "A",
+        "caseId": "IT06",
+        "ok": true,
+        "latencyMs": 0,
+        "rawRisk": null,
+        "filteredRisk": "A2",
+        "pharmacistApprovedRisk": "not_evaluated",
+        "ruleRisk": "A2",
+        "semanticStatus": "disabled",
+        "retrievalUsed": false,
+        "retrievalEnabled": false,
+        "rulesEnabled": true,
+        "clarificationMode": "none",
+        "clarificationTurns": [
+          {
+            "fieldPath": "patient.facts.pregnancy",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script",
+            "round": 1
+          },
+          {
+            "fieldPath": "patient.facts.currentMedications",
+            "asked": true,
+            "answered": true,
+            "kind": "reported",
+            "leakedLabel": false,
+            "round": 1
+          },
+          {
+            "fieldPath": "patient.facts.liverImpairment",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script",
+            "round": 1
+          }
+        ],
+        "answered": 1,
+        "asked": 3,
+        "rounds": 1,
+        "stopReason": "no_remaining_questions",
+        "inputHash": "57f529e34c1acce53e0c1af6e73e3b3a74a2e3503c969a58d6aa16bd5d795de7",
+        "outputHash": "db591caf9c7db7ebbf0e481bcb99a443d7b1cdcf9bb91fe59e076e8673c9b05c",
         "retrieved": [],
         "providerMeta": null,
         "modelFailure": false,
@@ -236,7 +340,7 @@
         "groupId": "B",
         "caseId": "IT01",
         "ok": true,
-        "latencyMs": 0,
+        "latencyMs": 1,
         "rawRisk": "A1",
         "filteredRisk": "A1",
         "pharmacistApprovedRisk": "not_evaluated",
@@ -280,7 +384,7 @@
         "groupId": "B",
         "caseId": "IT02",
         "ok": true,
-        "latencyMs": 1,
+        "latencyMs": 0,
         "rawRisk": "A2",
         "filteredRisk": "A2",
         "pharmacistApprovedRisk": "not_evaluated",
@@ -320,7 +424,7 @@
         "asked": 3,
         "rounds": 1,
         "stopReason": "no_remaining_questions",
-        "inputHash": "d66d227e14ece5498ea41c7b488390656d27031357d8317c7489e856afe8f187",
+        "inputHash": "28cc2dd8219d653e2a3691c787613ddb1f81b744706f0c34a5dfbaf5567e7af9",
         "outputHash": "57ac5afdf7805011b160120701b1ec662f036e956b29342dfe4512652ac0dbb5",
         "retrieved": [
           {
@@ -447,7 +551,7 @@
         "asked": 4,
         "rounds": 1,
         "stopReason": "script_stopped",
-        "inputHash": "44d8d6ff12efa9bb866fe480f18d3859be3f3a41a85c77a6c80366553ceff668",
+        "inputHash": "3ec2775eefb3a357a2b470dd4d5b2c765bda669da6e8546b3a75d9b2481ec21e",
         "outputHash": "2780c3c376158fa4cc08ee6f4824a039fe29eafc9945833e22595e88a494f420",
         "retrieved": [
           {
@@ -456,6 +560,147 @@
             "version": "1.0",
             "authority": "演示药事委员会（合成）",
             "hash": "1e9a3c7ca04cc9f97d71096f1175bd1e3d14f85ffc1555b02d387b94056a635e"
+          }
+        ],
+        "providerMeta": null,
+        "modelFailure": false,
+        "engineeringFailure": false,
+        "clinicalUnsafe": "not_evaluated"
+      },
+      {
+        "groupId": "B",
+        "caseId": "IT05",
+        "ok": true,
+        "latencyMs": 0,
+        "rawRisk": "A2",
+        "filteredRisk": "A2",
+        "pharmacistApprovedRisk": "not_evaluated",
+        "ruleRisk": "A2",
+        "semanticStatus": "ok",
+        "retrievalUsed": true,
+        "retrievalEnabled": true,
+        "rulesEnabled": true,
+        "clarificationMode": "none",
+        "clarificationTurns": [
+          {
+            "fieldPath": "patient.facts.pregnancy",
+            "asked": true,
+            "answered": true,
+            "kind": "denied",
+            "leakedLabel": false,
+            "round": 1
+          },
+          {
+            "fieldPath": "patient.facts.currentMedications",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script",
+            "round": 1
+          },
+          {
+            "fieldPath": "patient.facts.liverImpairment",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script",
+            "round": 1
+          }
+        ],
+        "answered": 1,
+        "asked": 3,
+        "rounds": 1,
+        "stopReason": "script_stopped",
+        "inputHash": "660f90765958e062ac32016cee1912f68c43b236f0e9ebe56b3b1c5535ac4e50",
+        "outputHash": "c03f61b0d079962f1df454e866d64818ea36c59b9e7bd97631d0f8eae28acdaf",
+        "retrieved": [
+          {
+            "sourceId": "KS-PREG-001",
+            "title": "妊娠禁用药（演示整理）",
+            "version": "1.0",
+            "authority": "演示药事委员会（合成）",
+            "hash": "d8bf4af1ed99ff3b95fd32d8efca0713d7713f47fc85a44465b7e7fce42663bc"
+          },
+          {
+            "sourceId": "KS-PREG-002",
+            "title": "妊娠慎用药（演示整理）",
+            "version": "1.0",
+            "authority": "演示药事委员会（合成）",
+            "hash": "f0bbd0c39c403e38e19f1490156e3357cb9d26484b6e0adca3c8d1f5510c9500"
+          },
+          {
+            "sourceId": "KS-DDI-001",
+            "title": "活血药与抗凝/抗血小板药（演示整理）",
+            "version": "1.0",
+            "authority": "演示药事委员会（合成）",
+            "hash": "1e9a3c7ca04cc9f97d71096f1175bd1e3d14f85ffc1555b02d387b94056a635e"
+          }
+        ],
+        "providerMeta": null,
+        "modelFailure": false,
+        "engineeringFailure": false,
+        "clinicalUnsafe": "not_evaluated"
+      },
+      {
+        "groupId": "B",
+        "caseId": "IT06",
+        "ok": true,
+        "latencyMs": 1,
+        "rawRisk": "A2",
+        "filteredRisk": "A2",
+        "pharmacistApprovedRisk": "not_evaluated",
+        "ruleRisk": "A2",
+        "semanticStatus": "ok",
+        "retrievalUsed": true,
+        "retrievalEnabled": true,
+        "rulesEnabled": true,
+        "clarificationMode": "none",
+        "clarificationTurns": [
+          {
+            "fieldPath": "patient.facts.pregnancy",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script",
+            "round": 1
+          },
+          {
+            "fieldPath": "patient.facts.currentMedications",
+            "asked": true,
+            "answered": true,
+            "kind": "reported",
+            "leakedLabel": false,
+            "round": 1
+          },
+          {
+            "fieldPath": "patient.facts.liverImpairment",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script",
+            "round": 1
+          }
+        ],
+        "answered": 1,
+        "asked": 3,
+        "rounds": 1,
+        "stopReason": "no_remaining_questions",
+        "inputHash": "760cd7dc9e83e3c44cbad0344d199f50a6ed017f20c89d36d1502bb99420d925",
+        "outputHash": "db591caf9c7db7ebbf0e481bcb99a443d7b1cdcf9bb91fe59e076e8673c9b05c",
+        "retrieved": [
+          {
+            "sourceId": "KS-DDI-001",
+            "title": "活血药与抗凝/抗血小板药（演示整理）",
+            "version": "1.0",
+            "authority": "演示药事委员会（合成）",
+            "hash": "1e9a3c7ca04cc9f97d71096f1175bd1e3d14f85ffc1555b02d387b94056a635e"
+          },
+          {
+            "sourceId": "KS-PAIR-018",
+            "title": "十八反配伍禁忌（演示整理）",
+            "version": "1.0",
+            "authority": "演示药事委员会（合成）",
+            "hash": "2524e86ea6b1cf270abb192d361d97ef91c5e46e27d231f3f9a8500b84046b96"
           }
         ],
         "providerMeta": null,
@@ -529,7 +774,7 @@
         "groupId": "C",
         "caseId": "IT02",
         "ok": true,
-        "latencyMs": 0,
+        "latencyMs": 1,
         "rawRisk": "A2",
         "filteredRisk": "A2",
         "pharmacistApprovedRisk": "not_evaluated",
@@ -593,7 +838,7 @@
         "asked": 6,
         "rounds": 1,
         "stopReason": "no_remaining_questions",
-        "inputHash": "8844a1e6ed4112503eb7625cd7c39972bd1a854c576d22764f8d42a1566fb82f",
+        "inputHash": "50a018560fc2f40b2b203aa4f45e97ffc6a51d2ca8ee06390155e742bc0c4ab5",
         "outputHash": "57ac5afdf7805011b160120701b1ec662f036e956b29342dfe4512652ac0dbb5",
         "retrieved": [
           {
@@ -684,7 +929,7 @@
         "asked": 6,
         "rounds": 1,
         "stopReason": "no_remaining_questions",
-        "inputHash": "847b6f672323b2d19c7a17bc6a5bed44cec1ca5da454c56bb4e43831c7f7ac4c",
+        "inputHash": "5fda88e10d96f40819b7de510b4171cb352b35521230c109e3fedcbceb12e596",
         "outputHash": "cf4b0d202a54d152781728ceeb299119b77da044d804690d8e14b72792ab6760",
         "retrieved": [],
         "providerMeta": null,
@@ -760,7 +1005,7 @@
         "asked": 6,
         "rounds": 1,
         "stopReason": "script_stopped",
-        "inputHash": "520d06d029faddddb8c7256c3e93126cebc781d2b2a6b995740a5344d20dd83d",
+        "inputHash": "f557d810445fdf037a1573308a877a7fa2c253ceb6ac192e1b6f6da85e281c11",
         "outputHash": "2780c3c376158fa4cc08ee6f4824a039fe29eafc9945833e22595e88a494f420",
         "retrieved": [
           {
@@ -769,6 +1014,195 @@
             "version": "1.0",
             "authority": "演示药事委员会（合成）",
             "hash": "1e9a3c7ca04cc9f97d71096f1175bd1e3d14f85ffc1555b02d387b94056a635e"
+          }
+        ],
+        "providerMeta": null,
+        "modelFailure": false,
+        "engineeringFailure": false,
+        "clinicalUnsafe": "not_evaluated"
+      },
+      {
+        "groupId": "C",
+        "caseId": "IT05",
+        "ok": true,
+        "latencyMs": 0,
+        "rawRisk": "A2",
+        "filteredRisk": "A2",
+        "pharmacistApprovedRisk": "not_evaluated",
+        "ruleRisk": "A2",
+        "semanticStatus": "ok",
+        "retrievalUsed": true,
+        "retrievalEnabled": true,
+        "rulesEnabled": true,
+        "clarificationMode": "generic",
+        "clarificationTurns": [
+          {
+            "fieldPath": "patient.facts.currentMedications",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script",
+            "round": 1
+          },
+          {
+            "fieldPath": "patient.facts.pregnancy",
+            "asked": true,
+            "answered": true,
+            "kind": "denied",
+            "leakedLabel": false,
+            "round": 1
+          },
+          {
+            "fieldPath": "patient.facts.lactation",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script",
+            "round": 1
+          },
+          {
+            "fieldPath": "patient.facts.liverImpairment",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script",
+            "round": 1
+          },
+          {
+            "fieldPath": "patient.facts.renalImpairment",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script",
+            "round": 1
+          },
+          {
+            "fieldPath": "patient.facts.weightKg",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script",
+            "round": 1
+          }
+        ],
+        "answered": 1,
+        "asked": 6,
+        "rounds": 1,
+        "stopReason": "script_stopped",
+        "inputHash": "a83cd3d0ac3abd62a289c13c47a60009ef11fd136d4ff554601c807955438395",
+        "outputHash": "c03f61b0d079962f1df454e866d64818ea36c59b9e7bd97631d0f8eae28acdaf",
+        "retrieved": [
+          {
+            "sourceId": "KS-PREG-001",
+            "title": "妊娠禁用药（演示整理）",
+            "version": "1.0",
+            "authority": "演示药事委员会（合成）",
+            "hash": "d8bf4af1ed99ff3b95fd32d8efca0713d7713f47fc85a44465b7e7fce42663bc"
+          },
+          {
+            "sourceId": "KS-PREG-002",
+            "title": "妊娠慎用药（演示整理）",
+            "version": "1.0",
+            "authority": "演示药事委员会（合成）",
+            "hash": "f0bbd0c39c403e38e19f1490156e3357cb9d26484b6e0adca3c8d1f5510c9500"
+          },
+          {
+            "sourceId": "KS-DDI-001",
+            "title": "活血药与抗凝/抗血小板药（演示整理）",
+            "version": "1.0",
+            "authority": "演示药事委员会（合成）",
+            "hash": "1e9a3c7ca04cc9f97d71096f1175bd1e3d14f85ffc1555b02d387b94056a635e"
+          }
+        ],
+        "providerMeta": null,
+        "modelFailure": false,
+        "engineeringFailure": false,
+        "clinicalUnsafe": "not_evaluated"
+      },
+      {
+        "groupId": "C",
+        "caseId": "IT06",
+        "ok": true,
+        "latencyMs": 1,
+        "rawRisk": "A2",
+        "filteredRisk": "A2",
+        "pharmacistApprovedRisk": "not_evaluated",
+        "ruleRisk": "A2",
+        "semanticStatus": "ok",
+        "retrievalUsed": true,
+        "retrievalEnabled": true,
+        "rulesEnabled": true,
+        "clarificationMode": "generic",
+        "clarificationTurns": [
+          {
+            "fieldPath": "patient.facts.currentMedications",
+            "asked": true,
+            "answered": true,
+            "kind": "reported",
+            "leakedLabel": false,
+            "round": 1
+          },
+          {
+            "fieldPath": "patient.facts.pregnancy",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script",
+            "round": 1
+          },
+          {
+            "fieldPath": "patient.facts.lactation",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script",
+            "round": 1
+          },
+          {
+            "fieldPath": "patient.facts.liverImpairment",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script",
+            "round": 1
+          },
+          {
+            "fieldPath": "patient.facts.renalImpairment",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script",
+            "round": 1
+          },
+          {
+            "fieldPath": "patient.facts.weightKg",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script",
+            "round": 1
+          }
+        ],
+        "answered": 1,
+        "asked": 6,
+        "rounds": 1,
+        "stopReason": "no_remaining_questions",
+        "inputHash": "cf74c0b2dbe0ce4f3bd28dac7e00babf2bee696a618f6bdf9653535499a0fc2a",
+        "outputHash": "db591caf9c7db7ebbf0e481bcb99a443d7b1cdcf9bb91fe59e076e8673c9b05c",
+        "retrieved": [
+          {
+            "sourceId": "KS-DDI-001",
+            "title": "活血药与抗凝/抗血小板药（演示整理）",
+            "version": "1.0",
+            "authority": "演示药事委员会（合成）",
+            "hash": "1e9a3c7ca04cc9f97d71096f1175bd1e3d14f85ffc1555b02d387b94056a635e"
+          },
+          {
+            "sourceId": "KS-PAIR-018",
+            "title": "十八反配伍禁忌（演示整理）",
+            "version": "1.0",
+            "authority": "演示药事委员会（合成）",
+            "hash": "2524e86ea6b1cf270abb192d361d97ef91c5e46e27d231f3f9a8500b84046b96"
           }
         ],
         "providerMeta": null,
@@ -842,7 +1276,7 @@
         "groupId": "D",
         "caseId": "IT02",
         "ok": true,
-        "latencyMs": 0,
+        "latencyMs": 1,
         "rawRisk": "A2",
         "filteredRisk": "A2",
         "pharmacistApprovedRisk": "not_evaluated",
@@ -906,7 +1340,7 @@
         "asked": 6,
         "rounds": 1,
         "stopReason": "no_remaining_questions",
-        "inputHash": "c32f43f14dfd2168654623b45be2ce3e0b2cec1d7147e638f4f921941f8ce8b2",
+        "inputHash": "b661d0e2d8b3bbf4b2db20fb26fc508b100e5a7c5ea491ce141606f6d379a5d4",
         "outputHash": "57ac5afdf7805011b160120701b1ec662f036e956b29342dfe4512652ac0dbb5",
         "retrieved": [
           {
@@ -997,7 +1431,7 @@
         "asked": 6,
         "rounds": 1,
         "stopReason": "no_remaining_questions",
-        "inputHash": "92b65ea955f95195493c976027cb9b21fc38438448b3c986098e8abf97bac279",
+        "inputHash": "a0225efc9c0a66899835388a08adabcf3f6f2afb52bf9eba4cbbf383148177bc",
         "outputHash": "cf4b0d202a54d152781728ceeb299119b77da044d804690d8e14b72792ab6760",
         "retrieved": [],
         "providerMeta": null,
@@ -1073,7 +1507,7 @@
         "asked": 6,
         "rounds": 1,
         "stopReason": "burden_cap",
-        "inputHash": "d9d546e001301076197d0ac117592970cd9d5fc47bc52217af7c4122706b072f",
+        "inputHash": "f47be9d6921dd9b93efaae6cb6db1c5f1e51a0ac4979045848bf5c5be71ee4cf",
         "outputHash": "2780c3c376158fa4cc08ee6f4824a039fe29eafc9945833e22595e88a494f420",
         "retrieved": [
           {
@@ -1088,6 +1522,195 @@
         "modelFailure": false,
         "engineeringFailure": false,
         "clinicalUnsafe": "not_evaluated"
+      },
+      {
+        "groupId": "D",
+        "caseId": "IT05",
+        "ok": true,
+        "latencyMs": 0,
+        "rawRisk": "A2",
+        "filteredRisk": "A2",
+        "pharmacistApprovedRisk": "not_evaluated",
+        "ruleRisk": "A2",
+        "semanticStatus": "ok",
+        "retrievalUsed": true,
+        "retrievalEnabled": true,
+        "rulesEnabled": true,
+        "clarificationMode": "risk_adaptive",
+        "clarificationTurns": [
+          {
+            "fieldPath": "patient.facts.currentMedications",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script",
+            "round": 1
+          },
+          {
+            "fieldPath": "patient.facts.pregnancy",
+            "asked": true,
+            "answered": true,
+            "kind": "denied",
+            "leakedLabel": false,
+            "round": 1
+          },
+          {
+            "fieldPath": "patient.facts.lactation",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script",
+            "round": 1
+          },
+          {
+            "fieldPath": "patient.facts.liverImpairment",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script",
+            "round": 1
+          },
+          {
+            "fieldPath": "patient.facts.renalImpairment",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script",
+            "round": 1
+          },
+          {
+            "fieldPath": "patient.facts.weightKg",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script",
+            "round": 1
+          }
+        ],
+        "answered": 1,
+        "asked": 6,
+        "rounds": 1,
+        "stopReason": "burden_cap",
+        "inputHash": "3b4c708dc025c3cc3ac2eec82d65fc20cf8ddafa0fd5eb70b3c7ff4589e94181",
+        "outputHash": "c03f61b0d079962f1df454e866d64818ea36c59b9e7bd97631d0f8eae28acdaf",
+        "retrieved": [
+          {
+            "sourceId": "KS-PREG-001",
+            "title": "妊娠禁用药（演示整理）",
+            "version": "1.0",
+            "authority": "演示药事委员会（合成）",
+            "hash": "d8bf4af1ed99ff3b95fd32d8efca0713d7713f47fc85a44465b7e7fce42663bc"
+          },
+          {
+            "sourceId": "KS-PREG-002",
+            "title": "妊娠慎用药（演示整理）",
+            "version": "1.0",
+            "authority": "演示药事委员会（合成）",
+            "hash": "f0bbd0c39c403e38e19f1490156e3357cb9d26484b6e0adca3c8d1f5510c9500"
+          },
+          {
+            "sourceId": "KS-DDI-001",
+            "title": "活血药与抗凝/抗血小板药（演示整理）",
+            "version": "1.0",
+            "authority": "演示药事委员会（合成）",
+            "hash": "1e9a3c7ca04cc9f97d71096f1175bd1e3d14f85ffc1555b02d387b94056a635e"
+          }
+        ],
+        "providerMeta": null,
+        "modelFailure": false,
+        "engineeringFailure": false,
+        "clinicalUnsafe": "not_evaluated"
+      },
+      {
+        "groupId": "D",
+        "caseId": "IT06",
+        "ok": true,
+        "latencyMs": 1,
+        "rawRisk": "A2",
+        "filteredRisk": "A2",
+        "pharmacistApprovedRisk": "not_evaluated",
+        "ruleRisk": "A2",
+        "semanticStatus": "ok",
+        "retrievalUsed": true,
+        "retrievalEnabled": true,
+        "rulesEnabled": true,
+        "clarificationMode": "risk_adaptive",
+        "clarificationTurns": [
+          {
+            "fieldPath": "patient.facts.currentMedications",
+            "asked": true,
+            "answered": true,
+            "kind": "reported",
+            "leakedLabel": false,
+            "round": 1
+          },
+          {
+            "fieldPath": "patient.facts.pregnancy",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script",
+            "round": 1
+          },
+          {
+            "fieldPath": "patient.facts.lactation",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script",
+            "round": 1
+          },
+          {
+            "fieldPath": "patient.facts.liverImpairment",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script",
+            "round": 1
+          },
+          {
+            "fieldPath": "patient.facts.renalImpairment",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script",
+            "round": 1
+          },
+          {
+            "fieldPath": "patient.facts.weightKg",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script",
+            "round": 1
+          }
+        ],
+        "answered": 1,
+        "asked": 6,
+        "rounds": 1,
+        "stopReason": "no_remaining_questions",
+        "inputHash": "b5af6e1ab66dc995cc919b01d46202a375244e1dd0a77ad8566a7ba222dbde11",
+        "outputHash": "db591caf9c7db7ebbf0e481bcb99a443d7b1cdcf9bb91fe59e076e8673c9b05c",
+        "retrieved": [
+          {
+            "sourceId": "KS-DDI-001",
+            "title": "活血药与抗凝/抗血小板药（演示整理）",
+            "version": "1.0",
+            "authority": "演示药事委员会（合成）",
+            "hash": "1e9a3c7ca04cc9f97d71096f1175bd1e3d14f85ffc1555b02d387b94056a635e"
+          },
+          {
+            "sourceId": "KS-PAIR-018",
+            "title": "十八反配伍禁忌（演示整理）",
+            "version": "1.0",
+            "authority": "演示药事委员会（合成）",
+            "hash": "2524e86ea6b1cf270abb192d361d97ef91c5e46e27d231f3f9a8500b84046b96"
+          }
+        ],
+        "providerMeta": null,
+        "modelFailure": false,
+        "engineeringFailure": false,
+        "clinicalUnsafe": "not_evaluated"
       }
     ],
     "RAG_off": [
@@ -1095,7 +1718,7 @@
         "groupId": "RAG_off",
         "caseId": "IT01",
         "ok": true,
-        "latencyMs": 1,
+        "latencyMs": 0,
         "rawRisk": "A1",
         "filteredRisk": "A1",
         "pharmacistApprovedRisk": "not_evaluated",
@@ -1171,7 +1794,7 @@
         "asked": 3,
         "rounds": 1,
         "stopReason": "no_remaining_questions",
-        "inputHash": "01d55d0d69f595a0f4e24ed352795044bab9faba605a20d0d325dcb166ddfc5d",
+        "inputHash": "6877e93d013e1a85aa546aa096d78b7b694c5a4dcb1c3c47943c54fef1378c58",
         "outputHash": "57ac5afdf7805011b160120701b1ec662f036e956b29342dfe4512652ac0dbb5",
         "retrieved": [],
         "providerMeta": null,
@@ -1283,8 +1906,112 @@
         "asked": 4,
         "rounds": 1,
         "stopReason": "script_stopped",
-        "inputHash": "d42a515bf76c215d7d06f8e4756c3271b595100c47e63ca3ad8ee08fb9b9c928",
+        "inputHash": "8abc2da96c0f966f0b97721bf9c50e40e3550b050ba320744ef2b784205c12ac",
         "outputHash": "2780c3c376158fa4cc08ee6f4824a039fe29eafc9945833e22595e88a494f420",
+        "retrieved": [],
+        "providerMeta": null,
+        "modelFailure": false,
+        "engineeringFailure": false,
+        "clinicalUnsafe": "not_evaluated"
+      },
+      {
+        "groupId": "RAG_off",
+        "caseId": "IT05",
+        "ok": true,
+        "latencyMs": 0,
+        "rawRisk": "A2",
+        "filteredRisk": "A2",
+        "pharmacistApprovedRisk": "not_evaluated",
+        "ruleRisk": "A2",
+        "semanticStatus": "ok",
+        "retrievalUsed": false,
+        "retrievalEnabled": false,
+        "rulesEnabled": true,
+        "clarificationMode": "none",
+        "clarificationTurns": [
+          {
+            "fieldPath": "patient.facts.pregnancy",
+            "asked": true,
+            "answered": true,
+            "kind": "denied",
+            "leakedLabel": false,
+            "round": 1
+          },
+          {
+            "fieldPath": "patient.facts.currentMedications",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script",
+            "round": 1
+          },
+          {
+            "fieldPath": "patient.facts.liverImpairment",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script",
+            "round": 1
+          }
+        ],
+        "answered": 1,
+        "asked": 3,
+        "rounds": 1,
+        "stopReason": "script_stopped",
+        "inputHash": "11b8f9a2f9fbd570cb414ef161314c587544fc095005a319bc503361401bc008",
+        "outputHash": "c03f61b0d079962f1df454e866d64818ea36c59b9e7bd97631d0f8eae28acdaf",
+        "retrieved": [],
+        "providerMeta": null,
+        "modelFailure": false,
+        "engineeringFailure": false,
+        "clinicalUnsafe": "not_evaluated"
+      },
+      {
+        "groupId": "RAG_off",
+        "caseId": "IT06",
+        "ok": true,
+        "latencyMs": 0,
+        "rawRisk": "A2",
+        "filteredRisk": "A2",
+        "pharmacistApprovedRisk": "not_evaluated",
+        "ruleRisk": "A2",
+        "semanticStatus": "ok",
+        "retrievalUsed": false,
+        "retrievalEnabled": false,
+        "rulesEnabled": true,
+        "clarificationMode": "none",
+        "clarificationTurns": [
+          {
+            "fieldPath": "patient.facts.pregnancy",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script",
+            "round": 1
+          },
+          {
+            "fieldPath": "patient.facts.currentMedications",
+            "asked": true,
+            "answered": true,
+            "kind": "reported",
+            "leakedLabel": false,
+            "round": 1
+          },
+          {
+            "fieldPath": "patient.facts.liverImpairment",
+            "asked": true,
+            "answered": false,
+            "leakedLabel": false,
+            "kind": "no_script",
+            "round": 1
+          }
+        ],
+        "answered": 1,
+        "asked": 3,
+        "rounds": 1,
+        "stopReason": "no_remaining_questions",
+        "inputHash": "805a2ff307fd9b3048e0386183adba60437a235733e9a444967c9f0f3ad25c2d",
+        "outputHash": "db591caf9c7db7ebbf0e481bcb99a443d7b1cdcf9bb91fe59e076e8673c9b05c",
         "retrieved": [],
         "providerMeta": null,
         "modelFailure": false,
@@ -1294,7 +2021,7 @@
     ]
   },
   "engineering": {
-    "cases": 4,
+    "cases": 6,
     "failures": 0,
     "modelFailures": 0
   }

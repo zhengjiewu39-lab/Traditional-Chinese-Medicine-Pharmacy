@@ -5,59 +5,69 @@
 const { FIELD_VALUE_SCHEMA, coerceFactValue } = require('./clinicalFacts');
 const { FIELD_WHITELIST } = require('./clarificationService');
 
-const KEYWORDS = [
-  { fieldPath: 'patient.facts.allergies', re: /过敏[于到]?([^。；;\n]+)|对([^。；;\n]{1,20})过敏/ },
-  { fieldPath: 'patient.facts.pregnancy', re: /怀孕|妊娠|备孕/ },
-  { fieldPath: 'patient.facts.lactation', re: /哺乳|在喂奶/ },
-  { fieldPath: 'patient.facts.liverImpairment', re: /肝[功能脏]?(异常|不好|损害)|肝炎/ },
-  { fieldPath: 'patient.facts.renalImpairment', re: /肾[功能脏]?(异常|不好|损害)|肾炎/ },
-  { fieldPath: 'patient.facts.ageYears', re: /(\d{1,3})\s*岁/ },
-  { fieldPath: 'patient.facts.weightKg', re: /(\d{2,3}(?:\.\d)?)\s*公斤|体重\s*(\d{2,3}(?:\.\d)?)/ },
-  { fieldPath: 'patient.facts.currentMedications', re: /在吃|正在服用|合并用药[:：]?\s*([^。；;\n]+)/ },
-];
+const NEGATION = /不(是|会|曾)?|没有|无|否认|未曾|未再|不是/;
+const HISTORY = /以前|曾经|几年前|病史|既往/;
+const FAMILY = /父亲|母亲|家人|家属|老公|妻子|孩子/;
+const HYPOTHESIS = /如果|要是|可能|怀疑/;
 
 function spanExists(text, span) {
   return Boolean(span && String(text).includes(String(span)));
 }
 
+function clauseAround(blob, idx, len = 12) {
+  const start = Math.max(0, idx - 8);
+  const end = Math.min(blob.length, idx + len + 12);
+  return blob.slice(start, end);
+}
+
+function negated(clause) {
+  return NEGATION.test(clause);
+}
+
 function heuristicExtract(text) {
   const blob = String(text || '');
   const out = [];
-  for (const row of KEYWORDS) {
-    const m = blob.match(row.re);
-    if (!m) continue;
-    const sourceText = m[0];
-    if (!spanExists(blob, sourceText)) continue;
-    let raw = m[1] || m[2] || true;
-    if (row.fieldPath === 'patient.facts.pregnancy' || row.fieldPath === 'patient.facts.lactation') raw = 'yes';
-    if (row.fieldPath === 'patient.facts.liverImpairment' || row.fieldPath === 'patient.facts.renalImpairment') raw = true;
-    if (row.fieldPath.endsWith('allergies') || row.fieldPath.endsWith('currentMedications')) {
-      raw = String(raw).split(/[、,，和与]/).map((s) => s.trim()).filter(Boolean);
+  const push = (row) => out.push({ ...row, extractedBy: 'heuristic_fallback', heuristicFallback: true, needsConfirmation: true, status: 'pending_confirmation', candidateScore: null });
+
+  const preg = blob.search(/怀孕|妊娠|备孕/);
+  if (preg >= 0) {
+    const clause = clauseAround(blob, preg);
+    if (FAMILY.test(clause) || HYPOTHESIS.test(clause)) {
+      /* skip relative / hypothetical */
+    } else if (negated(clause)) {
+      push({ fieldPath: 'patient.facts.pregnancy', candidateValue: 'no', sourceText: clause.trim(), proposedStatus: 'none' });
+    } else {
+      push({ fieldPath: 'patient.facts.pregnancy', candidateValue: 'yes', sourceText: clause.trim(), proposedStatus: 'reported' });
     }
-    if (row.fieldPath.endsWith('ageYears') || row.fieldPath.endsWith('weightKg')) raw = Number(raw);
-    let coerced;
-    try {
-      coerced = coerceFactValue(row.fieldPath, 'reported', raw);
-    } catch {
-      continue;
-    }
-    out.push({
-      fieldPath: row.fieldPath,
-      candidateValue: coerced.value,
-      status: 'pending_confirmation',
-      sourceText,
-      needsConfirmation: true,
-      extractedBy: 'heuristic',
-      candidateScore: null,
-    });
   }
+  const liver = blob.search(/肝[功能脏]?(异常|不好|损害)|肝炎/);
+  if (liver >= 0) {
+    const clause = clauseAround(blob, liver);
+    if (FAMILY.test(clause) || HYPOTHESIS.test(clause)) {
+      /* skip */
+    } else if (HISTORY.test(clause) || negated(clause)) {
+      push({ fieldPath: 'patient.facts.liverImpairment', candidateValue: false, sourceText: clause.trim(), proposedStatus: 'none' });
+    } else {
+      push({ fieldPath: 'patient.facts.liverImpairment', candidateValue: true, sourceText: clause.trim(), proposedStatus: 'reported' });
+    }
+  }
+  const med = blob.match(/正在服用\s*([^。；;\n]+)|在吃\s*([^。；;\n]+)|合并用药[:：]?\s*([^。；;\n]+)/);
+  if (med) {
+    const clause = med[0];
+    if (!negated(clause)) {
+      const names = String(med[1] || med[2] || med[3] || '').split(/[、,，和与]/).map((s) => s.trim()).filter((s) => s && !/true|false|没有/.test(s));
+      if (names.length) push({ fieldPath: 'patient.facts.currentMedications', candidateValue: names, sourceText: clause, proposedStatus: 'reported' });
+    }
+  }
+  const age = blob.match(/(\d{1,3})\s*岁/);
+  if (age) push({ fieldPath: 'patient.facts.ageYears', candidateValue: Number(age[1]), sourceText: age[0], proposedStatus: 'reported' });
   return out;
 }
 
 function whitelistOnly(candidates, sourceText) {
   return (candidates || []).filter((c) => {
     if (!FIELD_WHITELIST.has(c.fieldPath) && !FIELD_VALUE_SCHEMA[c.fieldPath]) return false;
-    if (c.sourceText && !spanExists(sourceText, c.sourceText)) return false;
+    if (!c.sourceText || !spanExists(sourceText, c.sourceText)) return false;
     return true;
   }).map((c) => ({
     ...c,
@@ -68,20 +78,77 @@ function whitelistOnly(candidates, sourceText) {
   }));
 }
 
-function extractCandidateFacts(c, { provider } = {}) {
+async function modelExtract(text, provider) {
+  if (!provider || typeof provider.complete !== 'function') return { candidates: [], called: false };
+  const messages = [
+    {
+      role: 'system',
+      content: 'Extract only whitelist patient facts as JSON {candidates:[{fieldPath,value,sourceText,negated}]}. sourceText must be a verbatim substring covering the full claim, including negation. Do not invent diagnoses or prescriptions. Do not mark verified.',
+    },
+    { role: 'user', content: String(text || '').slice(0, 2000) },
+  ];
+  let raw;
+  try {
+    raw = await provider.complete({ messages, jsonSchema: { type: 'object' } });
+  } catch {
+    return { candidates: [], called: true, invalid: true };
+  }
+  let parsed;
+  try { parsed = JSON.parse(raw); } catch { return { candidates: [], called: true, invalid: true }; }
+  const rows = [];
+  for (const c of parsed.candidates || []) {
+    if (!c.sourceText || !spanExists(text, c.sourceText)) continue;
+    const status = c.negated ? 'none' : 'reported';
+    try {
+      const coerced = coerceFactValue(c.fieldPath, status, c.negated ? (FIELD_VALUE_SCHEMA[c.fieldPath]?.type === 'list' ? [] : c.value) : c.value);
+      rows.push({
+        fieldPath: c.fieldPath,
+        candidateValue: coerced.value,
+        proposedStatus: coerced.status,
+        sourceText: c.sourceText,
+        extractedBy: provider.isMock ? 'mock_model' : 'model',
+        heuristicFallback: false,
+        needsConfirmation: true,
+        status: 'pending_confirmation',
+        candidateScore: null,
+      });
+    } catch { /* skip illegal */ }
+  }
+  return { candidates: rows, called: true };
+}
+
+async function extractCandidateFacts(c, { provider } = {}) {
   const text = c.source?.rawText || c.patient?.narrative || '';
-  const heuristic = heuristicExtract(text);
+  if (!text.trim()) {
+    return { candidates: [], provider: 'none', isMock: Boolean(provider?.isMock), modelDidNotVerify: true, extractSource: 'empty' };
+  }
+  if (provider && typeof provider.complete === 'function') {
+    const modeled = await modelExtract(text, provider);
+    if (modeled.called && !modeled.invalid) {
+      return {
+        candidates: whitelistOnly(modeled.candidates, text),
+        provider: provider.id || 'model',
+        isMock: Boolean(provider.isMock),
+        modelDidNotVerify: true,
+        extractSource: provider.isMock ? 'mock_model' : 'live_model',
+        modelCalled: true,
+      };
+    }
+  }
   return {
-    candidates: whitelistOnly(heuristic, text),
-    provider: provider?.id || 'heuristic',
-    isMock: Boolean(provider?.isMock),
+    candidates: whitelistOnly(heuristicExtract(text), text),
+    provider: 'heuristic_fallback',
+    isMock: false,
     modelDidNotVerify: true,
+    extractSource: 'heuristic_fallback',
+    modelCalled: false,
   };
 }
 
 function attachCandidates(c, extracted) {
   c.factCandidates = [...(c.factCandidates || []), ...(extracted.candidates || []).map((row) => ({
     ...row,
+    candidateId: row.candidateId || `cand-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     caseContentVersion: c.contentVersion,
     createdAt: new Date().toISOString(),
   }))];
@@ -93,4 +160,5 @@ module.exports = {
   attachCandidates,
   heuristicExtract,
   whitelistOnly,
+  modelExtract,
 };

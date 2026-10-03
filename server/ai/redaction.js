@@ -80,14 +80,14 @@ function minimiseCaseForModel(c) {
       lactation: p.lactation ?? 'unknown',
       allergies: {
         status: p.allergyStatus,
-        names: (p.allergies || []).map(scrubText),
+        names: (Array.isArray(p.allergies) ? p.allergies : []).map(scrubText),
       },
       allergySeverity: c.patient?.allergySeverity || 'unknown',
       liverImpairment: { status: p.liverStatus, reportedTrue: p.liverImpairment === true },
       renalImpairment: { status: p.renalStatus, reportedTrue: p.renalImpairment === true },
       currentMedications: {
         status: p.medicationStatus,
-        names: (p.currentMedications || []).map(scrubText),
+        names: (Array.isArray(p.currentMedications) ? p.currentMedications : []).map(scrubText),
       },
     },
     diagnosisText: scrubText(rx.diagnosisText || clinical.diagnosisText || ''),

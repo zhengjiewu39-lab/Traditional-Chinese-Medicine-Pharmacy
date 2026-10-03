@@ -2,6 +2,8 @@
  * Build evaluation cases from a frozen pack.
  * Hidden labels never enter the visible case object used by the system under test.
  */
+const facts = require('../workflow/clinicalFacts');
+
 const HIDDEN_KEYS = ['hiddenPatientFacts', 'patientAnswerScript', 'expertReferenceLabels', 'expected'];
 
 function deepMerge(base, over) {
@@ -20,7 +22,7 @@ function issuedAtFromOffset(offsetDays, now = new Date()) {
 function buildVisibleCase(pack, raw, { now = new Date() } = {}) {
   const defaults = pack.defaults || {};
   const observed = raw.initialObservedFacts || raw.patient || {};
-  const patient = deepMerge(defaults.patient, observed);
+  const patient = facts.attachFacts(deepMerge(defaults.patient, observed));
   const prescriber = raw.prescriber === null ? null : deepMerge(defaults.prescriber, raw.prescriber);
   const prescription = deepMerge(defaults.prescription, raw.prescription || {});
   const offset = prescription.issuedAtOffsetDays;

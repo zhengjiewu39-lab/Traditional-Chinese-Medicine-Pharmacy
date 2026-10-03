@@ -493,6 +493,13 @@ export default function ReviewDetail() {
                 setClarQ('');
               }, t('ai.review.clarSent'))}>{t('ai.review.clarSend')}</Button>
             </Stack>
+            {(c.factCandidates || []).filter((x) => x.status === 'pending_confirmation').map((cand) => (
+              <Stack key={cand.candidateId} direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+                <Typography variant="body2">候选 {cand.fieldPath} = {String(cand.candidateValue)}（{cand.sourceText}）</Typography>
+                <Button size="small" onClick={() => run(() => aiCasesApi.confirmFactCandidate(caseId, { candidateId: cand.candidateId, action: 'accept' }), '已确认候选')}>确认</Button>
+                <Button size="small" onClick={() => run(() => aiCasesApi.confirmFactCandidate(caseId, { candidateId: cand.candidateId, action: 'deny' }), '已否认候选')}>否认</Button>
+              </Stack>
+            ))}
             {(c.clarificationTasks || []).map((task) => (
               <Stack key={task.taskId} direction="row" spacing={1} alignItems="center">
                 <Typography variant="body2">{task.fieldPath} · {task.status} · {task.question}</Typography>
@@ -501,9 +508,10 @@ export default function ReviewDetail() {
                 )}
               </Stack>
             ))}
+            <Typography variant="caption" color="text.secondary">用药指示由当前处方模板生成，下方文字只作为待审解释，不会改剂量。</Typography>
             <TextField multiline minRows={3} label={t('ai.review.eduDraft')} value={eduText} onChange={(e) => setEduText(e.target.value)} />
             <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-              <Button variant="outlined" disabled={busy || !eduText} onClick={() => run(() => aiCasesApi.createEducation(caseId, { text: eduText, source: 'pharmacist' }), t('ai.review.eduCreated'))}>{t('ai.review.eduCreate')}</Button>
+              <Button variant="outlined" disabled={busy} onClick={() => run(() => aiCasesApi.createEducation(caseId, { aiExplanation: eduText, source: 'pharmacist' }), t('ai.review.eduCreated'))}>{t('ai.review.eduCreate')}</Button>
             </Stack>
             {(c.educationDocuments || []).map((d) => (
               <Stack key={d.documentId} direction="row" spacing={1} alignItems="center">

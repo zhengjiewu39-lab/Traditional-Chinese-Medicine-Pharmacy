@@ -147,6 +147,27 @@ export default function MyPrescriptions({ view = 'all' }) {
               </>
             )}
 
+            {(c.factCandidates || []).map((cand) => (
+              <Alert key={cand.candidateId} severity="warning" sx={{ mt: 2 }}>
+                <Typography variant="body2">系统从您的描述中读到：{cand.fieldPath} = {String(cand.candidateValue)}（原文「{cand.sourceText}」）。这还不是已核实资料。</Typography>
+                <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+                  <Button size="small" variant="contained" onClick={async () => {
+                    try {
+                      await patientPortalApi.confirmOwnFactCandidate(c.caseId, { candidateId: cand.candidateId, action: 'accept' });
+                      setNotice('已确认该资料');
+                      await load();
+                    } catch (e) { setError(formatApiError(e)); }
+                  }}>确认</Button>
+                  <Button size="small" onClick={async () => {
+                    try {
+                      await patientPortalApi.confirmOwnFactCandidate(c.caseId, { candidateId: cand.candidateId, action: 'deny' });
+                      setNotice('已否认该资料');
+                      await load();
+                    } catch (e) { setError(formatApiError(e)); }
+                  }}>不是这样</Button>
+                </Stack>
+              </Alert>
+            ))}
             {(c.clarifications || []).map((q) => (
               <Alert key={q.taskId} severity="info" sx={{ mt: 2 }}>
                 <Typography variant="body2" sx={{ mb: 1 }}>{q.question}</Typography>

@@ -44,6 +44,11 @@ function saveDoc(collection, key, document) {
   return document;
 }
 
+function getDoc(collection, key) {
+  const row = getDb().prepare('SELECT document FROM kv_docs WHERE collection = ? AND key = ?').get(collection, key);
+  return row ? JSON.parse(row.document) : null;
+}
+
 function data() {
   return {
     cases: readCollection('cases'),
@@ -97,6 +102,19 @@ function saveCase(c, { expectedVersion, expectedRecordVersion } = {}) {
     c.recordVersion = (current?.recordVersion || 0) + 1;
     writeDoc('cases', c.caseId, c, c.recordVersion);
     return c;
+  });
+}
+
+function appendCaseReplay(caseId, entry) {
+  return transaction(() => {
+    const current = getCase(caseId);
+    if (!current) return null;
+    const replays = Array.isArray(current.replays) ? current.replays : [];
+    if (!replays.some((r) => r.replayId === entry.replayId)) replays.push(entry);
+    current.replays = replays;
+    current.recordVersion = (current.recordVersion || 0) + 1;
+    writeDoc('cases', caseId, current, current.recordVersion);
+    return current;
   });
 }
 
@@ -277,9 +295,9 @@ const _store = {
 };
 
 module.exports = {
-  getCase, listCases, saveCase, tokens, proposals, addPurchaseDraft, purchaseDrafts, settings,
+  getCase, listCases, saveCase, appendCaseReplay, tokens, proposals, addPurchaseDraft, purchaseDrafts, settings,
   getDraft, listDrafts, saveDraft, getSuggestion, listSuggestions, saveSuggestion,
-  listDocs, saveDoc,
+  listDocs, saveDoc, getDoc,
   pickupTokens, pickupFailures, learning, recordStockMovement, upsertPatient, getPatient, listPatients,
   _store, INITIAL, DOC_MAP,
 };

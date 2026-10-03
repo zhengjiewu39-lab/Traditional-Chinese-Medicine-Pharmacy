@@ -3,6 +3,10 @@ const { ServiceError } = require('./errors');
 
 const STATUSES = ['draft', 'review_required', 'approved', 'published', 'superseded'];
 
+const CN_NUM = {
+  零: 0, 一: 1, 二: 2, 两: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9, 十: 10,
+};
+
 function structuredFacts(c) {
   const rx = c.prescription || {};
   return {
@@ -23,6 +27,14 @@ function normalizeUnit(u) {
   if (v === '千克' || v === 'kg') return 'kg';
   if (v === '毫克' || v === 'mg') return 'mg';
   return v || 'g';
+}
+
+function parseNumberToken(raw) {
+  const s = String(raw || '').trim();
+  if (/^\d+(?:\.\d+)?$/.test(s)) return Number(s);
+  if (Object.prototype.hasOwnProperty.call(CN_NUM, s)) return CN_NUM[s];
+  if (s.startsWith('十') && s.length === 2 && CN_NUM[s[1]] != null) return 10 + CN_NUM[s[1]];
+  return NaN;
 }
 
 function herbClause(blob, herbName, allNames) {
@@ -56,24 +68,32 @@ function escapeRe(s) {
 function factsMatchText(facts, text) {
   const blob = String(text || '');
   const problems = [];
+  let covered = 0;
   if (!blob.trim()) {
-    return { ok: false, problems: [{ code: 'empty_text' }], autoConsistent: false };
+    return { ok: false, verdict: 'empty', problems: [{ code: 'empty_text' }], autoConsistent: false };
   }
   const names = (facts.herbs || []).map((h) => h.name);
   for (const h of facts.herbs || []) {
-    if (!blob.includes(h.name) || h.dosage == null) continue;
+    if (!blob.includes(h.name)) {
+      problems.push({ code: 'herb_missing', herb: h.name });
+      continue;
+    }
+    if (h.dosage == null) continue;
     const window = herbClause(blob, h.name, names);
-    const m = window.match(new RegExp(`${escapeRe(h.name)}\\s*(\\d+(?:\\.\\d+)?)\\s*(g|kg|克|千克|mg|毫克)?`, 'i'));
-    if (m) {
-      const n = Number(m[1]);
-      const unit = normalizeUnit(m[2] || h.unit || 'g');
-      const expectedUnit = normalizeUnit(h.unit || 'g');
-      if (n !== Number(h.dosage)) {
-        problems.push({ code: 'dose_changed', herb: h.name, expected: h.dosage, unit: h.unit, found: m[0] });
-      }
-      if (m[2] && unit !== expectedUnit) {
-        problems.push({ code: 'unit_changed', herb: h.name, expected: h.unit || 'g', found: unit });
-      }
+    const m = window.match(new RegExp(`${escapeRe(h.name)}(?:每日|每天|一日)?\\s*(\\d+(?:\\.\\d+)?|[一二三四五六七八九十两])\\s*(g|kg|克|千克|mg|毫克)?`, 'i'));
+    if (!m) {
+      problems.push({ code: 'dose_unverified', herb: h.name, expected: h.dosage });
+      continue;
+    }
+    const n = parseNumberToken(m[1]);
+    const unit = normalizeUnit(m[2] || h.unit || 'g');
+    const expectedUnit = normalizeUnit(h.unit || 'g');
+    if (n !== Number(h.dosage)) {
+      problems.push({ code: 'dose_changed', herb: h.name, expected: h.dosage, unit: h.unit, found: m[0] });
+    } else if (m[2] && unit !== expectedUnit) {
+      problems.push({ code: 'unit_changed', herb: h.name, expected: h.unit || 'g', found: unit });
+    } else {
+      covered += 1;
     }
     if (h.decoctionTiming === '先煎' && /后下/.test(window) && !/先煎/.test(window)) {
       problems.push({ code: 'decoction_changed', herb: h.name, expected: '先煎' });
@@ -83,11 +103,21 @@ function factsMatchText(facts, text) {
     }
   }
   if (facts.doseCount != null) {
-    const countHit = blob.match(/共\s*(\d+)\s*剂/);
-    if (countHit && Number(countHit[1]) !== Number(facts.doseCount)) {
-      problems.push({ code: 'dose_count_changed', expected: facts.doseCount, found: Number(countHit[1]) });
+    const countHit = blob.match(/共\s*(\d+|[一二三四五六七八九十两])\s*剂/);
+    if (countHit) {
+      const n = parseNumberToken(countHit[1]);
+      if (n !== Number(facts.doseCount)) {
+        problems.push({ code: 'dose_count_changed', expected: facts.doseCount, found: n });
+      }
+    } else {
+      problems.push({ code: 'dose_count_unverified', expected: facts.doseCount });
     }
-    if (/每周/.test(blob) && /每日|一天|日一剂/.test(String(facts.frequency || facts.usage || ''))) {
+    const daily = blob.match(/每[日天]\s*(\d+|[一二三四五六七八九十两])\s*剂/);
+    const expectedDaily = /日一剂|每日一剂|一天一剂/.test(String(facts.frequency || facts.usage || ''));
+    if (daily && expectedDaily && parseNumberToken(daily[1]) !== 1) {
+      problems.push({ code: 'frequency_changed', expected: facts.frequency || facts.usage, found: daily[0] });
+    }
+    if (/每周/.test(blob) && expectedDaily) {
       problems.push({ code: 'frequency_changed', expected: facts.frequency || facts.usage });
     }
   }
@@ -99,7 +129,14 @@ function factsMatchText(facts, text) {
     seen.add(k);
     unique.push(p);
   }
-  return { ok: unique.length === 0, problems: unique, autoConsistent: unique.length === 0 };
+  const required = (facts.herbs || []).filter((h) => h.dosage != null).length + (facts.doseCount != null ? 1 : 0);
+  const complete = unique.length === 0 && covered === (facts.herbs || []).filter((h) => h.dosage != null).length && required > 0;
+  return {
+    ok: complete,
+    verdict: complete ? 'complete' : (unique.length ? 'inconsistent' : 'unknown'),
+    problems: unique,
+    autoConsistent: false,
+  };
 }
 
 function createDraft(c, actor, { text, aiExplanation = '', source = 'pharmacist' } = {}) {
@@ -108,9 +145,18 @@ function createDraft(c, actor, { text, aiExplanation = '', source = 'pharmacist'
     throw new ServiceError(409, 'usage_unclear', 'Usage is missing; create a clarification task instead of inventing directions');
   }
   const template = renderTemplate(facts);
-  const patientText = String(text || template).slice(0, 4000);
-  const check = factsMatchText(facts, patientText);
-  const extra = String(aiExplanation || '').slice(0, 2000);
+  const extra = String(aiExplanation || text || '').slice(0, 2000);
+  const explanationCheck = extra
+    ? factsMatchText(facts, extra)
+    : { ok: false, verdict: 'unknown', problems: [], autoConsistent: false };
+  const check = {
+    ok: true,
+    verdict: 'template_locked',
+    problems: [],
+    autoConsistent: false,
+    directionsLocked: true,
+    explanation: explanationCheck,
+  };
   const doc = {
     documentId: randomId('edu'),
     caseId: c.caseId,
@@ -118,14 +164,15 @@ function createDraft(c, actor, { text, aiExplanation = '', source = 'pharmacist'
     caseContentHash: c.contentHash,
     textVersion: 1,
     analysisId: c.analyses?.at(-1)?.analysisId || null,
-    status: 'review_required',
-    text: patientText,
+    status: extra ? 'review_required' : 'review_required',
+    text: template,
+    directionsText: template,
     templateText: template,
     aiExplanation: extra,
     structuredFacts: facts,
     source,
     genericFixedNotice: source === 'fixed_template',
-    consistency: { ...check, autoConsistent: check.ok && !extra },
+    consistency: check,
     createdBy: String(actor.id),
     createdAt: new Date().toISOString(),
     approvedBy: null,
@@ -134,6 +181,7 @@ function createDraft(c, actor, { text, aiExplanation = '', source = 'pharmacist'
     receivedAt: null,
     understoodAt: null,
     textHash: null,
+    directionsLocked: true,
   };
   doc.textHash = contentHashOf(doc);
   c.educationDocuments = (c.educationDocuments || []).map((d) => (
@@ -152,13 +200,22 @@ function approve(c, documentId, actor) {
   if (doc.caseContentVersion !== c.contentVersion || doc.caseContentHash !== c.contentHash) {
     throw new ServiceError(409, 'stale_education', 'Education document does not match current prescription content');
   }
-  const check = factsMatchText(doc.structuredFacts, doc.text);
-  if (!check.ok) throw new ServiceError(409, 'education_inconsistent', 'Simplification changed a dose, count or unit', check.problems);
-  check.autoConsistent = check.ok && !doc.aiExplanation;
+  const expected = renderTemplate(doc.structuredFacts || structuredFacts(c));
+  if ((doc.directionsText || doc.templateText || doc.text) !== expected) {
+    throw new ServiceError(409, 'education_inconsistent', 'Directions were altered away from the current prescription template');
+  }
+  doc.text = expected;
+  doc.directionsText = expected;
   doc.status = 'approved';
   doc.approvedBy = String(actor.id);
   doc.approvedAt = new Date().toISOString();
-  doc.consistency = check;
+  doc.consistency = {
+    ok: true,
+    verdict: 'template_locked',
+    problems: [],
+    autoConsistent: false,
+    directionsLocked: true,
+  };
   return doc;
 }
 
@@ -199,7 +256,7 @@ function markUnderstood(c, documentId, { quizOk = null } = {}) {
 }
 
 function contentHashOf(doc) {
-  return hashObject({ text: doc.text, facts: doc.structuredFacts, version: doc.textVersion });
+  return hashObject({ directions: doc.directionsText || doc.text, facts: doc.structuredFacts, explanation: doc.aiExplanation || '', version: doc.textVersion });
 }
 
 module.exports = {

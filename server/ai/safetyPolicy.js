@@ -33,7 +33,8 @@ function collectFreeText(caseRecord) {
   return [
     caseRecord.source?.rawText,
     rx.usage, rx.frequency, rx.decoctionNotes, rx.diagnosisText,
-    ...(p.allergies || []), ...(p.currentMedications || []),
+    ...(Array.isArray(p.allergies) ? p.allergies : []),
+    ...(Array.isArray(p.currentMedications) ? p.currentMedications : []),
     ...(rx.herbs || []).map((h) => `${h.name} ${h.note || ''} ${h.processing || ''}`),
   ].filter(Boolean).map(String);
 }

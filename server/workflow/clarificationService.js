@@ -209,52 +209,86 @@ function adaptiveFromFacts(c) {
   return out;
 }
 
-function scoreQuestion(q, seenFields) {
+const QUESTION_TEXT = {
+  'patient.facts.allergies': '是否有药物或食物过敏？没有请明确选择「没有」，不知道请选择「不知道」。',
+  'patient.facts.pregnancy': '是否正在怀孕或可能怀孕？',
+  'patient.facts.lactation': '是否正在哺乳？',
+  'patient.facts.liverImpairment': '目前是否有肝功能异常？既往史请说明，不要当作当前异常。',
+  'patient.facts.renalImpairment': '目前是否有肾功能异常？',
+  'patient.facts.ageYears': '请确认年龄（岁）。',
+  'patient.facts.weightKg': '请确认体重（公斤）。',
+  'patient.facts.currentMedications': '目前正在服用哪些西药或中成药？没有请明确选择「没有」。',
+  'patient.sex': '请确认生理性别。',
+};
+
+function scoreQuestion(q, seenFields, analysis = {}) {
   let score = 0;
   if (q.mandatory) score += QUESTION_WEIGHTS.mandatory;
   if (q.trigger === 'critical_missing') score += QUESTION_WEIGHTS.missingCritical;
   else if (q.trigger === 'conflict') score += QUESTION_WEIGHTS.conflict;
   else if (q.trigger === 'missing') score += QUESTION_WEIGHTS.missingNoncritical;
-  if (q.associatedRisk && /PREGNANCY|ALLERG|TOXIC|HARD/.test(String(q.associatedRisk))) score += QUESTION_WEIGHTS.mayChangePath;
+  const codes = [...(analysis.hardStops || []).map((h) => h.code), ...(analysis.alerts || []).map((a) => a.code), ...(analysis.missingInformation || []).map((m) => m.field || m.code)].join(' ');
+  const related = q.fieldPaths.some((f) => {
+    const key = f.replace('patient.facts.', '').replace('patient.', '');
+    return new RegExp(key.replace(/[A-Z]/g, (ch) => ch.toLowerCase()), 'i').test(codes)
+      || (f.includes('pregnancy') && /PREGNANCY/.test(codes))
+      || (f.includes('allerg') && /ALLERG/.test(codes))
+      || (f.includes('liver') && /HEPATO|LIVER/.test(codes));
+  });
+  if (related) score += QUESTION_WEIGHTS.mayChangePath;
   if (q.fieldPaths.some((f) => seenFields.has(f))) score += QUESTION_WEIGHTS.duplicatePenalty;
   score += QUESTION_WEIGHTS.burdenPenalty * (q.estimatedBurden || 1);
   return score;
 }
 
-function selectQuestions(candidates, { mode = 'risk_adaptive', maxBurden = 6 } = {}) {
-  const mandatory = candidates.filter((q) => q.mandatory);
+function attachQuestionText(q) {
+  return { ...q, questionText: q.questionText || QUESTION_TEXT[q.fieldPaths[0]] || q.reason || q.fieldPaths[0] };
+}
+
+function selectQuestions(candidates, { mode = 'risk_adaptive', maxBurden = 6, analysis = {} } = {}) {
+  const mandatory = candidates.filter((q) => q.mandatory).map(attachQuestionText);
+  const adaptive = candidates.filter((q) => !q.mandatory).map(attachQuestionText);
   if (mode === 'none') return { selected: [], skipped: candidates.map((q) => ({ ...q, skipReason: 'mode_none' })), stopReason: 'no_questions' };
-  if (mode === 'generic') {
-    const rest = candidates.filter((q) => !q.mandatory).slice(0, Math.max(0, maxBurden - mandatory.length));
-    const selected = [...mandatory, ...rest].slice(0, maxBurden);
+  const mandatoryBurden = mandatory.reduce((s, q) => s + (q.estimatedBurden || 1), 0);
+  if (mandatoryBurden > maxBurden) {
     return {
-      selected,
-      skipped: candidates.filter((q) => !selected.includes(q)).map((q) => ({ ...q, skipReason: 'generic_budget' })),
-      stopReason: selected.length ? null : 'nothing_to_ask',
+      selected: mandatory.map((q) => ({ ...q, selectionReason: 'mandatory' })),
+      skipped: adaptive.map((q) => ({ ...q, skipReason: 'mandatory_exceeds_budget' })),
+      stopReason: 'mandatory_exceeds_budget_escalate',
+      escalateToPharmacist: true,
+      weightsVersion: QUESTION_WEIGHTS.version,
+      heuristicNote: 'Mandatory safety questions are never dropped. Exceeding the budget escalates to a pharmacist. Weights are uncalibrated heuristics.',
     };
   }
-  const seen = new Set();
-  const ranked = [...candidates].sort((a, b) => scoreQuestion(b, seen) - scoreQuestion(a, seen));
-  const selected = [];
-  let burden = 0;
-  for (const q of ranked) {
-    if (q.mandatory) {
-      selected.push({ ...q, selectionReason: 'mandatory' });
-      q.fieldPaths.forEach((f) => seen.add(f));
-      burden += q.estimatedBurden || 1;
+  if (mode === 'generic') {
+    const room = Math.max(0, maxBurden - mandatoryBurden);
+    const rest = adaptive.slice(0, room);
+    return {
+      selected: [...mandatory.map((q) => ({ ...q, selectionReason: 'mandatory' })), ...rest.map((q) => ({ ...q, selectionReason: 'generic' }))],
+      skipped: adaptive.slice(room).map((q) => ({ ...q, skipReason: 'generic_budget' })),
+      stopReason: null,
+      weightsVersion: QUESTION_WEIGHTS.version,
+      heuristicNote: 'Uncalibrated heuristic ranking, not information gain.',
+    };
+  }
+  const selected = mandatory.map((q) => ({ ...q, selectionReason: 'mandatory' }));
+  const seen = new Set(mandatory.flatMap((q) => q.fieldPaths));
+  let burden = mandatoryBurden;
+  const remaining = [...adaptive];
+  while (remaining.length && burden < maxBurden) {
+    remaining.sort((a, b) => scoreQuestion(b, seen, analysis) - scoreQuestion(a, seen, analysis));
+    const next = remaining.shift();
+    if (next.fieldPaths.some((f) => seen.has(f))) {
+      next.skipReason = 'duplicate_field';
       continue;
     }
-    if (burden >= maxBurden) {
-      q.skipReason = 'burden_cap';
-      continue;
-    }
-    selected.push({ ...q, selectionReason: 'risk_heuristic' });
-    q.fieldPaths.forEach((f) => seen.add(f));
-    burden += q.estimatedBurden || 1;
+    selected.push({ ...next, selectionReason: 'risk_heuristic' });
+    next.fieldPaths.forEach((f) => seen.add(f));
+    burden += next.estimatedBurden || 1;
   }
   return {
     selected,
-    skipped: ranked.filter((q) => !selected.some((s) => s.questionId === q.questionId)),
+    skipped: remaining.map((q) => ({ ...q, skipReason: q.skipReason || 'burden_cap' })),
     stopReason: burden >= maxBurden ? 'burden_cap' : null,
     weightsVersion: QUESTION_WEIGHTS.version,
     heuristicNote: 'Weights are uncalibrated ordinal heuristics, not information gain or risk probability.',
@@ -289,12 +323,13 @@ function generateRiskQuestions(c, { mode = 'risk_adaptive', maxBurden = 6, maxRo
     merged.push(q);
   }
   const asked = new Set((c.clarificationTasks || []).filter((t) => ['sent', 'answered', 'reviewed'].includes(t.status)).flatMap((t) => [t.fieldPath]));
-  const unused = merged.filter((q) => !q.fieldPaths.every((f) => asked.has(f)) || q.mandatory);
-  const picked = selectQuestions(unused, { mode, maxBurden });
+  const unused = merged.filter((q) => !q.fieldPaths.every((f) => asked.has(f)));
+  const picked = selectQuestions(unused, { mode, maxBurden, analysis: c.analyses?.at(-1)?.output || {} });
   return {
     ...picked,
     remainingUnknown,
-    clarificationRound: priorRounds + 1,
+    persistedRound: priorRounds,
+    suggestedNextRound: priorRounds + 1,
     maxRounds,
     mode,
   };

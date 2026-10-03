@@ -3,13 +3,16 @@
  * and restock from reorder-point + pending prescription demand.
  * Does not invent herbs, change doses, or replace pharmacist sign-off.
  */
-const { randomId } = require('../common/hash');
+const { randomId, hashObject } = require('../common/hash');
 const { getStore, updateStore } = require('../data/store');
 const { logInventoryHistory } = require('../services/stats');
 const repo = require('./workflowRepository');
 const { recordStockMovement } = require('./workflowRepository');
+const { transaction } = require('../db/sqlite');
 const { unitsCompatible } = require('./inventoryDeduct');
 const { ServiceError } = require('./errors');
+const { isSyntheticMode } = require('../config/dataMode');
+const lots = require('./inventoryLots');
 
 const DEMAND_STATES = new Set([
   'pharmacist_approved',
@@ -30,7 +33,7 @@ function findInventoryItem(inventory, herb) {
 
 function planAllocation(c, { inventory, reserved } = {}) {
   const inv = inventory || getStore().inventory || [];
-  const stock = reserved || new Map(inv.map((i) => [i.id, i.stock ?? 0]));
+  const stock = reserved || new Map(inv.map((i) => [i.id, lots.listLots(i.id).length ? lots.rollupQty(i.id) : (i.stock ?? 0)]));
   const lines = [];
   for (const herb of c.prescription?.herbs || []) {
     const qty = herbQty(herb, c.prescription.doseCount);
@@ -48,7 +51,8 @@ function planAllocation(c, { inventory, reserved } = {}) {
       });
       continue;
     }
-    const available = stock.get(item.id) ?? 0;
+    const lotQty = lots.listLots(item.id).length ? lots.rollupQty(item.id) : (stock.get(item.id) ?? 0);
+    const available = lotQty;
     const ok = qty > 0 && available >= qty;
     if (ok) stock.set(item.id, available - qty);
     lines.push({
@@ -75,7 +79,7 @@ function planAllocation(c, { inventory, reserved } = {}) {
 
 function planDesk(cases = repo.listCases()) {
   const inventory = getStore().inventory || [];
-  const reserved = new Map(inventory.map((i) => [i.id, i.stock ?? 0]));
+  const reserved = new Map(inventory.map((i) => [i.id, lots.listLots(i.id).length ? lots.rollupQty(i.id) : (i.stock ?? 0)]));
   const allocations = [];
   for (const c of cases) {
     if (!FILL_STATES.has(c.state)) continue;
@@ -170,66 +174,100 @@ function receiveStock(actor, body = {}) {
   if (!Number.isFinite(qty) || qty <= 0) {
     throw new ServiceError(400, 'invalid_receipt_qty', 'Receipt quantity must be a positive number');
   }
-  const inspection = body.inspection === 'fail' ? 'fail' : 'pass';
-  const expiresAt = body.expiresAt ? String(body.expiresAt).slice(0, 10) : null;
-  const today = new Date().toISOString().slice(0, 10);
-  const expired = Boolean(expiresAt && expiresAt <= today);
-  const usable = inspection === 'pass' && !expired;
+  if (body.inspection !== 'pass' && body.inspection !== 'fail') {
+    throw new ServiceError(400, 'inspection_required', 'Receipts need an explicit pass or fail inspection');
+  }
+  const batchNo = String(body.batchNo || '').trim();
+  if (!batchNo) throw new ServiceError(400, 'batch_required', 'A batch number is required');
+  const expiresAt = String(body.expiresAt || '').slice(0, 10);
+  if (!lots.validIsoDate(expiresAt)) {
+    throw new ServiceError(400, 'invalid_expiry', 'Expiry must be a real YYYY-MM-DD date');
+  }
   const itemId = Number(body.inventoryId);
   const store = getStore();
   const item = (store.inventory || []).find((i) => i.id === itemId);
   if (!item) throw new ServiceError(404, 'inventory_not_found', 'Inventory item not found');
-  const receipt = {
-    id: randomId('rcv'),
-    requestId: body.requestId || null,
-    inventoryId: item.id,
-    name: item.name,
-    quantity: qty,
-    batchNo: String(body.batchNo || '').slice(0, 40) || null,
-    expiresAt,
-    inspection,
-    expired,
-    usable,
-    demoInbound: Boolean(body.demoInbound),
-    actorId: String(actor.id),
-    at: new Date().toISOString(),
-  };
-  if (body.requestId) {
-    const found = listRequests().find((r) => r.id === body.requestId);
-    if (found) saveRequest({ ...found, status: usable ? 'received' : 'rejected', receiptId: receipt.id });
+  if (!body.requestId) throw new ServiceError(400, 'request_required', 'Receive must reference a restock request');
+  const found = listRequests().find((r) => r.id === body.requestId);
+  if (!found) throw new ServiceError(404, 'restock_request_not_found', 'Restock request not found');
+  if (Number(found.inventoryId) !== itemId) {
+    throw new ServiceError(409, 'request_item_mismatch', 'Request does not match this inventory item');
   }
-  if (usable) {
-    updateStore((data) => {
-      const inv = (data.inventory || []).find((i) => i.id === item.id);
-      if (!inv) return;
-      inv.stock = (inv.stock ?? 0) + qty;
-      inv.batchNo = receipt.batchNo || inv.batchNo;
-      inv.expiry = expiresAt || inv.expiry;
-      const herb = (data.herbs || []).find((h) => h.name === inv.name);
-      if (herb) herb.stock = inv.stock;
-      logInventoryHistory(data, inv.id, 'receipt', qty, `到货验收 ${receipt.batchNo || ''} ${inspection}`);
-      recordStockMovement({
-        id: randomId('stk'),
-        idempotencyKey: body.idempotencyKey || `receipt:${receipt.id}`,
-        inventoryId: inv.id,
-        herbName: inv.name,
-        quantity: qty,
-        reason: receipt.demoInbound ? 'demo_receipt' : 'receipt',
-        actorId: String(actor.id),
-      });
+  if (found.status === 'rejected') throw new ServiceError(409, 'request_rejected', 'Rejected requests cannot receive stock');
+  const requestHash = hashObject({
+    inventoryId: itemId, quantity: qty, inspection: body.inspection, batchNo, expiresAt, requestId: body.requestId,
+  });
+  const key = body.idempotencyKey || `receipt:${requestHash}`;
+  const prior = typeof repo.getDoc === 'function' ? repo.getDoc('receipts', key) : null;
+  if (prior) {
+    if (prior.requestHash !== requestHash) {
+      throw new ServiceError(409, 'idempotency_conflict', 'This idempotency key was used for a different receipt');
+    }
+    return { receipt: prior, desk: planDesk(), replayed: true };
+  }
+  const expired = expiresAt <= lots.today();
+  const isolatedDemo = Boolean(body.demoInbound) && !isSyntheticMode();
+  const usable = body.inspection === 'pass' && !expired && !isolatedDemo;
+  return transaction(() => {
+    const again = typeof repo.getDoc === 'function' ? repo.getDoc('receipts', key) : null;
+    if (again) {
+      if (again.requestHash !== requestHash) throw new ServiceError(409, 'idempotency_conflict', 'This idempotency key was used for a different receipt');
+      return { receipt: again, desk: planDesk(), replayed: true };
+    }
+    const receipt = {
+      id: randomId('rcv'),
+      requestId: found.id,
+      inventoryId: item.id,
+      name: item.name,
+      quantity: qty,
+      batchNo,
+      expiresAt,
+      inspection: body.inspection,
+      expired,
+      usable,
+      isolatedDemo,
+      demoInbound: isolatedDemo,
+      dataMode: isolatedDemo ? 'demo_isolated' : (isSyntheticMode() ? 'demo' : 'live'),
+      actorId: String(actor.id),
+      at: new Date().toISOString(),
+      requestHash,
+      idempotencyKey: key,
+    };
+    repo.saveDoc('receipts', key, receipt);
+    const receivedQty = Number(found.receivedQty || 0) + (usable ? qty : 0);
+    const done = receivedQty >= Number(found.suggestedQty || 0);
+    saveRequest({
+      ...found,
+      receivedQty,
+      status: done ? 'received' : 'pending_receipt',
+      lastInspection: body.inspection,
+      receiptIds: [...(found.receiptIds || []), receipt.id],
     });
-  } else {
+    if (usable) {
+      lots.ensureLegacyLot(item);
+      lots.addLot({
+        inventoryId: item.id, name: item.name, batchNo, expiresAt, inspection: 'pass', qty, dataMode: receipt.dataMode, receiptId: receipt.id,
+      });
+      updateStore((data) => {
+        const inv = (data.inventory || []).find((i) => i.id === item.id);
+        if (!inv) return;
+        inv.stock = lots.rollupQty(item.id);
+        const herb = (data.herbs || []).find((h) => h.name === inv.name);
+        if (herb) herb.stock = inv.stock;
+        logInventoryHistory(data, inv.id, 'receipt', qty, `到货验收 ${batchNo} pass`);
+      });
+    }
     recordStockMovement({
       id: randomId('stk'),
-      idempotencyKey: body.idempotencyKey || `receipt-reject:${receipt.id}`,
+      idempotencyKey: key,
       inventoryId: item.id,
       herbName: item.name,
-      quantity: 0,
-      reason: expired ? 'receipt_expired' : 'receipt_failed_inspection',
+      quantity: usable ? qty : 0,
+      reason: isolatedDemo ? 'demo_isolated_receipt' : (usable ? 'receipt' : (expired ? 'receipt_expired' : 'receipt_failed_inspection')),
       actorId: String(actor.id),
     });
-  }
-  return { receipt, desk: planDesk() };
+    return { receipt, desk: planDesk(), replayed: false };
+  });
 }
 
 function applyRestock(actor, body = {}) {

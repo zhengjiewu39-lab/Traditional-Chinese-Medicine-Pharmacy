@@ -1,51 +1,40 @@
 # Validation report
 
-Research prototype only. Passing tests is not clinical validation and is not evidence of reduced adverse reactions, improved adherence, or better outcomes. Demo, synthetic and real-use data must stay labelled separately. Simulated runs are not clinical validation. The system cannot auto-train or auto-deploy a new model.
+Research prototype only. Passing tests is not clinical validation. This build can be described as a research prototype with a live-model screening interface and an uncertainty-handling framework. It is not a validated AI active-clarification system.
 
-Checked locally after the 2026-10-03 brief (local Node may be newer than `engines.node`; CI uses Node 20):
+Checked after the 2026-10-03 remaining-fix pass (local Node may be newer than `engines.node`; CI uses Node 20).
 
 | Check | Result |
 |---|---|
-| `npm run verify:pharmacy` | 78 pass / 0 fail |
+| `npm run verify:pharmacy` | 85/85 pass |
+| `npm run test:server` | 131/131 pass (37 groups) |
 | `npm run lint` | pass, 0 warnings |
-| `AI_COMPARE_ALLOW_MOCK=1 AI_COMPARE_SMOKE=1 npm run ai:evaluate:compare` | mock, 8 clean cases, 0 engineering failures, wrote `benchmarks/ai-review/results-mock/` |
-| Live A/B/C/D | **未验证** — no API key was supplied; do not treat mock scores as live results |
+| Interactive mock compare | `AI_COMPARE_ALLOW_MOCK=1 npm run ai:evaluate:compare` — 6 test cases, 0 engineering failures, `inferenceMode=mock` |
+| Live A/B/C/D | **未验证** — no API key, no live scores written |
+| Browser role E2E | **未完成** |
+| Independent expert labels | **not_evaluated** |
 
-## Phase 1 (safety)
+Mock compare only tests that the ask→script-answer→reanalyze loop runs and stays isolated. It does not support a model-effect or clinical-benefit claim.
 
-| Scenario | Implemented | Verified | Notes |
-|---|---|---|---|
-| Dual-sign binds contentVersion/hash/analysisId/protocolVersion | Yes | digitalPharmacy dual + content-change test | Content change archives signs; stale analysisId 409; proxy secondReviewerId 400 |
-| Education template vs AI paragraph; 17g/15mg/8剂; 附子先煎薄荷后下 | Yes | education factsMatchText tests | Per-herb window; superseded cannot revive |
-| auto_pick writes picking_plan only | Yes | digitalPharmacy auto-pick | State stays `dispensing`; no `type=weighed`; start reuses reservation |
-| Restock propose ≠ inbound | Yes | digitalPharmacy restock | `applied=[]`; fail inspection does not increase stock |
-| Analyze CAS / replay append-only | Yes | workflowService runAnalysis + replay | Stale model result stored in `staleAnalyses` |
-| Live empty catalog blocks deduct | Yes | digitalPharmacy live-empty test | `skipped` is demo-only |
+## Completion marks
 
-## Phase 2 (facts / questions)
+| Item | Has function | Wired into service | End-to-end | Live model | Expert review |
+|---|---|---|---|---|---|
+| Dual-sign version binding | Yes | Yes | API tests | n/a | n/a |
+| Replay append-only | Yes | Independent `replays` collection + in-transaction pointer | Concurrent content-edit and sign probes | n/a | n/a |
+| Picking plan ≠ weigh | Yes | Yes | API tests | n/a | n/a |
+| Receive idempotency + lots | Yes | Request-hash idempotency; lot balances; fail inspection does not reject the request | API tests | n/a | n/a |
+| Education template directions | Yes | Directions from `renderTemplate`; free text is explanation only | Unit + API; 17g / 每日三剂 / 注意休息 | n/a | n/a |
+| Weigh unit/scope | Yes | Unit conversion + per_dose/course_total; missing lines cannot be waived | API tests; exception without evidence blocked | n/a | n/a |
+| Fact extract | Yes | `provider.complete` when present; heuristic labelled fallback | Unit probes (negation, family/history, source span) | **未验证** | n/a |
+| Candidate confirm UI | Yes | API + pharmacist/patient pages | **浏览器未验收** | n/a | n/a |
+| Risk questions issued as tasks | Yes | `screen()` issues selected; rounds increment only when tasks are sent | API path | **未验证** | n/a |
+| Interactive experiment loop | Yes | evaluate-compare ask→script→reanalyze | mock only, 0 engineering failures | **未验证** | unreviewed pack |
 
-| Scenario | Implemented | Verified | Notes |
-|---|---|---|---|
-| Fact statuses include denied/verified/conflicting | Yes | digitalPharmacy fact test | Denied allergy is not `[]` / `none` |
-| NL extract is candidate, not verified | Yes | factExtract heuristic | Source span must exist in text |
-| Risk questions: mandatory + adaptive + stop | Yes | clarificationService generateRiskQuestions | Weights are uncalibrated heuristics |
-| Live model small run | No | 未验证 | Requires an authorized person to set provider keys and run compare |
+Replay no longer writes the case snapshot loaded before the model returns. The replay row is stored in an independent collection; a pointer is merged onto the current case inside a SQLite transaction. A concurrent content edit or pharmacist sign is kept.
 
-## Phase 3 (experiment)
+JSON catalog stock is still a roll-up beside SQLite lots and movements. Receive and deduct share a SQLite transaction for lots and movements; that is not a single catalog+SQLite rollback.
 
-| Scenario | Implemented | Verified | Notes |
-|---|---|---|---|
-| Orchestrator reads rulesEnabled/retrievalEnabled/clarificationMode | Yes | architectureConvergence | `retrievalUsed` from actual retrieved evidence |
-| Case constructor + hidden label isolation | Yes | architectureConvergence | `hiddenPatientFacts` / scripts / expert labels stay off the visible case |
-| Main groups A/B/C/D + RAG_off | Yes | evaluate-compare.js | Primary comparison D vs C |
-| Independent unsafe-suggestion labels | No | not_evaluated | Need independent professional review |
-| Pharmacist time / clinical effect / fairness | No | not_evaluated | No participant or real-use data |
+Fact extraction calls `provider.complete` when a provider exists. Heuristic output is labelled `heuristic_fallback` and is not a live-model result. Candidates stay `pending_confirmation` until a patient or pharmacist confirms them. Stopping questions is not approval.
 
-## Honest leftovers
-
-- Browser role E2E (create → clarify → dual-sign after edit → weigh → receive → deliver) was not logged in this pass as a full UI acceptance.
-- JSON inventory catalog and SQLite movements still coexist; deduct/receive share a SQLite transaction for movements, catalog rows remain in the JSON store.
-- No real weighing device is connected; manual entry is labelled `weighSource=manual`.
-- No live model key was used. Live results must stay in `benchmarks/ai-review/results-live/` and must not be copied from mock.
-
-Backup: `./scripts/backup-data.sh` then restore from `data/backups/<stamp>/RESTORE.txt`.
+`cases-v1.json` remains the engineering rule pack. The main clarification experiment uses `benchmarks/ai-review/cases-interactive-v1.json`. Rule-derived `expected` is not a medical gold standard.

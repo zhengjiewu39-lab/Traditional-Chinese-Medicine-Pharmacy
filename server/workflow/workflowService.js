@@ -259,13 +259,90 @@ async function runAnalysis(c, trigger) {
   return analysis;
 }
 
+function issueSelectedQuestions(c, actor) {
+  let issued = 0;
+  const analysisId = c.analyses?.at(-1)?.analysisId || null;
+  for (const q of c.questionPlan?.selected || []) {
+    const fieldPath = q.fieldPaths[0];
+    if (!fieldPath) continue;
+    const open = (c.clarificationTasks || []).find((t) => t.fieldPath === fieldPath && ['draft', 'sent'].includes(t.status));
+    if (open) continue;
+    const task = clarification.createTask(c, {
+      fieldPath,
+      question: q.questionText || q.reason,
+      reason: q.reason,
+      source: q.mandatory ? 'rule' : 'model',
+      requiredForDecision: false,
+    }, actor);
+    task.questionId = q.questionId;
+    task.mandatory = Boolean(q.mandatory);
+    task.analysisId = analysisId;
+    task.caseContentHash = c.contentHash;
+    clarification.sendTask(c, task.taskId, actor);
+    const token = issueToken(c.caseId, 'clarification', PATIENT_TOKEN_TTL_MS(), {
+      contentVersion: c.contentVersion,
+      taskId: task.taskId,
+      questionVersion: task.questionVersion,
+      patientRef: c.patient?.patientRef || null,
+    });
+    task.tokenFingerprint = fingerprint(token.tokenHash);
+    issued += 1;
+  }
+  return issued;
+}
+
+function confirmFactCandidate(caseId, body, actor) {
+  const c = getCaseOr404(caseId);
+  const cand = (c.factCandidates || []).find((x) => x.candidateId === body.candidateId);
+  if (!cand) throw new ServiceError(404, 'candidate_not_found', 'Fact candidate not found');
+  if (cand.caseContentVersion !== c.contentVersion) throw new ServiceError(409, 'stale_candidate', 'Candidate belongs to a previous content version');
+  if (cand.status !== 'pending_confirmation') throw new ServiceError(409, 'candidate_closed', 'Candidate already decided');
+  const action = body.action;
+  if (action === 'deny' || action === 'unknown') {
+    cand.status = action === 'deny' ? 'denied_by_patient' : 'unknown';
+    cand.decidedBy = String(actor.id);
+    cand.decidedAt = new Date().toISOString();
+    persistCase(c, c.recordVersion != null ? { expectedRecordVersion: c.recordVersion } : {});
+    return { case: c, candidate: cand };
+  }
+  const applied = facts.applyFactChange(c.patient, {
+    changeId: randomId('fch'),
+    kind: 'correct',
+    fieldPath: cand.fieldPath,
+    newValue: body.value !== undefined ? body.value : cand.candidateValue,
+    newStatus: body.status || cand.proposedStatus || 'reported',
+    contentVersion: c.contentVersion,
+  }, actor);
+  c.patient = applied.patient;
+  cand.status = 'accepted';
+  cand.decidedBy = String(actor.id);
+  cand.decidedAt = new Date().toISOString();
+  persistCase(c, c.recordVersion != null ? { expectedRecordVersion: c.recordVersion } : {});
+  return { case: c, candidate: cand, change: applied.change };
+}
+
 async function screen(c, trigger) {
   if (c.state !== 'ai_screening') transition(c, 'ai_screening', SYSTEM, trigger);
   const analysis = await runAnalysis(c, trigger);
-  if (c.source?.rawText) {
-    factExtract.attachCandidates(c, factExtract.extractCandidateFacts(c));
+  let issued = 0;
+  try {
+    if (c.source?.rawText || c.patient?.narrative) {
+      factExtract.attachCandidates(c, await factExtract.extractCandidateFacts(c, { provider: runtime.getProvider() }));
+    }
+  } catch {
+    /* Extraction is advisory; a provider crash must not fail screening. */
   }
-  c.questionPlan = clarification.generateRiskQuestions(c, { mode: 'risk_adaptive' });
+  try {
+    c.questionPlan = clarification.generateRiskQuestions(c, { mode: c.clarificationMode || 'risk_adaptive' });
+    issued = issueSelectedQuestions(c, SYSTEM);
+  } catch {
+    issued = 0;
+  }
+  if (issued > 0) {
+    c.clarificationRound = Number(c.clarificationRound || 0) + 1;
+    c.clarificationBurden = Number(c.clarificationBurden || 0) + issued;
+    c.lastClarificationIssuedAt = new Date().toISOString();
+  }
   if (c.questionPlan.stopReason && !c.questionPlan.selected?.length) {
     clarification.recordStop(c, c.questionPlan);
   }
@@ -291,21 +368,41 @@ async function analyze(caseId) {
 
 /** Reproduce a stored analysis on the same content without touching the workflow state. */
 async function replay(caseId, analysisId, actor) {
-  const c = getCaseOr404(caseId);
-  const original = analysisId ? c.analyses.find((a) => a.analysisId === analysisId) : c.analyses.at(-1);
+  const loaded = getCaseOr404(caseId);
+  const original = analysisId ? loaded.analyses.find((a) => a.analysisId === analysisId) : loaded.analyses.at(-1);
   if (!original) throw new ServiceError(404, 'analysis_not_found', 'No analysis to replay');
-  const content = original.contentHash === c.contentHash ? c : c.contentHistory.find((h) => h.contentHash === original.contentHash)?.snapshot;
-  if (!content) throw new ServiceError(409, 'content_unavailable', 'Content for that analysis is not retained');
-  const out = await analyzeCase({ ...contentOf(content), source: c.source, caseId: c.caseId }, {
+  const snapshot = original.contentHash === loaded.contentHash
+    ? contentOf(loaded)
+    : loaded.contentHistory.find((h) => h.contentHash === original.contentHash)?.snapshot;
+  if (!snapshot) throw new ServiceError(409, 'content_unavailable', 'Content for that analysis is not retained');
+  const out = await analyzeCase({ ...contentOf(snapshot), source: loaded.source, caseId: loaded.caseId }, {
     provider: runtime.getProvider(), aiEnabled: runtime.isAiEnabled(), timeoutMs: runtime.timeoutMs(), now: new Date(original.at),
   });
-  const pick = (o) => ({ riskTier: o.riskTier, recommendation: o.recommendation, hardStops: o.hardStops.map((h) => h.code).sort(), abstainReasons: [...o.abstainReasons].sort(), ruleSetVersion: o.ruleSetVersion, knowledgeBaseVersion: o.knowledgeBaseVersion, promptVersion: o.promptVersion });
+  const pick = (o) => ({
+    riskTier: o.riskTier,
+    recommendation: o.recommendation,
+    hardStops: o.hardStops.map((h) => h.code).sort(),
+    abstainReasons: [...o.abstainReasons].sort(),
+    ruleSetVersion: o.ruleSetVersion,
+    knowledgeBaseVersion: o.knowledgeBaseVersion,
+    promptVersion: o.promptVersion,
+  });
   const comparison = { original: pick(original.output), replay: pick(out) };
   comparison.identical = JSON.stringify(comparison.original) === JSON.stringify(comparison.replay);
-  const entry = { replayId: randomId('rep'), of: original.analysisId, at: new Date().toISOString(), by: String(actor.id), comparison };
-  c.replays.push(entry);
-  record(c, 'analysis_replayed', actor, { of: original.analysisId, identical: comparison.identical });
-  repo.saveCase(c);
+  const entry = {
+    replayId: randomId('rep'),
+    of: original.analysisId,
+    at: new Date().toISOString(),
+    by: String(actor.id),
+    comparison,
+    replayOnly: true,
+  };
+  repo.saveDoc('replays', entry.replayId, { caseId, ...entry });
+  try {
+    if (typeof repo.appendCaseReplay === 'function') repo.appendCaseReplay(caseId, entry);
+  } catch {
+    /* Independent replay row is already stored; a busy case write must not fail HTTP or roll back the replay. */
+  }
   return entry;
 }
 
@@ -393,10 +490,34 @@ async function updateContent(caseId, patch, actor) {
   if (screenTrigger) {
     const fresh = getCaseOr404(caseId);
     if (fresh.contentHash === newHash) analysis = await screen(fresh, screenTrigger);
-    persistCase(fresh, { expectedRecordVersion: fresh.recordVersion });
+    persistScreenResult(caseId, fresh);
     return { case: repo.getCase(caseId), changed: true, analysis };
   }
   return { case: repo.getCase(caseId), changed: true, analysis };
+}
+
+function persistScreenResult(caseId, screened) {
+  const fields = [
+    'analyses', 'staleAnalyses', 'questionPlan', 'clarificationTasks', 'clarificationRound',
+    'clarificationBurden', 'lastClarificationIssuedAt', 'clarificationStop', 'factCandidates',
+    'state', 'transitions', 'reviewLane', 'reviewProtocol', 'secondReview',
+  ];
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const latest = getCaseOr404(caseId);
+    for (const key of fields) {
+      if (screened[key] !== undefined) latest[key] = screened[key];
+    }
+    try {
+      persistCase(latest, { expectedRecordVersion: latest.recordVersion });
+      return latest;
+    } catch (err) {
+      if (err.code !== 'version_conflict' || attempt === 7) {
+        if (err.code === 'version_conflict') return getCaseOr404(caseId);
+        throw err;
+      }
+    }
+  }
+  return getCaseOr404(caseId);
 }
 
 function requireLatest(c, analysisId) {
@@ -713,7 +834,14 @@ function patientView(c) {
       phoneMasked: p.phone ? `${String(p.phone).slice(0, 3)}****${String(p.phone).slice(-4)}` : null,
     },
     explanation: published
-      ? { text: published.text, label: published.genericFixedNotice ? '固定提示（非AI已审核说明）' : '经药师审核发布的用药说明', documentId: published.documentId, approvedAt: published.approvedAt }
+      ? {
+        text: published.directionsText || published.text,
+        directionsText: published.directionsText || published.text,
+        aiExplanation: published.aiExplanation || '',
+        label: published.genericFixedNotice ? '固定提示（非AI已审核说明）' : '经药师审核发布的用药说明',
+        documentId: published.documentId,
+        approvedAt: published.approvedAt,
+      }
       : { text: '用药说明尚未由药师审核发布。处方批准不等于说明已审核。', label: null, documentId: null },
     educationStatus: published ? 'published' : 'not_published',
     substitutionAsked: false,
@@ -742,6 +870,13 @@ function patientCaseDto(c) {
       text: published.text,
       approvedAt: published.approvedAt,
     }] : [],
+    factCandidates: (c.factCandidates || []).filter((x) => x.status === 'pending_confirmation' && x.caseContentVersion === c.contentVersion).map((x) => ({
+      candidateId: x.candidateId,
+      fieldPath: x.fieldPath,
+      candidateValue: x.candidateValue,
+      sourceText: x.sourceText,
+      extractSource: x.extractedBy || x.extractSource,
+    })),
     clarifications: (c.clarificationTasks || []).filter((t) => t.status === 'sent').map((t) => ({
       taskId: t.taskId,
       fieldPath: t.fieldPath,
@@ -1054,47 +1189,84 @@ function dispensingAction(caseId, body, actor) {
     }
     case 'record_weigh':
     case 'submit_final_check': {
-      const source = body.weighSource === 'device' ? 'device' : 'manual';
-      if (source === 'device' && !body.deviceId) {
-        throw new ServiceError(400, 'device_id_required', 'Device weigh records need a device id; otherwise use manual entry');
+      const source = 'manual';
+      const deviceTrusted = false;
+      const unitFactor = { g: 1, 克: 1, kg: 1000, 千克: 1000, mg: 0.001, 毫克: 0.001 };
+      const merged = new Map();
+      for (const h of c.prescription.herbs || []) {
+        const row = merged.get(h.name) || { name: h.name, dosage: 0, unit: h.unit || 'g' };
+        if (h.unit && row.unit && h.unit !== row.unit) {
+          throw new ServiceError(409, 'duplicate_herb_unit_conflict', `${h.name} is listed with conflicting units`);
+        }
+        row.dosage += Number(h.dosage || 0);
+        row.unit = h.unit || row.unit;
+        merged.set(h.name, row);
       }
-      const perDose = new Map((c.prescription.herbs || []).map((h) => [h.name, h.dosage]));
       const items = body.weighedItems || [];
       if (!items.length) throw new ServiceError(400, 'weigh_required', 'Actual weigh records are required; a picking plan is not a measurement');
+      const seenHerb = new Set();
+      const seenLot = new Set();
+      const doseCount = Number(c.prescription.doseCount || 1);
       const deviations = items.map((w) => {
-        const expected = perDose.get(w.name);
-        const dev = expected ? Math.abs(w.grams - expected) / expected : null;
+        if (seenHerb.has(w.name)) throw new ServiceError(409, 'duplicate_weigh_line', `${w.name} was weighed more than once`);
+        seenHerb.add(w.name);
+        const lotKey = `${w.name}:${w.batchNo || ''}`;
+        if (seenLot.has(lotKey) && w.batchNo) throw new ServiceError(409, 'duplicate_weigh_lot', `${w.name} lot ${w.batchNo} already recorded`);
+        seenLot.add(lotKey);
+        const spec = merged.get(w.name);
+        const factor = unitFactor[w.unit || spec?.unit || 'g'];
+        if (!factor) throw new ServiceError(400, 'unit_mismatch', `Unsupported weigh unit ${w.unit}`);
+        const scope = w.measurementScope || body.measurementScope || 'per_dose';
+        const grams = Number(w.grams) * factor;
+        const expectedPerDose = spec ? Number(spec.dosage) * (unitFactor[spec.unit] || 1) : null;
+        const expected = expectedPerDose == null ? null : (scope === 'course_total' ? expectedPerDose * doseCount : expectedPerDose);
+        const dev = expected ? Math.abs(grams - expected) / expected : null;
         return {
-          name: w.name, grams: w.grams, expected: expected ?? null, unit: w.unit || 'g',
+          name: w.name, grams, entered: w.grams, unit: 'g', enteredUnit: w.unit || spec?.unit || 'g',
+          measurementScope: scope, expected, expectedPerDose, doseCount,
           deviation: dev, outOfTolerance: expected == null || dev > DOSE_DEVIATION_TOLERANCE,
+          batchNo: w.batchNo || body.batchNo || null,
         };
       });
-      const missing = [...perDose.keys()].filter((n) => !items.some((w) => w.name === n));
-      if (missing.length && !body.exceptionCode) {
-        throw new ServiceError(409, 'weigh_incomplete', 'Every prescribed herb needs a weigh record, or a controlled exception');
+      const missing = [...merged.keys()].filter((n) => !items.some((w) => w.name === n));
+      if (missing.length) {
+        throw new ServiceError(409, 'weigh_incomplete', 'Every prescribed herb needs a weigh record; missing lines cannot be waived by a code');
       }
-      if (c.state === 'dispensing') {
+      if (c.state === 'pharmacist_final_check') {
+        for (const r of c.dispensingRecords || []) {
+          if (r.type === 'final_check_pass') r.voided = true;
+        }
+      } else if (c.state === 'dispensing') {
         transition(c, 'pharmacist_final_check', actor, body.note || '提交实测复核');
-      } else if (c.state !== 'pharmacist_final_check') {
+      } else {
         throw new ServiceError(409, 'invalid_state', 'Weigh records are only accepted during dispensing');
       }
       c.dispensingRecords.push({
-        type: 'weighed', by: String(actor.id), role: actor.role, at, items: deviations, missing,
-        source, deviceId: body.deviceId || null, batchNo: body.batchNo || null,
-        exceptionCode: body.exceptionCode || null, autoPick: false,
+        type: 'weighed', by: String(actor.id), role: actor.role, at, items: deviations, missing: [],
+        source, deviceId: body.deviceId || null, deviceTrusted, batchNo: body.batchNo || null,
+        exceptionCode: null, autoPick: false, measurementScope: body.measurementScope || 'per_dose',
       });
       break;
     }
     case 'final_check_pass': {
       if (!hasPharmacistCredential(actor)) throw new ServiceError(403, 'pharmacist_only', 'Final check requires a pharmacist credential');
-      const weighed = [...c.dispensingRecords].reverse().find((r) => r.type === 'weighed' && r.autoPick !== true);
+      const weighed = [...c.dispensingRecords].reverse().find((r) => r.type === 'weighed' && r.autoPick !== true && !r.voided);
       if (!weighed) throw new ServiceError(409, 'weigh_required', 'Final check needs an actual weigh record, not a picking plan');
       if (weighed.by === String(actor.id)) throw new ServiceError(409, 'same_person_check', 'Final check must be done by someone other than the dispenser');
-      if ((weighed.missing.length || weighed.items.some((i) => i.outOfTolerance)) && !(body.note && body.exceptionCode)) {
-        throw new ServiceError(400, 'comment_required', 'Weighing deviations require a note and a controlled exception code');
+      if (weighed.missing?.length) throw new ServiceError(409, 'weigh_incomplete', 'Missing weigh lines cannot be released');
+      if (weighed.items.some((i) => i.outOfTolerance)) {
+        if (!body.note || !body.exceptionCode || !body.exceptionEvidence) {
+          throw new ServiceError(400, 'controlled_exception_required', 'Deviations need a pharmacist note, allowed exception code, and evidence; reweigh unless a controlled exception is recorded');
+        }
+        if (!['reweigh_accepted', 'shortage_documented'].includes(body.exceptionCode)) {
+          throw new ServiceError(400, 'invalid_exception', 'Exception code is not an allowed controlled exception');
+        }
       }
       transition(c, 'ready_for_pickup', actor, body.note || '复核通过');
-      c.dispensingRecords.push({ type: 'final_check_pass', by: String(actor.id), role: actor.role, at });
+      c.dispensingRecords.push({
+        type: 'final_check_pass', by: String(actor.id), role: actor.role, at,
+        exceptionCode: body.exceptionCode || null, exceptionEvidence: body.exceptionEvidence || null,
+      });
       break;
     }
     case 'final_check_fail':
@@ -1357,7 +1529,7 @@ function createEducation(caseId, body, actor) {
     throw new ServiceError(403, 'pharmacist_credential_required', 'Education publish requires a pharmacist');
   }
   const c = getCaseOr404(caseId);
-  const doc = education.createDraft(c, actor, { text: body.text, source: body.source || 'pharmacist' });
+  const doc = education.createDraft(c, actor, { text: body.text, aiExplanation: body.aiExplanation, source: body.source || 'pharmacist' });
   record(c, 'education_drafted', actor, { documentId: doc.documentId });
   repo.saveCase(c);
   return doc;
@@ -1428,6 +1600,7 @@ module.exports = {
   sampleLowRisk,
   isPriorityReview,
   issueClarification,
+  confirmFactCandidate,
   getClarification,
   submitClarification,
   reviewClarification,

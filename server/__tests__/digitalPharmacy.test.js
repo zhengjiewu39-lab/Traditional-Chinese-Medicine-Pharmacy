@@ -312,6 +312,11 @@ describe('P1 review fixes', () => {
       doseCount: 7,
     };
     assert.strictEqual(education.factsMatchText(decoctFacts, '附子6g先煎，薄荷3g后下，共7剂').ok, true);
+    assert.strictEqual(education.factsMatchText(factsRow, '黄芪每日17克，共七剂').ok, false);
+    assert.strictEqual(education.factsMatchText(factsRow, '黄芪15g，每日三剂，共7剂').ok, false);
+    assert.strictEqual(education.factsMatchText(factsRow, '注意休息').ok, false);
+    assert.notStrictEqual(education.factsMatchText(factsRow, '注意休息').verdict, 'complete');
+    assert.strictEqual(education.factsMatchText(factsRow, '注意休息').autoConsistent, false);
     const draft = await call('POST', `/api/ai/cases/${id}/education`, {
       as: 'pharmacist', body: { text: '黄芪15g，水煎服，日一剂，共7剂' },
     });
@@ -763,6 +768,179 @@ describe('role lanes and research protocol', () => {
       process.env.DATA_MODE = prev;
       updateStore((data) => { data.inventory = snap; });
     }
+  });
+});
+
+describe('2026-10-03 remaining probes', () => {
+  it('replay appends only and keeps a concurrent content edit', async () => {
+    const { id } = await openCase({ allergies: ['青霉素'] });
+    const analysisId = repo.getCase(id).analyses.at(-1).analysisId;
+    runtime.setProviderOverride({
+      id: 'slow-mock',
+      isMock: true,
+      async complete(args) {
+        await new Promise((r) => setTimeout(r, 80));
+        return createMockProvider().complete(args);
+      },
+    });
+    const pending = call('POST', `/api/ai/cases/${id}/replay`, { as: 'pharmacist', body: { analysisId } });
+    await new Promise((r) => setTimeout(r, 20));
+    const patched = await call('PATCH', `/api/ai/cases/${id}`, { as: 'pharmacist', body: { reason: '并发改年龄', patient: { ageYears: 77 } } });
+    assert.strictEqual(patched.status, 200, JSON.stringify(patched.body));
+    const replayed = await pending;
+    assert.strictEqual(replayed.status, 200, JSON.stringify(replayed.body));
+    const after = repo.getCase(id);
+    assert.strictEqual(after.patient.ageYears, 77);
+    assert.ok(after.contentVersion >= 2);
+    assert.ok((after.replays || []).some((r) => r.of === analysisId));
+  });
+
+  it('identical receipt idempotency keys do not double stock', async () => {
+    updateStore((data) => {
+      const item = data.inventory.find((i) => i.name === '甘草');
+      if (item) { item.stock = 50; item.minStock = 80; }
+    });
+    const restock = await call('POST', '/api/ai/ops/restock', { as: 'technician', body: {} });
+    assert.strictEqual(restock.status, 200, JSON.stringify(restock.body));
+    const req = (restock.body.requests || []).find((r) => r.name === '甘草');
+    assert.ok(req, JSON.stringify(restock.body));
+    const gan = getStore().inventory.find((i) => i.name === '甘草');
+    const ganId = gan.id;
+    const lots = require('../workflow/inventoryLots');
+    lots.ensureLegacyLot(gan);
+    const before = lots.rollupQty(ganId);
+    const body = {
+      inventoryId: ganId, requestId: req.id, quantity: 10, inspection: 'pass',
+      batchNo: 'B-IDEM', expiresAt: '2099-01-01', idempotencyKey: 'idem-gan-10',
+    };
+    const a = await call('POST', '/api/ai/ops/receive', { as: 'technician', body });
+    const b = await call('POST', '/api/ai/ops/receive', { as: 'technician', body });
+    assert.strictEqual(a.status, 200, JSON.stringify(a.body));
+    assert.strictEqual(b.status, 200, JSON.stringify(b.body));
+    assert.strictEqual(b.body.replayed, true);
+    assert.strictEqual(lots.rollupQty(ganId), before + 10);
+    assert.strictEqual(getStore().inventory.find((i) => i.name === '甘草').stock, before + 10);
+  });
+
+  it('heuristic extract respects negation and a provider.complete is called when supplied', async () => {
+    const extract = require('../workflow/factExtract');
+    const heur = extract.heuristicExtract('我没有怀孕，也没有肝炎，正在服用阿司匹林。');
+    assert.ok(heur.some((c) => c.fieldPath === 'patient.facts.pregnancy' && (c.candidateValue === 'no' || c.proposedStatus === 'none')));
+    assert.ok(!heur.some((c) => c.fieldPath === 'patient.facts.pregnancy' && c.candidateValue === 'yes'));
+    assert.ok(heur.some((c) => c.fieldPath === 'patient.facts.currentMedications' && Array.isArray(c.candidateValue) && c.candidateValue.includes('阿司匹林')));
+    let calls = 0;
+    const provider = {
+      id: 'probe',
+      isMock: true,
+      async complete() {
+        calls += 1;
+        return JSON.stringify({
+          candidates: [{ fieldPath: 'patient.facts.currentMedications', value: ['阿司匹林'], sourceText: '正在服用阿司匹林', negated: false }],
+        });
+      },
+    };
+    const out = await extract.extractCandidateFacts({ source: { rawText: '我没有怀孕，正在服用阿司匹林。' } }, { provider });
+    assert.strictEqual(calls, 1);
+    assert.strictEqual(out.modelCalled, true);
+    assert.ok(out.candidates.every((c) => c.status === 'pending_confirmation'));
+  });
+
+  it('question-plan rounds stay at 0 until tasks are actually issued', () => {
+    const plan1 = require('../workflow/clarificationService').generateRiskQuestions({
+      patient: { sex: 'female', facts: { pregnancy: { status: 'not_asked' } } },
+      analyses: [{ output: { missingInformation: [{ field: 'patient.facts.pregnancy', critical: true, message: '妊娠未核实', source: 'rule' }] } }],
+      clarificationRound: 0,
+      clarificationTasks: [],
+    });
+    const plan2 = require('../workflow/clarificationService').generateRiskQuestions({
+      patient: { sex: 'female', facts: { pregnancy: { status: 'not_asked' } } },
+      analyses: [{ output: { missingInformation: [{ field: 'patient.facts.pregnancy', critical: true, message: '妊娠未核实', source: 'rule' }] } }],
+      clarificationRound: 0,
+      clarificationTasks: [],
+    });
+    assert.strictEqual(plan1.persistedRound, 0);
+    assert.strictEqual(plan2.persistedRound, 0);
+    assert.ok((plan1.selected || []).every((q) => q.questionText));
+  });
+
+  it('replay during pharmacist sign keeps the approval', async () => {
+    const { id, analysis } = await openCase({ allergies: ['青霉素'] });
+    const analysisId = repo.getCase(id).analyses.at(-1).analysisId;
+    runtime.setProviderOverride({
+      id: 'slow-mock',
+      isMock: true,
+      async complete(args) {
+        await new Promise((r) => setTimeout(r, 80));
+        return createMockProvider().complete(args);
+      },
+    });
+    const pending = call('POST', `/api/ai/cases/${id}/replay`, { as: 'pharmacist', body: { analysisId } });
+    await new Promise((r) => setTimeout(r, 20));
+    const approved = await call('POST', `/api/ai/cases/${id}/pharmacist-decision`, {
+      as: 'pharmacist', body: { action: 'approve', analysisId: analysis.analysisId, comment: 'ok' },
+    });
+    assert.strictEqual(approved.status, 200, JSON.stringify(approved.body));
+    const replayed = await pending;
+    assert.strictEqual(replayed.status, 200, JSON.stringify(replayed.body));
+    const after = repo.getCase(id);
+    assert.ok(after.approval?.valid);
+    assert.strictEqual(after.state, 'pharmacist_approved');
+    assert.ok((after.replays || []).some((r) => r.of === analysisId) || repo.getDoc('replays', replayed.body.replayId));
+  });
+
+  it('weigh rejects unit mismatch and exception bypass without evidence', async () => {
+    const lots = require('../workflow/inventoryLots');
+    updateStore((data) => {
+      const item = data.inventory.find((i) => i.name === '黄芪');
+      if (item) { item.stock = Math.max(Number(item.stock || 0), 80); item.minStock = 40; }
+    });
+    const huang = getStore().inventory.find((i) => i.name === '黄芪');
+    lots.addLot({
+      inventoryId: huang.id, name: '黄芪', batchNo: 'B-WEIGH', expiresAt: '2099-01-01', inspection: 'pass', qty: 200,
+    });
+    updateStore((data) => {
+      const item = data.inventory.find((i) => i.id === huang.id);
+      if (item) item.stock = lots.rollupQty(huang.id);
+    });
+    const { id, analysis } = await openCase({ allergies: ['青霉素'] });
+    assert.strictEqual((await call('POST', `/api/ai/cases/${id}/pharmacist-decision`, {
+      as: 'pharmacist', body: { action: 'approve', analysisId: analysis.analysisId, comment: 'ok' },
+    })).status, 200);
+    assert.strictEqual((await call('POST', `/api/patient/me/cases/${id}/confirm`, {
+      as: 'patient',
+      body: { decision: 'confirm', identityConfirmed: true, fulfillment: 'pickup', educationReceived: true, educationUnderstood: true },
+    })).status, 200);
+    const started = await call('POST', `/api/ai/cases/${id}/dispensing`, { as: 'technician', body: { action: 'start' } });
+    assert.strictEqual(started.status, 200, JSON.stringify(started.body));
+    const unit = await call('POST', `/api/ai/cases/${id}/dispensing`, {
+      as: 'technician',
+      body: { action: 'record_weigh', weighSource: 'manual', weighedItems: [{ name: '黄芪', grams: 15, unit: 'mg', measurementScope: 'per_dose' }] },
+    });
+    assert.strictEqual(unit.status, 200, JSON.stringify(unit.body));
+    const weighed = repo.getCase(id).dispensingRecords.find((r) => r.type === 'weighed');
+    assert.ok(weighed.items[0].outOfTolerance);
+    const bypass = await call('POST', `/api/ai/cases/${id}/dispensing`, {
+      as: 'pharmacist', body: { action: 'final_check_pass', exceptionCode: 'reweigh_accepted' },
+    });
+    assert.ok(bypass.status >= 400, JSON.stringify(bypass.body));
+    const course = await call('POST', `/api/ai/cases/${id}/dispensing`, {
+      as: 'technician',
+      body: { action: 'record_weigh', weighSource: 'manual', weighedItems: [{ name: '黄芪', grams: 15, unit: 'g', measurementScope: 'course_total' }] },
+    });
+    assert.strictEqual(course.status, 200, JSON.stringify(course.body));
+    const courseRow = [...repo.getCase(id).dispensingRecords].reverse().find((r) => r.type === 'weighed' && !r.voided);
+    assert.ok(courseRow.items[0].outOfTolerance);
+  });
+
+  it('heuristic extract skips family, history and unsourced spans', () => {
+    const extract = require('../workflow/factExtract');
+    const hist = extract.heuristicExtract('我几年前有肝炎，父亲也有肝炎。如果怀孕了怎么办。');
+    assert.ok(!hist.some((c) => c.fieldPath === 'patient.facts.liverImpairment' && c.candidateValue === true));
+    assert.ok(!hist.some((c) => c.fieldPath === 'patient.facts.pregnancy'));
+    const noSpan = extract.whitelistOnly([{
+      fieldPath: 'patient.facts.pregnancy', candidateValue: 'yes', sourceText: '不存在的片段',
+    }], '我没有怀孕');
+    assert.strictEqual(noSpan.length, 0);
   });
 });
 

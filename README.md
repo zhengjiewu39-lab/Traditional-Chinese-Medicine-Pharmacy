@@ -56,9 +56,9 @@ npm run dev          # API :3002 + 前端 :3000
 
 ```bash
 npm run ai:evaluate          # 合成病例 + mock，工程回归
-npm run ai:evaluate:compare  # 真实模型主实验 A/B/C/D + RAG_off；缺密钥退出码 2，不写占位成绩
-AI_COMPARE_ALLOW_MOCK=1 npm run ai:evaluate:compare   # 仅工程 mock，写入 benchmarks/ai-review/results-mock/
-AI_COMPARE_SMOKE=1 AI_COMPARE_ALLOW_MOCK=1 npm run ai:evaluate:compare  # 前 8 个 clean 病例冒烟
+npm run ai:evaluate:compare  # 交互病例包主实验 A/B/C/D + RAG_off；缺密钥退出码 2，不写占位成绩
+AI_COMPARE_ALLOW_MOCK=1 npm run ai:evaluate:compare   # mock 交互循环，写入 results-mock
+AI_COMPARE_PACK=benchmarks/ai-review/cases-v1.json AI_COMPARE_ALLOW_MOCK=1 npm run ai:evaluate:compare  # 工程规则包
 ./scripts/backup-data.sh     # 迁移前备份 JSON/SQLite
 ```
 

@@ -1,9 +1,10 @@
 {
-  "generatedAt": "2026-10-03T01:31:20.312Z",
+  "generatedAt": "2026-10-03T19:07:04.412Z",
   "frozenCasePack": {
-    "path": "benchmarks/ai-review/cases-v1.json",
+    "path": "benchmarks/ai-review/cases-interactive-v1.json",
     "version": "1.0.0",
-    "frozenAt": "2026-09-28"
+    "frozenAt": "2026-10-03",
+    "expertReviewStatus": "unreviewed"
   },
   "groups": {
     "A": "fixed questionnaire + rules",
@@ -18,6 +19,6 @@
     "maxRounds": 3,
     "note": "Experimental parameter, not a clinical standard."
   },
-  "smoke": true,
+  "smoke": false,
   "note": "Unsafe-suggestion rate needs independent professional labels. Clinical outcomes are not_evaluated. Stopping questions is not approval."
 }

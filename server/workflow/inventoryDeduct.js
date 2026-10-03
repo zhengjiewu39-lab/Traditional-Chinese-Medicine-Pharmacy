@@ -4,6 +4,7 @@ const { logInventoryHistory } = require('../services/stats');
 const { recordStockMovement } = require('./workflowRepository');
 const { transaction, getDb } = require('../db/sqlite');
 const { ServiceError } = require('./errors');
+const lots = require('./inventoryLots');
 
 function unitsCompatible(a, b) {
   const norm = (u) => ({ g: 'g', 克: 'g', kg: 'kg', 千克: 'kg', ml: 'ml' }[String(u || 'g').toLowerCase()] || String(u || 'g'));
@@ -42,27 +43,22 @@ function deductForCase(c, actor, { idempotencyKey } = {}) {
   return transaction(() => {
     if (findSuccess(`${key}:ok`)) return { replayed: true, movements: [] };
     const movements = [];
-    updateStore((data) => {
-      for (const line of plan) {
-        const inv = (data.inventory || []).find((i) => i.id === line.inv.id);
-        if (!inv || inv.stock < line.qty) {
-          throw new ServiceError(409, 'insufficient_stock', `${line.herb.name} stock changed during deduct`);
-        }
-        inv.stock -= line.qty;
-        logInventoryHistory(data, inv.id, 'dispense', line.qty, `病例 ${c.caseId}`);
-        const rec = recordStockMovement({
-          id: randomId('stk'),
-          idempotencyKey: `${key}:${inv.id}`,
-          inventoryId: inv.id,
-          herbName: inv.name,
-          quantity: line.qty,
-          reason: 'dispense',
-          caseId: c.caseId,
-          actorId: String(actor.id),
-        });
-        movements.push({ inventoryId: inv.id, quantity: line.qty, replayed: rec.replayed });
-      }
-    });
+    const taken = [];
+    for (const line of plan) {
+      const fromLots = lots.takeFromLots(line.inv, line.qty);
+      taken.push({ inventoryId: line.inv.id, fromLots });
+      const rec = recordStockMovement({
+        id: randomId('stk'),
+        idempotencyKey: `${key}:${line.inv.id}`,
+        inventoryId: line.inv.id,
+        herbName: line.inv.name,
+        quantity: line.qty,
+        reason: 'dispense',
+        caseId: c.caseId,
+        actorId: String(actor.id),
+      });
+      movements.push({ inventoryId: line.inv.id, quantity: line.qty, replayed: rec.replayed, lots: fromLots });
+    }
     recordStockMovement({
       id: randomId('stk'),
       idempotencyKey: `${key}:ok`,
@@ -70,6 +66,14 @@ function deductForCase(c, actor, { idempotencyKey } = {}) {
       actorId: String(actor.id),
       quantity: plan.reduce((s, l) => s + l.qty, 0),
       reason: 'dispense_complete',
+    });
+    updateStore((data) => {
+      for (const line of plan) {
+        const inv = (data.inventory || []).find((i) => i.id === line.inv.id);
+        if (!inv) throw new ServiceError(409, 'insufficient_stock', `${line.herb.name} catalog row missing during deduct`);
+        inv.stock = lots.rollupQty(inv.id);
+        logInventoryHistory(data, inv.id, 'dispense', line.qty, `病例 ${c.caseId}`);
+      }
     });
     return { replayed: false, movements };
   });
