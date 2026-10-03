@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
   Button,
@@ -101,6 +101,8 @@ function Orders() {
     message: '',
     severity: 'success',
   });
+  const catalogHerbsRef = useRef([]);
+  catalogHerbsRef.current = catalogHerbs;
 
   useEffect(() => {
     ordersApi.getOrders().then((res) => {
@@ -111,104 +113,49 @@ function Orders() {
     }).catch(console.error);
   }, []);
 
-  // 自动添加订单计时器
   useEffect(() => {
-    let autoAddInterval = null;
-    
-    if (autoAddEnabled) {
-      autoAddInterval = setInterval(() => {
-        const randomOrder = generateRandomOrder();
-        if (randomOrder) addNewOrder(randomOrder);
-        
+    if (!autoAddEnabled) return undefined;
+    const timer = setInterval(() => {
+      const medicines = catalogHerbsRef.current.filter((h) => Number(h.stock) >= 0);
+      if (!medicines.length) return;
+      const medicine = medicines[Math.floor(Math.random() * medicines.length)];
+      const quantity = Math.floor(Math.random() * 5) + 1;
+      const customers = ['王明', '李芳', '张伟', '赵丽', '刘强', '陈红', '杨雪', '周刚'];
+      const addresses = [
+        '北京市朝阳区建国路88号', '上海市浦东新区陆家嘴1号', '广州市天河区体育西路12号',
+        '深圳市南山区科技园路33号', '成都市锦江区红星路18号',
+      ];
+      const order = {
+        customerName: customers[Math.floor(Math.random() * customers.length)],
+        date: new Date().toISOString().slice(0, 10),
+        items: [{ herbId: medicine.id, name: medicine.name, quantity, price: medicine.price, unit: medicine.unit }],
+        shippingAddress: addresses[Math.floor(Math.random() * addresses.length)],
+        paymentMethod: '微信支付',
+        status: '待付款',
+        deductStock: false,
+        receiveIntoStock: false,
+      };
+      ordersApi.createOrder(order).then((res) => {
+        setOrders((prev) => [res.data, ...prev]);
+        herbsApi.getAllHerbs().then((r) => setCatalogHerbs(r.data || [])).catch(() => {});
         setNotification({
           open: true,
-          message: `系统已自动添加新订单: ${randomOrder.id}`,
+          message: `系统已自动添加新订单: ${res.data.orderNo || res.data.id}`,
           severity: 'info',
         });
-      }, 30000); // 每30秒自动添加一个订单
-    }
-    
-    return () => {
-      if (autoAddInterval) {
-        clearInterval(autoAddInterval);
-      }
-    };
-  }, [autoAddEnabled, catalogHerbs]);
+      }).catch((e) => {
+        setNotification({
+          open: true,
+          message: e.response?.data?.message || '自动订单未写入：药品须在仓库目录中',
+          severity: 'error',
+        });
+      });
+    }, 30000);
+    return () => clearInterval(timer);
+  }, [autoAddEnabled]);
 
   const getStatusColor = (status) => {
     return statusMap[status] || 'default';
-  };
-  
-  // 生成随机订单
-  const generateRandomOrder = () => {
-    const customers = ['王明', '李芳', '张伟', '赵丽', '刘强', '陈红', '杨雪', '周刚'];
-    const medicines = catalogHerbs.filter((h) => Number(h.stock) >= 0);
-    const addresses = [
-      '北京市朝阳区建国路88号',
-      '上海市浦东新区陆家嘴1号',
-      '广州市天河区体育西路12号',
-      '深圳市南山区科技园路33号',
-      '成都市锦江区红星路18号',
-      '杭州市西湖区文三路99号',
-      '武汉市江汉区解放大道66号',
-      '南京市鼓楼区中山北路1号'
-    ];
-    const paymentMethods = ['微信支付', '支付宝', '银联', '现金支付'];
-    
-    if (!medicines.length) return null;
-    const itemCount = Math.min(medicines.length, Math.floor(Math.random() * 3) + 1);
-    const items = [];
-    let total = 0;
-
-    for (let i = 0; i < itemCount; i++) {
-      const medicine = medicines[Math.floor(Math.random() * medicines.length)];
-      const quantity = Math.floor(Math.random() * 5) + 1;
-      items.push({
-        herbId: medicine.id,
-        name: medicine.name,
-        quantity,
-        price: medicine.price,
-        unit: medicine.unit,
-      });
-      total += Number(medicine.price || 0) * quantity;
-    }
-    
-    // 生成当前日期
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    const orderDate = `${year}-${month}-${day}`;
-    
-    // 生成订单ID
-    const orderNumber = Math.floor(1000 + Math.random() * 9000);
-    
-    return {
-      id: orderNumber,
-      customerName: customers[Math.floor(Math.random() * customers.length)],
-      date: orderDate,
-      total: parseFloat(total.toFixed(2)),
-      status: '待付款',
-      items: items,
-      shippingAddress: addresses[Math.floor(Math.random() * addresses.length)],
-      paymentMethod: paymentMethods[Math.floor(Math.random() * paymentMethods.length)]
-    };
-  };
-  
-  // 添加新订单
-  const addNewOrder = async (order) => {
-    if (!order) return;
-    try {
-      const res = await ordersApi.createOrder({ ...order, deductStock: false, receiveIntoStock: false });
-      setOrders((prev) => [res.data, ...prev]);
-      herbsApi.getAllHerbs().then((r) => setCatalogHerbs(r.data || [])).catch(() => {});
-    } catch (e) {
-      setNotification({
-        open: true,
-        message: e.response?.data?.message || '自动订单未写入：药品须在仓库目录中',
-        severity: 'error',
-      });
-    }
   };
 
   // 处理新订单提交
