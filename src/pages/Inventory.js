@@ -6,6 +6,7 @@ import {
 } from '@mui/material';
 import { Add, Warning, Refresh, Edit, Inventory as InvIcon } from '@mui/icons-material';
 import { inventoryApi } from '../services/api';
+import RestockPanel from '../components/ai/RestockPanel';
 
 function Inventory() {
   const [inventory, setInventory] = useState([]);
@@ -71,7 +72,7 @@ function Inventory() {
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3, flexWrap: 'wrap', gap: 2 }}>
         <Box>
           <Typography variant="h5" fontWeight={700}>库存管理</Typography>
-          <Typography variant="body2" color="text.secondary">实时库存 · 低库存预警 · 批次效期追踪</Typography>
+          <Typography variant="body2" color="text.secondary">实时库存 · 按待发处方自动补货 · 批次效期</Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Button startIcon={<Refresh />} onClick={load}>刷新</Button>
@@ -96,6 +97,8 @@ function Inventory() {
           ))}
         </Grid>
       )}
+
+      <RestockPanel onApplied={load} />
 
       {alerts.length > 0 && (
         <Alert severity="warning" sx={{ mb: 2 }}>

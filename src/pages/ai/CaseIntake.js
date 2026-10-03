@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Box, Paper, Typography, TextField, Grid, MenuItem, Button, Alert, Stack, Divider,
+  Autocomplete, Box, Paper, Typography, TextField, Grid, MenuItem, Button, Alert, Stack, Divider,
 } from '@mui/material';
 import { aiCasesApi } from '../../services/aiApi';
+import { patientsApi } from '../../services/api';
 import { formatApiError } from '../../config/httpClient';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { meansNoAllergy } from '../../i18n/lookup';
@@ -30,26 +31,48 @@ export default function CaseIntake() {
   const [form, setForm] = useState({
     herbs: '', rawText: '', age: '', sex: 'unknown', pregnancy: 'unknown', lactation: 'unknown', allergies: '', meds: '',
     doseCount: '7', usage: '', form: 'decoction', decoctionNotes: '',
-    doctor: '', patientRef: '', name: '', diagnosis: '', weightKg: '', allergySeverity: 'unknown', clinicalNotes: '',
+    doctor: '', patientRef: 'P1', name: '', diagnosis: '', weightKg: '', allergySeverity: 'unknown', clinicalNotes: '',
   });
   const [legacyId, setLegacyId] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [patients, setPatients] = useState([]);
+  const [selected, setSelected] = useState(null);
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }));
+
+  useEffect(() => {
+    patientsApi.getAllPatients().then((r) => setPatients(r.data || [])).catch(() => setPatients([]));
+  }, []);
+
+  const applyPatient = (p) => {
+    setSelected(p);
+    if (!p) return;
+    setForm((f) => ({
+      ...f,
+      patientRef: p.patientRef || `P${p.id}`,
+      name: p.name || '',
+      age: p.age != null ? String(p.age) : '',
+      sex: p.gender === '男' ? 'male' : p.gender === '女' ? 'female' : 'unknown',
+      allergies: Array.isArray(p.allergies) && p.allergies.length ? p.allergies.join('，') : f.allergies,
+    }));
+  };
 
   const loadExample = (key) => {
     const ex = EXAMPLES[key];
+    const prefer = { routine: 1, hardStop: 2, interaction: 3, missing: 2 }[key];
+    const p = patients.find((x) => x.id === prefer) || patients[0] || null;
     setForm((f) => ({
       ...f,
       herbs: ex.herbs,
-      age: ex.age,
-      sex: ex.sex,
-      allergies: ex.allergies,
+      age: p?.age != null ? String(p.age) : ex.age,
+      sex: p ? (p.gender === '女' ? 'female' : p.gender === '男' ? 'male' : ex.sex) : ex.sex,
+      allergies: p?.allergies?.length ? p.allergies.join('，') : ex.allergies,
       meds: key === 'interaction' ? t('ai.intake.exWarfarin') : ex.meds,
       doctor: t('ai.intake.demoDoctor'),
-      patientRef: 'P1',
-      name: t('ai.intake.demoPatient'),
+      patientRef: p ? (p.patientRef || `P${p.id}`) : 'P1',
+      name: p?.name || t('ai.intake.demoPatient'),
     }));
+    setSelected(p);
   };
 
   const submit = async (body) => {
@@ -123,6 +146,15 @@ export default function CaseIntake() {
           </Grid>
           <Grid item xs={12}>
             <TextField fullWidth multiline minRows={2} label={t('ai.intake.rawText')} value={form.rawText} onChange={set('rawText')} />
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <Autocomplete
+              options={patients}
+              value={selected}
+              onChange={(_, v) => applyPatient(v)}
+              getOptionLabel={(p) => `${p.name} · ${p.patientRef || `P${p.id}`}`}
+              renderInput={(params) => <TextField {...params} label={t('ai.intake.pickPatient')} />}
+            />
           </Grid>
           <Grid item xs={6} md={2}><TextField fullWidth label={t('ai.intake.patientRef')} value={form.patientRef} onChange={set('patientRef')} /></Grid>
           <Grid item xs={6} md={2}><TextField fullWidth label={t('ai.intake.name')} value={form.name} onChange={set('name')} /></Grid>

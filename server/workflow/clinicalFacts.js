@@ -42,7 +42,23 @@ function migrateScalar(v, unit) {
   return fact({ status: 'reported', value: v, unit, source: 'legacy_scalar' });
 }
 
+function looksLikeFact(x) {
+  return x && typeof x === 'object' && !Array.isArray(x) && FACT_STATUSES.includes(x.status);
+}
+
 function migrateAllergyList(list) {
+  if (looksLikeFact(list)) {
+    const names = Array.isArray(list.value) ? list.value.map(String) : [];
+    return {
+      fact: fact({
+        status: list.status,
+        value: list.status === 'reported' ? names : (list.status === 'none' ? [] : null),
+        source: list.source || 'fact_object',
+        version: list.version || 1,
+      }),
+      items: names.map((name) => ({ name, status: 'reported', severity: 'unknown', source: 'fact_object', version: 1 })),
+    };
+  }
   if (list == null) return { fact: fact({ status: 'not_asked', value: [], source: 'legacy_absent' }), items: [] };
   if (!Array.isArray(list) || list.length === 0) {
     return { fact: fact({ status: 'unknown', value: [], source: 'legacy_empty_array' }), items: [] };
@@ -58,6 +74,21 @@ function migrateAllergyList(list) {
 }
 
 function migrateMedList(list) {
+  if (looksLikeFact(list)) {
+    const names = Array.isArray(list.value) ? list.value.map(String) : [];
+    return {
+      fact: fact({
+        status: list.status,
+        value: list.status === 'reported' ? names : (list.status === 'none' ? [] : null),
+        source: list.source || 'fact_object',
+        version: list.version || 1,
+      }),
+      items: names.map((name) => ({
+        name, category: null, dose: null, frequency: null, itemStatus: 'active',
+        startedAt: null, stoppedAt: null, source: 'fact_object', version: 1,
+      })),
+    };
+  }
   if (list == null) return { fact: fact({ status: 'not_asked', value: [], source: 'legacy_absent' }), items: [] };
   if (!Array.isArray(list) || list.length === 0) {
     return { fact: fact({ status: 'unknown', value: [], source: 'legacy_empty_array' }), items: [] };
@@ -95,6 +126,126 @@ function factIsUnset(f) {
   return !f || f.status === 'not_asked' || f.status === 'unknown';
 }
 
+const FIELD_VALUE_SCHEMA = {
+  'patient.facts.ageYears': { type: 'number', unit: 'years', min: 0, max: 120 },
+  'patient.facts.weightKg': { type: 'number', unit: 'kg', min: 0.5, max: 300 },
+  'patient.facts.pregnancy': { type: 'tri' },
+  'patient.facts.lactation': { type: 'tri' },
+  'patient.facts.liverImpairment': { type: 'boolean' },
+  'patient.facts.renalImpairment': { type: 'boolean' },
+  'patient.facts.allergies': { type: 'list' },
+  'patient.facts.currentMedications': { type: 'list' },
+  'patient.sex': { type: 'sex' },
+};
+
+function coerceFactValue(fieldPath, status, raw) {
+  const spec = FIELD_VALUE_SCHEMA[fieldPath];
+  if (!spec) return { status: status || 'unknown', value: raw ?? null };
+  if (status === 'unknown' || status === 'not_asked' || status === 'not_applicable') {
+    return { status, value: null };
+  }
+  if (status === 'none') {
+    if (spec.type === 'list') return { status: 'none', value: [] };
+    if (spec.type === 'tri') return { status: 'none', value: 'no' };
+    if (spec.type === 'boolean') return { status: 'none', value: false };
+    return { status: 'none', value: null };
+  }
+  if (spec.type === 'number') {
+    const n = typeof raw === 'number' ? raw : Number(String(raw).trim());
+    if (!Number.isFinite(n) || n < spec.min || n > spec.max) {
+      const err = new Error('invalid_fact_value');
+      err.code = 'invalid_fact_value';
+      err.fieldPath = fieldPath;
+      throw err;
+    }
+    return { status: 'reported', value: n, unit: spec.unit };
+  }
+  if (spec.type === 'boolean') {
+    const v = raw === true || raw === 'true' || raw === 'yes' || raw === '1';
+    const no = raw === false || raw === 'false' || raw === 'no' || raw === '0';
+    if (!v && !no) return { status: 'unknown', value: null };
+    return v ? { status: 'reported', value: true } : { status: 'none', value: false };
+  }
+  if (spec.type === 'tri') {
+    if (raw === 'yes' || raw === true) return { status: 'reported', value: 'yes' };
+    if (raw === 'no' || raw === false) return { status: 'none', value: 'no' };
+    return { status: 'unknown', value: null };
+  }
+  if (spec.type === 'sex') {
+    const s = String(raw || '').toLowerCase();
+    if (['male', 'female', 'unknown'].includes(s)) return { status: 'reported', value: s };
+    return { status: 'unknown', value: null };
+  }
+  if (spec.type === 'list') {
+    if (Array.isArray(raw)) return { status: raw.length ? 'reported' : 'unknown', value: raw };
+    if (raw && typeof raw === 'object' && raw.name) return { status: 'reported', value: raw };
+    if (typeof raw === 'string' && raw.trim()) return { status: 'reported', value: raw.trim() };
+    return { status: 'unknown', value: null };
+  }
+  return { status: status || 'reported', value: raw };
+}
+
+function projectFromFacts(p) {
+  const f = p.facts || {};
+  if (f.ageYears?.status === 'reported' && f.ageYears.value != null) p.ageYears = Number(f.ageYears.value);
+  else if (f.ageYears?.status === 'not_asked' || f.ageYears?.status === 'unknown') p.ageYears = undefined;
+  if (f.weightKg?.status === 'reported' && f.weightKg.value != null) p.weightKg = Number(f.weightKg.value);
+  else if (f.weightKg) p.weightKg = undefined;
+  if (f.pregnancy?.status === 'reported') p.pregnancy = f.pregnancy.value;
+  else if (f.pregnancy?.status === 'none') p.pregnancy = 'no';
+  else if (f.pregnancy) p.pregnancy = 'unknown';
+  if (f.lactation?.status === 'reported') p.lactation = f.lactation.value;
+  else if (f.lactation?.status === 'none') p.lactation = 'no';
+  else if (f.lactation) p.lactation = 'unknown';
+  p.allergies = f.allergies?.status === 'reported'
+    ? (p.allergyItems || []).filter((i) => i.status === 'reported').map((i) => i.name)
+    : (f.allergies?.status === 'none' ? [] : null);
+  p.currentMedications = f.currentMedications?.status === 'reported'
+    ? activeMedicationsRaw(p).map((i) => i.name)
+    : (f.currentMedications?.status === 'none' ? [] : null);
+  p.liverImpairment = f.liverImpairment?.status === 'reported' && f.liverImpairment.value === true ? true : undefined;
+  p.renalImpairment = f.renalImpairment?.status === 'reported' && f.renalImpairment.value === true ? true : undefined;
+  return p;
+}
+
+function activeMedicationsRaw(p) {
+  return (p.medicationItems || []).filter((i) => i.itemStatus === 'active');
+}
+
+function clinicalProjection(patient = {}) {
+  const p = attachFacts(patient);
+  return {
+    ageYears: typeof p.ageYears === 'number' ? p.ageYears : undefined,
+    weightKg: typeof p.weightKg === 'number' ? p.weightKg : undefined,
+    sex: p.sex || 'unknown',
+    pregnancy: p.pregnancy || 'unknown',
+    lactation: p.lactation || 'unknown',
+    allergies: p.allergies,
+    allergyStatus: p.facts.allergies.status,
+    currentMedications: p.currentMedications,
+    medicationStatus: p.facts.currentMedications.status,
+    medicationItems: activeMedicationsRaw(p),
+    liverImpairment: p.liverImpairment === true,
+    renalImpairment: p.renalImpairment === true,
+    liverStatus: p.facts.liverImpairment.status,
+    renalStatus: p.facts.renalImpairment.status,
+    facts: p.facts,
+    allergyItems: p.allergyItems,
+    patientRef: p.patientRef,
+    identityVerified: p.identityVerified,
+  };
+}
+
+function factLabel(factObj, { noneText = '明确没有', unknownText = '未知', notAskedText = '未询问' } = {}) {
+  if (!factObj || typeof factObj !== 'object') return { status: 'unknown', text: unknownText, names: [] };
+  const st = factObj.status || 'unknown';
+  if (st === 'none') return { status: 'none', text: noneText, names: [] };
+  if (st === 'not_asked') return { status: 'not_asked', text: notAskedText, names: [] };
+  if (st === 'unknown' || st === 'not_applicable') return { status: st, text: unknownText, names: [] };
+  const names = Array.isArray(factObj.value) ? factObj.value : (factObj.value != null ? [factObj.value] : []);
+  return { status: 'reported', text: names.join('、') || String(factObj.value ?? ''), names };
+}
+
 function attachFacts(patient = {}) {
   const p = { ...patient };
   if (p.facts?.allergies && p.facts?.liverImpairment) {
@@ -113,12 +264,21 @@ function attachFacts(patient = {}) {
       p.facts.allergies = allergies.fact;
       p.allergyItems = allergies.items;
     }
+    if (typeof p.ageYears === 'number' && Number(p.facts.ageYears?.value) !== p.ageYears) {
+      p.facts.ageYears = migrateScalar(p.ageYears, 'years');
+    }
+    if (typeof p.weightKg === 'number' && Number(p.facts.weightKg?.value) !== p.weightKg) {
+      p.facts.weightKg = migrateScalar(p.weightKg, 'kg');
+    }
     if (p.pregnancy === 'yes' && p.facts.pregnancy?.status !== 'reported') {
       p.facts.pregnancy = migrateTri('yes');
     } else if (p.pregnancy === 'no' && factIsUnset(p.facts.pregnancy)) {
       p.facts.pregnancy = migrateTri('no');
     }
-    return p;
+    if (p.sex && ['male', 'female', 'unknown'].includes(p.sex)) {
+      p.facts.sex = p.facts.sex || fact({ status: 'reported', value: p.sex, source: 'legacy_sex' });
+    }
+    return projectFromFacts(p);
   }
   const allergies = migrateAllergyList(p.allergies);
   const meds = migrateMedList(p.currentMedications);
@@ -135,7 +295,7 @@ function attachFacts(patient = {}) {
   p.allergyItems = p.allergyItems || allergies.items;
   p.medicationItems = p.medicationItems || meds.items;
   p.factChangeLog = Array.isArray(p.factChangeLog) ? p.factChangeLog : [];
-  return p;
+  return projectFromFacts(p);
 }
 
 function allergyStatus(patient) {
@@ -264,34 +424,39 @@ function applyFactChange(patient, change, actor) {
       source: 'patient_correction',
       version: (p.facts.currentMedications.version || 1) + 1,
     });
+  } else if (change.fieldPath === 'patient.sex') {
+    const coerced = coerceFactValue('patient.sex', change.newStatus || 'reported', change.newValue);
+    p.sex = coerced.value || 'unknown';
+    p.facts.sex = fact({
+      status: coerced.status,
+      value: coerced.value,
+      reportedBy: String(actor.id),
+      reportedAt: now,
+      source: 'patient_correction',
+      version: (p.facts.sex?.version || 1) + 1,
+    });
   } else if (change.fieldPath?.startsWith('patient.facts.')) {
     const key = change.fieldPath.replace('patient.facts.', '');
-    if (p.facts[key]) {
-      p.facts[key] = fact({
-        ...(typeof change.newValue === 'object' && change.newValue?.status ? change.newValue : { status: change.newStatus || 'reported', value: change.newValue }),
-        reportedBy: String(actor.id),
-        reportedAt: now,
-        source: 'patient_correction',
-        version: (p.facts[key].version || 1) + 1,
-      });
-      if (key === 'pregnancy') {
-        p.pregnancy = p.facts.pregnancy.status === 'reported' ? p.facts.pregnancy.value
-          : p.facts.pregnancy.status === 'none' ? 'no' : 'unknown';
-      }
-    }
+    const incoming = (typeof change.newValue === 'object' && change.newValue && !Array.isArray(change.newValue) && change.newValue.status)
+      ? change.newValue
+      : { status: change.newStatus || 'reported', value: change.newValue };
+    const coerced = coerceFactValue(change.fieldPath, incoming.status, incoming.value);
+    p.facts[key] = fact({
+      status: coerced.status,
+      value: coerced.value,
+      unit: coerced.unit || p.facts[key]?.unit || null,
+      reportedBy: String(actor.id),
+      reportedAt: now,
+      source: 'patient_correction',
+      version: (p.facts[key]?.version || 1) + 1,
+    });
   }
   if (change.newStatus === 'none' && (change.fieldPath === 'patient.facts.allergies' || change.fieldPath === 'allergies')) {
     p.facts.allergies = fact({
       status: 'none', value: [], reportedBy: String(actor.id), reportedAt: now, source: 'patient_correction', version: (p.facts.allergies.version || 1) + 1,
     });
   }
-  p.allergies = p.facts.allergies.status === 'reported' ? reportedAllergyNames(p) : (p.facts.allergies.status === 'none' ? [] : null);
-  p.currentMedications = p.facts.currentMedications.status === 'reported' ? activeMedications(p).map((i) => i.name) : (p.facts.currentMedications.status === 'none' ? [] : null);
-  p.liverImpairment = liverReportedTrue(p) ? true : undefined;
-  p.renalImpairment = renalReportedTrue(p) ? true : undefined;
-  if (p.facts.pregnancy.status === 'reported') p.pregnancy = p.facts.pregnancy.value;
-  else if (p.facts.pregnancy.status === 'none') p.pregnancy = 'no';
-  else p.pregnancy = 'unknown';
+  projectFromFacts(p);
   p.factChangeLog.push(entry);
   return { patient: p, change: entry };
 }
@@ -317,6 +482,7 @@ module.exports = {
   FACT_STATUSES,
   MED_STATUSES,
   CHANGE_KINDS,
+  FIELD_VALUE_SCHEMA,
   fact,
   attachFacts,
   allergyStatus,
@@ -328,6 +494,10 @@ module.exports = {
   renalReportedTrue,
   applyFactChange,
   verifyChange,
+  coerceFactValue,
+  projectFromFacts,
+  clinicalProjection,
+  factLabel,
   CLINICAL_FIELD_PATHS,
   NON_CLINICAL_FIELD_PATHS,
 };

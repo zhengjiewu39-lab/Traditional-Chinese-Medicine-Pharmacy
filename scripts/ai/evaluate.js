@@ -46,6 +46,50 @@ const LABEL = 'Engineering evaluation on synthetic standardized cases. Not a cli
 const EVALUATOR = { role: 'technician', id: 'evaluation-harness' };
 const SCREENED_STATES = new Set(['pharmacist_review_required', 'information_incomplete']);
 
+function explicitNoneIfEmptyList(patient) {
+  const p = { ...patient };
+  const emptyAllergies = Array.isArray(p.allergies) && p.allergies.length === 0;
+  const emptyMeds = Array.isArray(p.currentMedications) && p.currentMedications.length === 0;
+  if (!emptyAllergies && !emptyMeds) return p;
+  const tri = (v) => {
+    if (v === 'yes') return { status: 'reported', value: 'yes', source: 'benchmark_default', version: 1 };
+    if (v === 'no') return { status: 'none', value: 'no', source: 'benchmark_default', version: 1 };
+    return { status: 'unknown', value: null, source: 'benchmark_default', version: 1 };
+  };
+  const allergyFact = emptyAllergies
+    ? { status: 'none', value: [], source: 'benchmark_default', version: 1 }
+    : (p.allergies == null
+      ? { status: 'not_asked', value: [], source: 'benchmark_absent', version: 1 }
+      : { status: 'reported', value: p.allergies, source: 'benchmark_array', version: 1 });
+  const medFact = emptyMeds
+    ? { status: 'none', value: [], source: 'benchmark_default', version: 1 }
+    : (p.currentMedications == null
+      ? { status: 'not_asked', value: [], source: 'benchmark_absent', version: 1 }
+      : { status: 'reported', value: p.currentMedications, source: 'benchmark_array', version: 1 });
+  p.facts = {
+    liverImpairment: p.liverImpairment === true
+      ? { status: 'reported', value: true, source: 'benchmark_default', version: 1 }
+      : { status: 'none', value: false, source: 'benchmark_default', version: 1 },
+    renalImpairment: p.renalImpairment === true
+      ? { status: 'reported', value: true, source: 'benchmark_default', version: 1 }
+      : { status: 'none', value: false, source: 'benchmark_default', version: 1 },
+    pregnancy: tri(p.pregnancy),
+    lactation: tri(p.lactation),
+    allergies: allergyFact,
+    currentMedications: medFact,
+    ageYears: typeof p.ageYears === 'number'
+      ? { status: 'reported', value: p.ageYears, unit: 'years', source: 'benchmark_default', version: 1 }
+      : { status: 'not_asked', value: null, unit: 'years', source: 'benchmark_default', version: 1 },
+    weightKg: typeof p.weightKg === 'number'
+      ? { status: 'reported', value: p.weightKg, unit: 'kg', source: 'benchmark_default', version: 1 }
+      : { status: 'not_asked', value: null, unit: 'kg', source: 'benchmark_default', version: 1 },
+    ...(p.facts || {}),
+  };
+  if (emptyAllergies) p.facts.allergies = { status: 'none', value: [], source: 'benchmark_default', version: 1 };
+  if (emptyMeds) p.facts.currentMedications = { status: 'none', value: [], source: 'benchmark_default', version: 1 };
+  return p;
+}
+
 function stripNulls(obj) {
   if (Array.isArray(obj)) return obj.map(stripNulls);
   if (!obj || typeof obj !== 'object') return obj;
@@ -70,7 +114,7 @@ function buildInput(defaults, spec) {
   delete rxSpec.issuedAtOffsetDays;
   const input = {
     source: { ...defaults.source, ...(spec.source || {}) },
-    patient: { ...defaults.patient, patientRef: `SYN-${spec.id}`, ...(spec.patient || {}) },
+    patient: explicitNoneIfEmptyList({ ...defaults.patient, patientRef: `SYN-${spec.id}`, ...(spec.patient || {}) }),
     prescription: { ...rxDefaults, issuedAt: isoDate(offset), ...rxSpec },
   };
   if (spec.prescriber !== null) input.prescriber = { ...defaults.prescriber, ...(spec.prescriber || {}) };

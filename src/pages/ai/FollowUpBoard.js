@@ -32,17 +32,19 @@ export default function FollowUpBoard() {
     <Box>
       <Typography variant="h5" sx={{ fontWeight: 700, mb: 2 }}>{t('nav.followUp')}</Typography>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-      <Alert severity="info" sx={{ mb: 2 }}>AI cannot close these tasks. Unsent notifications stay marked in-app only.</Alert>
-      <TextField size="small" label="Note / close summary" value={note} onChange={(e) => setNote(e.target.value)} sx={{ mb: 2, minWidth: 320 }} />
+      <Alert severity="info" sx={{ mb: 2 }}>{t('ai.follow.warn')}</Alert>
+      <TextField size="small" label={t('ai.follow.note')} value={note} onChange={(e) => setNote(e.target.value)} sx={{ mb: 2, minWidth: 320 }} />
       <Paper>
         <Table size="small">
           <TableHead>
             <TableRow>
-              <TableCell>Case</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Owner</TableCell>
-              <TableCell>Due</TableCell>
-              <TableCell>Notify</TableCell>
+              <TableCell>{t('ai.follow.case')}</TableCell>
+              <TableCell>{t('ai.patient')}</TableCell>
+              <TableCell>{t('ai.intake.patientRef')}</TableCell>
+              <TableCell>{t('ai.follow.status')}</TableCell>
+              <TableCell>{t('ai.follow.owner')}</TableCell>
+              <TableCell>{t('ai.follow.due')}</TableCell>
+              <TableCell>{t('ai.follow.notify')}</TableCell>
               <TableCell />
             </TableRow>
           </TableHead>
@@ -50,20 +52,22 @@ export default function FollowUpBoard() {
             {tasks.map((task) => (
               <TableRow key={task.taskId}>
                 <TableCell sx={{ fontFamily: 'monospace' }}>{String(task.caseId).slice(-8)}</TableCell>
-                <TableCell>{task.status}{task.overdue ? ' / overdue' : ''}</TableCell>
+                <TableCell>{task.patientName || task.patientLabel || '—'}</TableCell>
+                <TableCell sx={{ fontFamily: 'monospace' }}>{task.patientRef || '—'}</TableCell>
+                <TableCell>{task.status}{task.overdue ? ` / ${t('ai.follow.overdue')}` : ''}</TableCell>
                 <TableCell>{task.owner || '—'}</TableCell>
                 <TableCell>{task.dueAt || '—'}</TableCell>
-                <TableCell>{task.notifyNote || '仅站内待办，未发送'}</TableCell>
+                <TableCell>{task.notifyNote || t('ai.follow.warn')}</TableCell>
                 <TableCell>
                   <Stack direction="row" spacing={1}>
-                    <Button size="small" onClick={() => act(task, 'assign')}>Assign</Button>
-                    <Button size="small" onClick={() => act(task, 'contact')}>Contact</Button>
-                    <Button size="small" onClick={() => act(task, 'close')}>Close</Button>
+                    <Button size="small" onClick={() => act(task, 'assign')}>{t('ai.follow.assign')}</Button>
+                    <Button size="small" onClick={() => act(task, 'contact')}>{t('ai.follow.contact')}</Button>
+                    <Button size="small" onClick={() => act(task, 'close')}>{t('ai.follow.close')}</Button>
                   </Stack>
                 </TableCell>
               </TableRow>
             ))}
-            {!tasks.length && <TableRow><TableCell colSpan={6} align="center">No open follow-up tasks</TableCell></TableRow>}
+            {!tasks.length && <TableRow><TableCell colSpan={8} align="center">{t('ai.follow.empty')}</TableCell></TableRow>}
           </TableBody>
         </Table>
       </Paper>

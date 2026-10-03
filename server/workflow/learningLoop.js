@@ -138,7 +138,11 @@ function recordShadowComplete(modelId, body, actor) {
   if (!m) throw new ServiceError(404, 'model_not_found', 'Model not in registry');
   if (m.status !== 'shadow') throw new ServiceError(409, 'not_in_shadow', 'Shadow completion is recorded only while the model is in shadow');
   const metrics = body.metrics || {};
-  if (!body.evaluationReportId) throw new ServiceError(400, 'evaluation_report_required', 'A live-evaluation report id is required');
+  if (!body.evaluationReportId || !String(body.evaluationReportId).trim()) throw new ServiceError(400, 'evaluation_report_required', 'A live-evaluation report id is required');
+  if (!body.evaluationReportHash) throw new ServiceError(400, 'evaluation_report_hash_required', 'A hash of the evaluation file is required');
+  if (metrics.schemaPassRate == null || metrics.unsafeAutonomousActions == null) {
+    throw new ServiceError(400, 'metrics_required', 'schemaPassRate and unsafeAutonomousActions are required');
+  }
   if (metrics.unsafeAutonomousActions != null && metrics.unsafeAutonomousActions > LIVE_GATES.maxUnsafeAutonomousActions) {
     throw new ServiceError(409, 'live_gate_failed', 'Unsafe autonomous actions exceed the live gate');
   }
@@ -148,6 +152,7 @@ function recordShadowComplete(modelId, body, actor) {
   const next = {
     ...m,
     evaluationReportId: String(body.evaluationReportId),
+    evaluationReportHash: String(body.evaluationReportHash),
     shadowCompletedAt: new Date().toISOString(),
     shadowMetrics: {
       schemaPassRate: metrics.schemaPassRate ?? null,
@@ -165,16 +170,34 @@ function recordShadowComplete(modelId, body, actor) {
 function assertLiveReady(m, actor, pharmacistApproverId) {
   if (!m.shadowCompletedAt) throw new ServiceError(409, 'shadow_incomplete', 'Live publish requires a completed shadow run');
   if (!m.evaluationReportId) throw new ServiceError(409, 'evaluation_report_required', 'Live publish requires an evaluation report recorded during shadow');
-  if (!pharmacistApproverId) throw new ServiceError(400, 'pharmacist_approval_required', 'Live publish requires a pharmacist approver distinct from the governance actor');
-  const pharmacist = assertPharmacistAccount(pharmacistApproverId, { otherThan: actor.id });
+  if (pharmacistApproverId) {
+    throw new ServiceError(400, 'proxy_pharmacist_sign_forbidden', 'Admin cannot fill pharmacistApproverId. A pharmacist must sign the candidate while logged in.');
+  }
+  if (!m.pharmacistSignedBy) throw new ServiceError(400, 'pharmacist_signature_required', 'A pharmacist must POST /learning/models/:id/sign before live publish');
+  const pharmacist = assertPharmacistAccount(m.pharmacistSignedBy, { otherThan: actor.id });
   if (m.shadowMetrics?.unsafeAutonomousActions != null
     && m.shadowMetrics.unsafeAutonomousActions > LIVE_GATES.maxUnsafeAutonomousActions) {
     throw new ServiceError(409, 'live_gate_failed', 'Unsafe autonomous actions exceed the live gate');
+  }
+  if (m.shadowMetrics?.schemaPassRate == null || m.shadowMetrics?.unsafeAutonomousActions == null) {
+    throw new ServiceError(409, 'metrics_required', 'Live publish requires recorded schemaPassRate and unsafeAutonomousActions');
   }
   if (m.shadowMetrics?.schemaPassRate != null && m.shadowMetrics.schemaPassRate < LIVE_GATES.minSchemaPassRate) {
     throw new ServiceError(409, 'live_gate_failed', 'schemaPassRate is below the live gate');
   }
   return pharmacist;
+}
+
+function signCandidate(modelId, actor) {
+  if (actor.role !== 'pharmacist' || !hasPharmacistCredential(actor)) {
+    throw new ServiceError(403, 'pharmacist_credential_required', 'Only a logged-in pharmacist can sign a model candidate');
+  }
+  const m = repo.learning().getModel(modelId);
+  if (!m) throw new ServiceError(404, 'model_not_found', 'Model not in registry');
+  const next = { ...m, pharmacistSignedBy: String(actor.id), pharmacistSignedAt: new Date().toISOString() };
+  repo.learning().putModel(next);
+  audit.append({ eventType: 'model_pharmacist_signed', actorType: actor.role, actorId: actor.id, payload: { modelId } });
+  return next;
 }
 
 function setModelStatus(modelId, status, actor, reason, extra = {}) {
@@ -238,6 +261,7 @@ module.exports = {
   reviewLabel,
   registerModel,
   recordShadowComplete,
+  signCandidate,
   setModelStatus,
   findPromotableShadowModel,
   hashObjectSafe,

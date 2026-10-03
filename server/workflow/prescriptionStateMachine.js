@@ -23,7 +23,7 @@ const STATES = [
   'completed',
 ];
 
-const PHARMACIST_ONLY_TARGETS = new Set(['pharmacist_approved', 'pharmacist_rejected', 'pharmacist_final_check']);
+const PHARMACIST_ONLY_TARGETS = new Set(['pharmacist_approved', 'pharmacist_rejected']);
 
 /** from → to → allowed actor roles */
 const TRANSITIONS = {
@@ -47,7 +47,7 @@ const TRANSITIONS = {
     ai_screening: ['system'],
   },
   pharmacist_approved: {
-    patient_confirmation_required: ['pharmacist', 'technician', 'system'],
+    patient_confirmation_required: ['pharmacist', 'technician', 'system', 'patient'],
     ai_screening: ['system'],
   },
   pharmacist_rejected: {

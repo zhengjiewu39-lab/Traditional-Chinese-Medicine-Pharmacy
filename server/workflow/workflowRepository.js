@@ -71,16 +71,26 @@ function listCases(filter = {}) {
   return list.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
 }
 
-function saveCase(c, { expectedVersion } = {}) {
+function saveCase(c, { expectedVersion, expectedRecordVersion } = {}) {
   return transaction(() => {
     const current = getCase(c.caseId);
-    if (expectedVersion != null && current && current.contentVersion !== expectedVersion) {
+    if (expectedVersion != null && current && Number(current.contentVersion) !== Number(expectedVersion)) {
       const err = new Error('version_conflict');
       err.code = 'version_conflict';
+      err.status = 409;
       err.currentVersion = current.contentVersion;
       throw err;
     }
-    writeDoc('cases', c.caseId, c, c.contentVersion || 1);
+    if (expectedRecordVersion != null && current && Number(current.recordVersion || 0) !== Number(expectedRecordVersion)) {
+      const err = new Error('version_conflict');
+      err.code = 'version_conflict';
+      err.status = 409;
+      err.currentVersion = current.contentVersion;
+      err.currentRecordVersion = current.recordVersion;
+      throw err;
+    }
+    c.recordVersion = (current?.recordVersion || 0) + 1;
+    writeDoc('cases', c.caseId, c, c.recordVersion);
     return c;
   });
 }

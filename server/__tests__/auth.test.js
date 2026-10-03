@@ -14,6 +14,13 @@ describe('auth helpers', () => {
     assert.ok(result.token.includes('.'));
   });
 
+  it('maps demo patient login P1 to that synthetic patient', () => {
+    const result = authenticate('P1', 'patient123');
+    assert.ok(result);
+    assert.equal(result.user.role, 'patient');
+    assert.equal(result.user.patientRef, 'P1');
+  });
+
   it('rejects invalid credentials and non-string input', () => {
     assert.equal(authenticate('admin', 'wrong'), null);
     assert.equal(authenticate('admin', undefined), null);
@@ -55,6 +62,7 @@ describe('auth helpers', () => {
   it('marks public paths correctly', () => {
     assert.equal(isPublicPath('/api/health'), true);
     assert.equal(isPublicPath('/api/auth/login'), true);
+    assert.equal(isPublicPath('/api/auth/demo-patients'), true);
     assert.equal(isPublicPath('/api/pickup/redeem'), true);
     assert.equal(isPublicPath('/api/prescriptions/pickup/TCM128456'), false);
     assert.equal(isPublicPath('/api/prescriptions/pickup/queue'), false);

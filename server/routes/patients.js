@@ -1,22 +1,30 @@
 const express = require('express');
 const { getStore, updateStore, nextId } = require('../data/store');
 
+const { refForStorePatient, syncPatientRecord, storeToWorkflow } = require('../workflow/patientIdentity');
+const repo = require('../workflow/workflowRepository');
+const { ServiceError } = require('../workflow/errors');
+
 const router = express.Router();
+
+function withRef(p) {
+  return { ...p, patientRef: refForStorePatient(p) };
+}
 
 router.get('/', (req, res) => {
   const { q } = req.query;
   let patients = getStore().patients;
   if (q) {
     const term = q.toLowerCase();
-    patients = patients.filter(p => p.name.includes(term) || p.phone.includes(term));
+    patients = patients.filter(p => p.name.includes(term) || p.phone.includes(term) || String(p.patientRef || `P${p.id}`).toLowerCase().includes(term));
   }
-  res.json(patients);
+  res.json(patients.map(withRef));
 });
 
 router.get('/:id', (req, res) => {
   const p = getStore().patients.find(x => x.id === +req.params.id);
   if (!p) return res.status(404).json({ message: '未找到' });
-  res.json(p);
+  res.json(withRef(p));
 });
 
 router.get('/:id/prescriptions', (req, res) => {
@@ -35,25 +43,39 @@ router.post('/', (req, res) => {
       allergies: [],
       ...req.body,
     };
+    created.patientRef = refForStorePatient(created);
     data.patients.push(created);
     if (created.customerId) {
       const cust = data.customers.find(c => c.id === created.customerId);
       if (cust && !cust.patientId) cust.patientId = created.id;
     }
   });
-  res.status(201).json(created);
+  const wf = storeToWorkflow(created);
+  repo.upsertPatient({
+    patientRef: created.patientRef,
+    name: created.name,
+    phone: created.phone,
+    sex: wf.sex,
+    ageYears: created.age,
+    allergies: created.allergies || [],
+    medicalHistory: created.medicalHistory || [],
+    legacyPatientId: String(created.id),
+    legacyCustomerId: created.customerId != null ? String(created.customerId) : null,
+    version: 1,
+  });
+  res.status(201).json(withRef(created));
 });
 
 router.put('/:id', (req, res) => {
-  let updated;
-  updateStore(data => {
-    const idx = data.patients.findIndex(p => p.id === +req.params.id);
-    if (idx === -1) return;
-    data.patients[idx] = { ...data.patients[idx], ...req.body, id: +req.params.id };
-    updated = data.patients[idx];
-  });
-  if (!updated) return res.status(404).json({ message: '未找到' });
-  res.json(updated);
+  try {
+    const out = syncPatientRecord(+req.params.id, req.body);
+    res.json({ ...out.patient, synced: out.synced });
+  } catch (err) {
+    if (err instanceof ServiceError) {
+      return res.status(err.status).json({ error: { code: err.code, message: err.message } });
+    }
+    throw err;
+  }
 });
 
 router.delete('/:id', (req, res) => {

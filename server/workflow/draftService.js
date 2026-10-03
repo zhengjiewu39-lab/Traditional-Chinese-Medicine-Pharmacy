@@ -9,6 +9,7 @@ const { ServiceError } = require('./errors');
 const { createCase, analyze } = require('./workflowService');
 const suggestions = require('./suggestionService');
 const { prescriberFields } = require('../security/prescriberLicense');
+const { normalizePatientIdentity } = require('./patientIdentity');
 
 function parseHerbText(text) {
   if (!text) return [];
@@ -45,7 +46,7 @@ function createDraft(body, actor) {
     dataMode: getDataMode(),
     synthetic: isSyntheticMode(),
     status: 'draft',
-    patient: body.patient || {},
+    patient: normalizePatientIdentity(body.patient || {}),
     clinical: { diagnosisText: body.diagnosisText || body.diagnosis || '', notes: body.notes || '' },
     prescription: {
       herbs: prescription.herbs || [],
@@ -75,7 +76,7 @@ function patchDraft(id, body, actor) {
   assertOwner(d, actor);
   if (d.status !== 'draft') throw new ServiceError(409, 'draft_submitted', 'Submitted drafts cannot be edited; create a new draft from the returned case');
   const before = d.contentHash;
-  if (body.patient) d.patient = { ...d.patient, ...body.patient };
+  if (body.patient) d.patient = normalizePatientIdentity({ ...d.patient, ...body.patient });
   if (body.clinical || body.diagnosisText || body.diagnosis || body.notes != null) {
     d.clinical = {
       ...d.clinical,

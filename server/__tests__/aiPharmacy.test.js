@@ -110,6 +110,9 @@ async function newCase(overrides, as = 'technician') {
   const created = await call('POST', '/api/ai/cases', { as, body: caseInput(overrides) });
   assert.strictEqual(created.status, 201, JSON.stringify(created.body));
   const id = created.body.case.caseId;
+  if (created.body.analysis) {
+    return { id, analysis: created.body.analysis, state: created.body.case.state };
+  }
   const analyzed = await call('POST', `/api/ai/cases/${id}/analyze`, { as, body: {} });
   assert.strictEqual(analyzed.status, 200, JSON.stringify(analyzed.body));
   return { id, analysis: analyzed.body.analysis, state: analyzed.body.case.state };
@@ -176,7 +179,9 @@ describe('AI pharmacy: workflow and authority boundaries', () => {
     const { id, analysis } = await newCase();
     assert.strictEqual((await approve(id, analysis.analysisId)).status, 200);
     assert.strictEqual(repo.getCase(id).approval.valid, true);
-    const edit = await call('PATCH', `/api/ai/cases/${id}`, { as: 'pharmacist', body: { prescription: { herbs: [{ name: '黄芪', dosage: 30 }, { name: '白术', dosage: 10 }] }, reason: '医师改量' } });
+    const blocked = await call('PATCH', `/api/ai/cases/${id}`, { as: 'pharmacist', body: { prescription: { herbs: [{ name: '黄芪', dosage: 30 }, { name: '白术', dosage: 10 }] }, reason: '药师不得改方' } });
+    assert.strictEqual(blocked.status, 403);
+    const edit = await call('PATCH', `/api/ai/cases/${id}`, { as: 'pharmacist', body: { patient: { ageYears: 46 }, reason: '补充年龄' } });
     assert.strictEqual(edit.status, 200, JSON.stringify(edit.body));
     const c = repo.getCase(id);
     assert.strictEqual(c.approval.valid, false);

@@ -1,6 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Container, Box, Typography, TextField, Button, Paper, Alert, Stack } from '@mui/material';
+import {
+  Container, Box, Typography, TextField, Button, Paper, Alert, Stack,
+  Dialog, DialogTitle, DialogContent, List, ListItemButton, ListItemText, CircularProgress,
+} from '@mui/material';
 import {
   AdminPanelSettings, LocalPharmacy, Handyman, Science, Person, MedicalServices,
 } from '@mui/icons-material';
@@ -8,12 +11,12 @@ import { useAuth } from '../contexts/AuthContext';
 import { getHomeForRole } from '../config/navigation';
 import { useLanguage } from '../i18n/LanguageContext';
 import LanguageSwitcher from '../components/LanguageSwitcher';
+import { authApi } from '../services/api';
 
 const CLINICAL_ACCOUNTS = [
   { username: 'prescriber', password: 'doc123', role: 'prescriber', Icon: MedicalServices },
   { username: 'pharmacist', password: 'pharm123', role: 'pharmacist', Icon: LocalPharmacy },
   { username: 'pharmacist2', password: 'pharm456', role: 'pharmacist', Icon: LocalPharmacy },
-  { username: 'patient', password: 'patient123', role: 'patient', Icon: Person },
 ];
 const SUPPORT_ACCOUNTS = [
   { username: 'technician', password: 'tech123', role: 'technician', Icon: Handyman },
@@ -26,15 +29,19 @@ function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const [directory, setDirectory] = useState([]);
+  const [dirLoading, setDirLoading] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
   const { t } = useLanguage();
 
-  const signIn = async (u, p) => {
+  const signIn = async (u, p, extra = {}) => {
     try {
       setError('');
       setLoading(true);
-      const loggedIn = await login(u, p);
+      const loggedIn = await login(u, p, extra);
       navigate(getHomeForRole(loggedIn?.role));
     } catch {
       setError(t('auth.loginFailed'));
@@ -42,6 +49,24 @@ function Login() {
       setLoading(false);
     }
   };
+
+  const loadDirectory = async (q) => {
+    setDirLoading(true);
+    try {
+      const r = await authApi.demoPatients({ q: q || undefined, limit: 40 });
+      setDirectory(r.data.patients || []);
+    } catch {
+      setDirectory([]);
+    } finally {
+      setDirLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!pickerOpen) return undefined;
+    const tmr = setTimeout(() => loadDirectory(query), 200);
+    return () => clearTimeout(tmr);
+  }, [pickerOpen, query]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -103,6 +128,9 @@ function Login() {
           <Typography variant="caption" color="text.secondary" sx={{ mt: 1, mb: 0.5 }}>{t('login.clinicalGroup')}</Typography>
           <Stack direction="row" spacing={1} justifyContent="center" flexWrap="wrap" useFlexGap>
             {CLINICAL_ACCOUNTS.map(accountButton)}
+            <Button size="small" variant="outlined" startIcon={<Person />} disabled={loading} onClick={() => setPickerOpen(true)}>
+              {t('roles.patient')}
+            </Button>
           </Stack>
           <Typography variant="caption" color="text.secondary" sx={{ mt: 1.5, mb: 0.5 }}>{t('login.supportGroup')}</Typography>
           <Stack direction="row" spacing={1} justifyContent="center" flexWrap="wrap" useFlexGap>
@@ -113,6 +141,36 @@ function Login() {
           </Typography>
         </Paper>
       </Box>
+      <Dialog open={pickerOpen} onClose={() => setPickerOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>{t('login.pickPatient')}</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>{t('login.pickPatientHint')}</Typography>
+          <TextField
+            autoFocus
+            fullWidth
+            size="small"
+            label={t('login.pickPatientSearch')}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            sx={{ mb: 1 }}
+          />
+          {dirLoading && <Box sx={{ textAlign: 'center', py: 2 }}><CircularProgress size={22} /></Box>}
+          <List dense>
+            {directory.map((p) => (
+              <ListItemButton
+                key={p.patientRef}
+                disabled={loading}
+                onClick={() => { setPickerOpen(false); signIn(p.patientRef, 'patient123'); }}
+              >
+                <ListItemText
+                  primary={`${p.name} · ${p.patientRef}`}
+                  secondary={t('login.pickPatientMeta', { age: p.age ?? '—', gender: p.gender || '—' })}
+                />
+              </ListItemButton>
+            ))}
+          </List>
+        </DialogContent>
+      </Dialog>
     </Container>
   );
 }

@@ -65,6 +65,8 @@ export const authApi = {
   getCurrentUser: () => api.get('/auth/me'),
   updateProfile: (userData) => api.put('/auth/profile', userData),
   changePassword: (passwordData) => api.post('/auth/change-password', passwordData),
+  demoPatients: (params) => api.get('/auth/demo-patients', { params }),
+  assumePatient: (patientRef) => api.post('/auth/assume-patient', { patientRef }),
 };
 
 // 药材管理相关API

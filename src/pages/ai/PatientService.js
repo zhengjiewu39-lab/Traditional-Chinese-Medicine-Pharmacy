@@ -81,7 +81,11 @@ export default function PatientService() {
                     {['pharmacist_approved', 'patient_confirmation_required'].includes(c.state) && (
                       <Button size="small" variant="outlined" onClick={() => issue(c.caseId)}>{c.state === 'pharmacist_approved' ? t('ai.patientSvc.issue') : t('ai.patientSvc.reissue')}</Button>
                     )}
-                    {links[c.caseId] && <Typography variant="caption" display="block">{`${window.location.origin}${links[c.caseId].path}`}</Typography>}
+                    {links[c.caseId] && (
+                      <Typography variant="caption" display="block">
+                        {t('ai.review.issued')} · {links[c.caseId].deliveredTo || ''} → {links[c.caseId].inboxPath || '/patient/me'}
+                      </Typography>
+                    )}
                   </TableCell>
                 </TableRow>
               );

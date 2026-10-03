@@ -13,6 +13,19 @@ import {
 } from '../../config/aiLabels';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { meansNoAllergy } from '../../i18n/lookup';
+import { displayFact, triFromFact, scalarFromFact, factStatus } from '../../utils/clinicalFacts';
+
+const CLAR_FIELDS = [
+  'patient.facts.ageYears',
+  'patient.facts.weightKg',
+  'patient.facts.allergies',
+  'patient.facts.currentMedications',
+  'patient.facts.pregnancy',
+  'patient.facts.lactation',
+  'patient.facts.liverImpairment',
+  'patient.facts.renalImpairment',
+  'patient.sex',
+];
 
 const ACTION_KEYS = {
   approve: 'ai.action.approve',
@@ -42,8 +55,13 @@ function EditDialog({ open, onClose, c, onSaved, t }) {
   const [err, setErr] = useState('');
   useEffect(() => {
     if (!open) return;
+    const allergy = displayFact(p.facts?.allergies, p.allergyItems, { none: 'none', unknown: '', notAsked: '' });
+    const meds = displayFact(p.facts?.currentMedications, p.medicationItems, { none: '', unknown: '', notAsked: '' });
     setF({
-      age: p.ageYears ?? '', allergies: p.allergies ? (p.allergies.length ? p.allergies.join(', ') : 'none') : '', pregnancy: p.pregnancy || 'unknown', meds: (p.currentMedications || []).join(', '),
+      age: scalarFromFact(p.facts?.ageYears) ?? p.ageYears ?? '',
+      allergies: allergy.status === 'none' ? 'none' : (allergy.names || []).join(', '),
+      pregnancy: triFromFact(p.facts?.pregnancy) || p.pregnancy || 'unknown',
+      meds: (meds.names || (Array.isArray(p.currentMedications) ? p.currentMedications : [])).join(', '),
       herbs: (c.prescription.herbs || []).map((h) => `${h.name}${h.dosage ?? ''}g`).join('，'), doseCount: c.prescription.doseCount ?? '', usage: c.prescription.usage || '', decoctionNotes: c.prescription.decoctionNotes || '', reason: '',
     });
     setErr('');
@@ -56,18 +74,22 @@ function EditDialog({ open, onClose, c, onSaved, t }) {
         const m = part.match(/^(.+?)(\d+(?:\.\d+)?)\s*g?$/);
         return m ? { name: m[1], dosage: Number(m[2]), unit: 'g' } : { name: part, dosage: null, unit: 'g' };
       });
-      await aiCasesApi.update(c.caseId, {
+      const body = {
         reason: f.reason,
+        expectedVersion: c.contentVersion,
         patient: {
           ...(f.age !== '' ? { ageYears: Number(f.age) } : {}),
           ...(f.allergies !== '' ? { allergies: meansNoAllergy(f.allergies) ? [] : split(f.allergies) } : {}),
           pregnancy: f.pregnancy,
           currentMedications: split(f.meds),
         },
-        prescription: {
+      };
+      if (c.__canEditRx) {
+        body.prescription = {
           herbs, ...(f.doseCount !== '' ? { doseCount: Number(f.doseCount) } : {}), ...(f.usage ? { usage: f.usage } : {}), ...(f.decoctionNotes ? { decoctionNotes: f.decoctionNotes } : {}),
-        },
-      });
+        };
+      }
+      await aiCasesApi.update(c.caseId, body);
       onSaved();
       onClose();
     } catch (e) {
@@ -81,7 +103,7 @@ function EditDialog({ open, onClose, c, onSaved, t }) {
         <Alert severity="warning" sx={{ mb: 2 }}>{t('ai.review.editWarn')}</Alert>
         {err && <Alert severity="error" sx={{ mb: 2 }}>{err}</Alert>}
         <Grid container spacing={2}>
-          <Grid item xs={12}><TextField fullWidth label={t('ai.review.herbs')} value={f.herbs || ''} onChange={set('herbs')} /></Grid>
+          {c.__canEditRx && <Grid item xs={12}><TextField fullWidth label={t('ai.review.herbs')} value={f.herbs || ''} onChange={set('herbs')} /></Grid>}
           <Grid item xs={4}><TextField fullWidth label={t('ai.review.age')} type="number" value={f.age ?? ''} onChange={set('age')} /></Grid>
           <Grid item xs={4}>
             <TextField select fullWidth label={t('ai.review.pregnancy')} value={f.pregnancy || 'unknown'} onChange={set('pregnancy')}>
@@ -120,6 +142,11 @@ export default function ReviewDetail() {
   const [editOpen, setEditOpen] = useState(false);
   const [link, setLink] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [clarField, setClarField] = useState('patient.facts.ageYears');
+  const [clarQ, setClarQ] = useState('');
+  const [eduText, setEduText] = useState('');
+  const [planDue, setPlanDue] = useState('');
+  const [planNote, setPlanNote] = useState('');
 
   const load = useCallback(async () => {
     try {
@@ -137,6 +164,7 @@ export default function ReviewDetail() {
   const out = analysis?.output;
   const isPharmacist = user?.role === 'pharmacist' || (Array.isArray(user?.credentials) && user.credentials.includes('pharmacist'));
   const canEditContent = ['pharmacist', 'prescriber'].includes(user?.role);
+  const canEditRx = user?.role === 'prescriber';
   const inReview = c?.state === 'pharmacist_review_required';
 
   const run = async (fn, okText) => {
@@ -166,15 +194,32 @@ export default function ReviewDetail() {
   if (!c) return <Box sx={{ textAlign: 'center', py: 6 }}><CircularProgress /></Box>;
   const p = c.patient || {};
   const overridable = (out?.alerts || []).filter((a) => a.code !== 'INJECTION_SUSPECTED');
+  const yn = (fact) => {
+    const st = factStatus(fact);
+    if (st === 'reported' && fact.value === true) return t('ai.review.yesNoUnknown.yes');
+    if (st === 'none' || (st === 'reported' && fact.value === false)) return t('ai.review.yesNoUnknown.no');
+    if (st === 'not_asked') return t('ai.confirm.notAsked');
+    return t('ai.unknown');
+  };
+  const allergy = displayFact(p.facts?.allergies, p.allergyItems, { none: t('ai.confirm.noAllergy'), unknown: t('ai.unknown'), notAsked: t('ai.confirm.notAsked') });
+  const meds = displayFact(p.facts?.currentMedications, p.medicationItems, { none: t('ai.none'), unknown: t('ai.unknown'), notAsked: t('ai.confirm.notAsked') });
 
   return (
     <Box>
       <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }} flexWrap="wrap" useFlexGap>
         <Button size="small" onClick={() => navigate('/ai/review-queue')}>{t('ai.review.back')}</Button>
         <Typography variant="h5" sx={{ fontWeight: 700, fontFamily: 'monospace' }}>{c.caseId.slice(-8)}</Typography>
+        {(p.name || p.patientRef) && (
+          <Chip
+            color="primary"
+            variant="outlined"
+            label={[p.name, p.patientRef].filter(Boolean).join(' · ')}
+          />
+        )}
         <StateChip state={c.state} size="medium" />
         {out && <RiskTierChip tier={out.riskTier} size="medium" />}
         {out && <Chip label={t(RECOMMENDATION_LABELS[out.recommendation] || out.recommendation)} variant="outlined" />}
+        {c.reviewLane && <Chip size="small" color={c.reviewLane === 'dual' ? 'warning' : c.reviewLane === 'fast' ? 'success' : 'default'} label={t('ai.review.lane', { lane: t(`ai.cases.lane${c.reviewLane === 'fast' ? 'Fast' : c.reviewLane === 'dual' ? 'Dual' : 'Priority'}`) })} />}
         {out?.displaySource && <Chip size="small" color={out.displaySource === 'degraded_rules' ? 'warning' : 'default'} label={t(DISPLAY_SOURCE_LABELS[out.displaySource] || out.displaySource)} />}
         {c.approval && <Chip color={c.approval.valid ? 'success' : 'default'} label={c.approval.valid ? t('ai.review.approvalValid') : t('ai.review.approvalInvalid')} />}
         {c.synthetic && <Chip size="small" label={t('ai.review.synthetic')} />}
@@ -221,12 +266,15 @@ export default function ReviewDetail() {
             {c.prescription.prescriberAttestations?.length > 0 && <Typography variant="body2">{t('ai.review.dualSign', { items: c.prescription.prescriberAttestations.join(', ') })}</Typography>}
           </Section>
           <Section title={t('ai.review.patientRisk')}>
+            <Typography variant="body2" sx={{ fontWeight: 700, mb: 0.5 }}>
+              {[p.name || t('ai.unregistered'), p.patientRef].filter(Boolean).join(' · ')}
+            </Typography>
             <Typography variant="body2">{t('ai.review.diagnosisLine', { dx: c.prescription.diagnosisText || t('ai.noneRecorded'), kg: p.weightKg ?? t('ai.noneRecorded'), sev: t(`ai.allergySeverity.${p.allergySeverity || 'unknown'}`) })}</Typography>
             <Typography variant="body2">{t('ai.review.demoLine', { age: p.ageYears ?? t('ai.noneRecorded'), sex: t(`ai.sex.${p.sex || 'unknown'}`), preg: t(`ai.tri.${p.pregnancy || 'unknown'}`), lac: t(`ai.tri.${p.lactation || 'unknown'}`) })}</Typography>
-            <Typography variant="body2">{t('ai.review.allergies', { v: p.allergies ? (p.allergies.length ? p.allergies.join(', ') : t('ai.none')) : t('ai.noneRecorded') })}</Typography>
+            <Typography variant="body2">{t('ai.review.allergies', { v: allergy.text })}</Typography>
             {c.prescription.clinicalNotes ? <Typography variant="body2">{t('ai.review.notes', { v: c.prescription.clinicalNotes })}</Typography> : null}
-            <Typography variant="body2">{t('ai.review.meds', { v: p.currentMedications?.length ? p.currentMedications.join(', ') : t('ai.noneRecorded') })}</Typography>
-            <Typography variant="body2">{t('ai.review.liver', { liver: p.liverImpairment ? t('ai.review.yesNoUnknown.yes') : t('ai.review.yesNoUnknown.no'), kidney: p.renalImpairment ? t('ai.review.yesNoUnknown.yes') : t('ai.review.yesNoUnknown.no') })}</Typography>
+            <Typography variant="body2">{t('ai.review.meds', { v: meds.text })}</Typography>
+            <Typography variant="body2">{t('ai.review.liver', { liver: yn(p.facts?.liverImpairment), kidney: yn(p.facts?.renalImpairment) })}</Typography>
           </Section>
           <Section title={t('ai.review.history')}>
             <Typography variant="caption" color="text.secondary">{t('ai.review.analyses')}</Typography>
@@ -360,15 +408,33 @@ export default function ReviewDetail() {
                 {isPharmacist && !inReview && <Alert severity="info">{t('ai.review.notInReview', { state: t(STATE_LABELS[c.state] || c.state) })}</Alert>}
                 {isPharmacist && inReview && (
                   <Stack spacing={2}>
-                    {c.secondReview?.status === 'pending' && <Alert severity="info">{t('ai.review.secondPending', { id: c.secondReview.requestedBy })}</Alert>}
+                    {c.secondReview?.status === 'pending' && c.secondReview.firstSigner && String(c.secondReview.firstSigner) === String(user?.id) && (
+                      <Alert severity="info">{t('ai.review.waitSecond')}</Alert>
+                    )}
+                    {c.secondReview?.status === 'pending' && c.secondReview.firstSigner && String(c.secondReview.firstSigner) !== String(user?.id) && (
+                      <Alert severity="info">{t('ai.review.firstSigned', { id: c.secondReview.firstSigner })}</Alert>
+                    )}
+                    {c.secondReview?.status === 'pending' && !c.secondReview.firstSigner && (
+                      <Alert severity="info">{t('ai.review.secondPending', { id: c.secondReview.requestedBy })}</Alert>
+                    )}
                     <TextField label={out.abstain ? t('ai.review.commentAbstain') : t('ai.review.comment')} multiline minRows={2} value={comment} onChange={(e) => setComment(e.target.value)} />
                     <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                      <Button variant="contained" color="success" disabled={busy || out.riskTier === 'A3'} onClick={() => decide('approve')}>{t('ai.action.approve')}</Button>
+                      {c.reviewLane === 'fast' && (
+                        <Button variant="contained" color="success" disabled={busy || out.riskTier === 'A3'} onClick={() => decide('fast_approve')}>{t('ai.action.fast_approve')}</Button>
+                      )}
+                      <Button
+                        variant="contained"
+                        color="success"
+                        disabled={busy || out.riskTier === 'A3' || (c.secondReview?.firstSigner && String(c.secondReview.firstSigner) === String(user?.id))}
+                        onClick={() => decide('approve')}
+                      >
+                        {c.reviewLane === 'dual' && !c.secondReview?.firstSigner ? t('ai.action.first_sign') : t('ai.action.approve')}
+                      </Button>
                       <Button variant="outlined" color="error" disabled={busy || !comment} onClick={() => decide('reject')}>{t('ai.action.reject')}</Button>
                       <Button variant="outlined" disabled={busy || !comment} onClick={() => decide('return_to_prescriber')}>{t('ai.action.return_to_prescriber')}</Button>
                       <Button variant="outlined" disabled={busy} onClick={() => decide('request_second_review')}>{t('ai.action.request_second_review')}</Button>
                     </Stack>
-                    {out.riskTier === 'A3' && <Alert severity="error">{t('ai.review.a3block')}</Alert>}
+                    {out.riskTier === 'A3' && <Alert severity="error">{t('ai.review.a3only')}</Alert>}
                     <Stack direction="row" spacing={1}>
                       <TextField size="small" fullWidth label={t('ai.review.needInfo')} value={infoItems} onChange={(e) => setInfoItems(e.target.value)} />
                       <Button variant="outlined" disabled={busy || !infoItems} onClick={() => decide('request_information', { requestedInformation: infoItems.split(/[，,]/).map((x) => x.trim()).filter(Boolean) })}>{t('ai.review.askInfo')}</Button>
@@ -412,7 +478,56 @@ export default function ReviewDetail() {
           )}
         </Grid>
       </Grid>
-      <EditDialog t={t} open={editOpen} onClose={() => setEditOpen(false)} c={c} onSaved={() => { setNotice(t('ai.review.updated')); load(); }} />
+      {isPharmacist && (
+        <Section title={t('ai.review.serviceTitle')}>
+          <Alert severity="info" sx={{ mb: 2 }}>{t('ai.review.selfReport')}</Alert>
+          <Stack spacing={2}>
+            <Stack direction={{ xs: 'column', md: 'row' }} spacing={1}>
+              <TextField select size="small" label={t('ai.review.clarField')} value={clarField} onChange={(e) => setClarField(e.target.value)} sx={{ minWidth: 260 }}>
+                {CLAR_FIELDS.map((f) => <MenuItem key={f} value={f}>{f}</MenuItem>)}
+              </TextField>
+              <TextField size="small" fullWidth label={t('ai.review.clarQuestion')} value={clarQ} onChange={(e) => setClarQ(e.target.value)} />
+              <Button variant="outlined" disabled={busy || !clarQ} onClick={() => run(async () => {
+                const r = await aiCasesApi.issueClarification(caseId, { fieldPath: clarField, question: clarQ, source: 'pharmacist' });
+                setLink({ path: r.data.path, expiresAt: r.data.expiresAt, token: r.data.token });
+                setClarQ('');
+              }, t('ai.review.clarSent'))}>{t('ai.review.clarSend')}</Button>
+            </Stack>
+            {(c.clarificationTasks || []).map((task) => (
+              <Stack key={task.taskId} direction="row" spacing={1} alignItems="center">
+                <Typography variant="body2">{task.fieldPath} · {task.status} · {task.question}</Typography>
+                {task.status === 'answered' && (
+                  <Button size="small" onClick={() => run(() => aiCasesApi.reviewClarification(caseId, task.taskId), t('ai.review.clarReviewed'))}>{t('ai.review.clarReview')}</Button>
+                )}
+              </Stack>
+            ))}
+            <TextField multiline minRows={3} label={t('ai.review.eduDraft')} value={eduText} onChange={(e) => setEduText(e.target.value)} />
+            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+              <Button variant="outlined" disabled={busy || !eduText} onClick={() => run(() => aiCasesApi.createEducation(caseId, { text: eduText, source: 'pharmacist' }), t('ai.review.eduCreated'))}>{t('ai.review.eduCreate')}</Button>
+            </Stack>
+            {(c.educationDocuments || []).map((d) => (
+              <Stack key={d.documentId} direction="row" spacing={1} alignItems="center">
+                <Typography variant="body2">{d.status} · {d.text?.slice(0, 80)}</Typography>
+                {d.status === 'review_required' && <Button size="small" onClick={() => run(() => aiCasesApi.decideEducation(caseId, d.documentId, { action: 'approve' }), t('ai.review.eduApprove'))}>{t('ai.review.eduApprove')}</Button>}
+                {d.status === 'approved' && <Button size="small" onClick={() => run(() => aiCasesApi.decideEducation(caseId, d.documentId, { action: 'publish' }), t('ai.review.eduPublish'))}>{t('ai.review.eduPublish')}</Button>}
+              </Stack>
+            ))}
+            <Alert severity="info">{t('ai.review.noPlan')}</Alert>
+            <Stack direction={{ xs: 'column', md: 'row' }} spacing={1}>
+              <TextField size="small" type="datetime-local" label={t('ai.review.followDue')} value={planDue} onChange={(e) => setPlanDue(e.target.value)} InputLabelProps={{ shrink: true }} />
+              <TextField size="small" fullWidth label={t('ai.review.followNote')} value={planNote} onChange={(e) => setPlanNote(e.target.value)} />
+              <Button variant="outlined" disabled={busy} onClick={() => run(() => aiCasesApi.setFollowUpPlan(caseId, { dueAt: planDue ? new Date(planDue).toISOString() : undefined, note: planNote || undefined }), t('ai.review.followSaved'))}>{t('ai.review.followSave')}</Button>
+            </Stack>
+            {['completed', 'ready_for_pickup', 'pharmacist_approved', 'dispensing'].includes(c.state) && (
+              <Button variant="outlined" disabled={busy} onClick={() => run(async () => {
+                const r = await aiCasesApi.issueFeedbackToken(caseId);
+                setLink({ path: r.data.path || r.data.nextFeedbackPath || `/patient/feedback/${r.data.token}`, expiresAt: r.data.expiresAt });
+              }, t('ai.review.feedbackIssued'))}>{t('ai.review.feedbackLink')}</Button>
+            )}
+          </Stack>
+        </Section>
+      )}
+      <EditDialog t={t} open={editOpen} onClose={() => setEditOpen(false)} c={{ ...c, __canEditRx: canEditRx }} onSaved={() => { setNotice(t('ai.review.updated')); load(); }} />
     </Box>
   );
 }

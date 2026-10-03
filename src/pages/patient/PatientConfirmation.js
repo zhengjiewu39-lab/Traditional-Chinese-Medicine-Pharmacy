@@ -7,6 +7,7 @@ import { patientPortalApi } from '../../services/aiApi';
 import { formatApiError } from '../../config/httpClient';
 import { SYNTHETIC_LABEL } from '../../config/aiLabels';
 import { useLanguage } from '../../i18n/LanguageContext';
+import { displayFact, triFromFact, scalarFromFact } from '../../utils/clinicalFacts';
 
 const TRI = ['no', 'yes', 'unknown'];
 const split = (s) => s.split(/[，,、;；]+/).map((x) => x.trim()).filter(Boolean);
@@ -20,14 +21,19 @@ export default function PatientConfirmation() {
   const [busy, setBusy] = useState(false);
   const [f, setF] = useState({
     identityConfirmed: false, allergiesConfirmed: false, allergyCorrections: '', pregnancy: 'unknown', lactation: 'unknown', ageConfirmed: false,
-    currentMedications: '', fulfillment: 'pickup', contactConfirmed: false, substitutionConsent: 'decline', educationAcknowledged: false, declineReason: '',
+    currentMedications: '', fulfillment: 'pickup', contactConfirmed: false, educationReceived: false, educationUnderstood: false, declineReason: '',
   });
 
   useEffect(() => {
     patientPortalApi.getConfirmation(token)
       .then((r) => {
         setView(r.data);
-        setF((x) => ({ ...x, pregnancy: r.data.recordedInformation.pregnancy || 'unknown', lactation: r.data.recordedInformation.lactation || 'unknown' }));
+        const info = r.data.recordedInformation || {};
+        setF((x) => ({
+          ...x,
+          pregnancy: info.pregnancyTri || triFromFact(info.pregnancy),
+          lactation: info.lactationTri || triFromFact(info.lactation),
+        }));
       })
       .catch((e) => setError(formatApiError(e)));
   }, [token]);
@@ -51,8 +57,8 @@ export default function PatientConfirmation() {
           currentMedications: split(f.currentMedications),
           fulfillment: f.fulfillment,
           contactConfirmed: f.contactConfirmed,
-          substitutionConsent: f.substitutionConsent,
-          educationAcknowledged: f.educationAcknowledged,
+          educationReceived: f.educationReceived,
+          educationUnderstood: f.educationUnderstood,
         };
       setResult((await patientPortalApi.submitConfirmation(token, body)).data);
     } catch (e) {
@@ -63,7 +69,10 @@ export default function PatientConfirmation() {
   };
 
   const r = view?.recordedInformation;
-  const allergyText = r?.allergies ? (r.allergies.length ? r.allergies.join(', ') : t('ai.confirm.noAllergy')) : t('ai.unregistered');
+  const labels = { none: t('ai.confirm.noAllergy'), unknown: t('ai.unknown'), notAsked: t('ai.confirm.notAsked') || t('ai.unknown') };
+  const allergy = displayFact(r?.allergies, r?.allergyItems, labels);
+  const meds = displayFact(r?.currentMedications, r?.medicationItems, { none: t('ai.none'), unknown: t('ai.unknown'), notAsked: t('ai.unknown') });
+  const age = scalarFromFact(r?.ageYears) ?? r?.ageYearsDisplay;
   return (
     <Container maxWidth="sm" sx={{ py: 4 }}>
       <Paper sx={{ p: 3 }}>
@@ -97,19 +106,20 @@ export default function PatientConfirmation() {
             <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>{t('ai.confirm.education')}</Typography>
             <Typography variant="body2">{view.explanation.text}</Typography>
             {view.explanation.label && <Typography variant="caption" color="text.secondary">{view.explanation.label}</Typography>}
+            {view.explanation.documentId && <Typography variant="caption" display="block">{view.explanation.documentId}</Typography>}
             <Divider sx={{ my: 2 }} />
             <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>{t('ai.confirm.checkInfo')}</Typography>
             <Stack spacing={1}>
               <FormControlLabel control={<Checkbox checked={f.identityConfirmed} onChange={set('identityConfirmed')} />} label={t('ai.confirm.identity')} />
-              <FormControlLabel control={<Checkbox checked={f.ageConfirmed} onChange={set('ageConfirmed')} />} label={t('ai.confirm.ageOk', { age: r.ageYears ?? t('ai.unregistered') })} />
-              <FormControlLabel control={<Checkbox checked={f.allergiesConfirmed} onChange={set('allergiesConfirmed')} />} label={t('ai.confirm.allergiesOk', { v: allergyText })} />
+              <FormControlLabel control={<Checkbox checked={f.ageConfirmed} onChange={set('ageConfirmed')} />} label={t('ai.confirm.ageOk', { age: age ?? t('ai.unregistered') })} />
+              <FormControlLabel control={<Checkbox checked={f.allergiesConfirmed} onChange={set('allergiesConfirmed')} />} label={t('ai.confirm.allergiesOk', { v: allergy.text })} />
               <TextField size="small" label={t('ai.confirm.allergyAdd')} value={f.allergyCorrections} onChange={set('allergyCorrections')} />
               <Stack direction="row" spacing={1}>
                 <TextField select size="small" fullWidth label={t('ai.confirm.pregnancy')} value={f.pregnancy} onChange={set('pregnancy')}>{TRI.map((v) => <MenuItem key={v} value={v}>{t(`ai.tri.${v}`)}</MenuItem>)}</TextField>
                 <TextField select size="small" fullWidth label={t('ai.confirm.lactation')} value={f.lactation} onChange={set('lactation')}>{TRI.map((v) => <MenuItem key={v} value={v}>{t(`ai.tri.${v}`)}</MenuItem>)}</TextField>
               </Stack>
-              <TextField size="small" label={t('ai.confirm.otherMeds', { v: r.currentMedications?.join(', ') || t('ai.none') })} value={f.currentMedications} onChange={set('currentMedications')} />
-              <FormControlLabel control={<Checkbox checked={f.contactConfirmed} onChange={set('contactConfirmed')} />} label={t('ai.confirm.phoneOk', { phone: r.phoneMasked || t('ai.unregistered') })} />
+              <TextField size="small" label={t('ai.confirm.otherMeds', { v: meds.text })} value={f.currentMedications} onChange={set('currentMedications')} />
+              <FormControlLabel control={<Checkbox checked={f.contactConfirmed} onChange={set('contactConfirmed')} />} label={t('ai.confirm.phoneOk', { phone: r?.phoneMasked || t('ai.unregistered') })} />
             </Stack>
             <Alert severity="warning" sx={{ my: 2 }}>{t('ai.confirm.reReview')}</Alert>
             <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>{t('ai.confirm.service')}</Typography>
@@ -117,11 +127,8 @@ export default function PatientConfirmation() {
               <TextField select size="small" label={t('ai.confirm.fulfill')} value={f.fulfillment} onChange={set('fulfillment')}>
                 {['pickup', 'delivery', 'decoction_pickup', 'decoction_delivery'].map((v) => <MenuItem key={v} value={v}>{t(`ai.fulfillment.${v}`)}</MenuItem>)}
               </TextField>
-              <TextField select size="small" label={t('ai.confirm.subst')} value={f.substitutionConsent} onChange={set('substitutionConsent')}>
-                <MenuItem value="decline">{t('ai.confirm.substNo')}</MenuItem>
-                <MenuItem value="accept">{t('ai.confirm.substYes')}</MenuItem>
-              </TextField>
-              <FormControlLabel control={<Checkbox checked={f.educationAcknowledged} onChange={set('educationAcknowledged')} />} label={t('ai.confirm.readEdu')} />
+              <FormControlLabel control={<Checkbox checked={f.educationReceived} onChange={set('educationReceived')} />} label={t('ai.confirm.readEdu')} />
+              <FormControlLabel control={<Checkbox checked={f.educationUnderstood} onChange={set('educationUnderstood')} />} label={t('ai.confirm.understoodEdu') || t('ai.confirm.readEdu')} />
             </Stack>
             <Stack direction="row" spacing={1} sx={{ mt: 3 }}>
               <Button variant="contained" disabled={busy || !f.identityConfirmed} onClick={() => submit('confirm')}>{t('ai.confirm.confirmBtn')}</Button>

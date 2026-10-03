@@ -102,12 +102,18 @@ function reviewTask(c, taskId, actor) {
   return task;
 }
 
-function expireStale(c) {
+function expireStale(c, { prescriptionChanged = false } = {}) {
   for (const task of c.clarificationTasks || []) {
+    if (task.status === 'answered' || task.status === 'reviewed') continue;
     if (task.status === 'sent' && task.caseContentVersion !== c.contentVersion) {
-      task.status = 'expired';
+      if (prescriptionChanged) task.status = 'expired';
+      else task.caseContentVersion = c.contentVersion;
     }
   }
+}
+
+function retainOpenOnFactChange(c) {
+  expireStale(c, { prescriptionChanged: false });
 }
 
 function openRequired(c) {
@@ -122,5 +128,6 @@ module.exports = {
   answerTask,
   reviewTask,
   expireStale,
+  retainOpenOnFactChange,
   openRequired,
 };

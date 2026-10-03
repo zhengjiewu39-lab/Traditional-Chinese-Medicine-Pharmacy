@@ -67,6 +67,17 @@ CREATE TABLE IF NOT EXISTS migration_log (
   error TEXT,
   at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS external_evidence (
+  id TEXT PRIMARY KEY,
+  connector TEXT NOT NULL,
+  herb TEXT,
+  pmid TEXT,
+  source_url TEXT,
+  retrieved_at TEXT NOT NULL,
+  review_status TEXT NOT NULL,
+  document TEXT NOT NULL,
+  content_hash TEXT NOT NULL
+);
 `;
 
 let db = null;
@@ -78,7 +89,10 @@ function filePath() {
 
 function getDb() {
   const next = filePath();
-  if (db && dbPath === next) return db;
+  if (db && dbPath === next) {
+    db.exec(SCHEMA);
+    return db;
+  }
   if (db) {
     try { db.close(); } catch { /* ignore */ }
     db = null;
@@ -108,6 +122,8 @@ function reset() {
 function backupSqlite() {
   const src = filePath();
   if (!fs.existsSync(src)) return null;
+  const database = getDb();
+  database.pragma('wal_checkpoint(TRUNCATE)');
   const dest = `${src}.bak`;
   fs.copyFileSync(src, dest);
   return dest;

@@ -1,5 +1,6 @@
 const { randomId } = require('../common/hash');
 const { ServiceError } = require('./errors');
+const { staffPatientDisplay } = require('./patientIdentity');
 
 const STATUSES = ['open', 'assigned', 'in_progress', 'resolved', 'escalated', 'cancelled'];
 
@@ -92,6 +93,7 @@ function listOpen(cases) {
   return cases.flatMap((c) => (c.followUpTasks || []).filter((t) => ['open', 'assigned', 'in_progress', 'escalated'].includes(t.status)).map((t) => ({
     ...t,
     caseId: c.caseId,
+    ...staffPatientDisplay(c),
     overdue: t.dueAt ? Date.parse(t.dueAt) < Date.now() : false,
     noResponse: t.contacts.some((x) => x.note === 'no_response') || (t.contacts.length > 0 && t.status !== 'resolved' && t.dueAt && Date.parse(t.dueAt) < Date.now()),
   })));

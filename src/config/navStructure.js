@@ -1,10 +1,10 @@
 /**
- * Role menus after digital-pharmacy reconstruction.
- * Clinical path: prescriber → pharmacist → pharmacist 2 → patient.
+ * Role menus. Each role sees only its own desk.
+ * Clinical path: prescriber → pharmacist (fast or dual) → patient → technician.
  */
 
 export const WORKBENCH_HOME = '/workbench';
-export const RESEARCH_HOME = '/research/evaluation';
+export const RESEARCH_HOME = '/research/desk';
 export const PATIENT_HOME = '/patient/me';
 export const PRESCRIBER_HOME = '/doctor';
 export const PHARMACIST_HOME = '/ai/review-queue';
@@ -20,30 +20,23 @@ const PATIENT = ['patient'];
 
 export const NAV_STRUCTURE = [
   {
-    sectionKey: 'nav.sectionWorkbench',
-    items: [
-      { labelKey: 'nav.workbench', path: '/workbench', icon: 'workbench', roles: [...PRESCRIBER, ...PHARMACIST, ...TECH, ...ADMIN] },
-    ],
-  },
-  {
     sectionKey: 'nav.sectionPathPrescriber',
     items: [
       { labelKey: 'nav.doctor', path: '/doctor', icon: 'doctor', roles: PRESCRIBER },
       { labelKey: 'nav.templates', path: '/prescriptions/templates', icon: 'templates', roles: PRESCRIBER },
-      { labelKey: 'nav.intake', path: '/intake', icon: 'intake', roles: [...PHARMACIST, ...TECH] },
     ],
   },
   {
     sectionKey: 'nav.sectionRecords',
     items: [
-      { labelKey: 'nav.patients', path: '/patients', icon: 'patients', roles: [...PRESCRIBER, ...PHARMACIST] },
-      { labelKey: 'nav.aiCases', path: '/ai/cases', icon: 'aiSafety', roles: [...PRESCRIBER, ...PHARMACIST, ...ADMIN] },
+      { labelKey: 'nav.patients', path: '/patients', icon: 'patients', roles: [...PRESCRIBER, ...PHARMACIST, ...ADMIN] },
     ],
   },
   {
     sectionKey: 'nav.sectionPathPharmacist',
     items: [
       { labelKey: 'nav.reviewQueue', path: '/ai/review-queue', icon: 'review', roles: PHARMACIST },
+      { labelKey: 'nav.followUp', path: '/ai/follow-up', icon: 'patientService', roles: PHARMACIST },
     ],
   },
   {
@@ -51,14 +44,6 @@ export const NAV_STRUCTURE = [
     items: [
       { labelKey: 'nav.dispensing', path: '/dispensing', icon: 'dispensing', roles: [...PHARMACIST, ...TECH] },
       { labelKey: 'nav.pickup', path: '/pickup', icon: 'pickup', roles: TECH },
-      { labelKey: 'nav.distribution', path: '/distribution', icon: 'delivery', roles: TECH },
-    ],
-  },
-  {
-    sectionKey: 'nav.sectionFollowUp',
-    items: [
-      { labelKey: 'nav.followUp', path: '/ai/follow-up', icon: 'patientService', roles: PHARMACIST },
-      { labelKey: 'nav.patientService', path: '/patient-service', icon: 'patientService', roles: PHARMACIST },
     ],
   },
   {
@@ -72,9 +57,16 @@ export const NAV_STRUCTURE = [
     items: [
       { labelKey: 'nav.myProfile', path: '/patient/profile', icon: 'patients', roles: PATIENT },
       { labelKey: 'nav.myPrescriptions', path: '/patient/me', icon: 'patientService', roles: PATIENT },
-      { labelKey: 'nav.myClarifications', path: '/patient/me', icon: 'aiSafety', roles: PATIENT },
-      { labelKey: 'nav.myEducation', path: '/patient/me', icon: 'knowledge', roles: PATIENT },
-      { labelKey: 'nav.myFeedback', path: '/patient/me', icon: 'patientService', roles: PATIENT },
+      { labelKey: 'nav.myClarifications', path: '/patient/clarifications', icon: 'aiSafety', roles: PATIENT },
+      { labelKey: 'nav.myEducation', path: '/patient/education', icon: 'knowledge', roles: PATIENT },
+      { labelKey: 'nav.myFeedback', path: '/patient/feedback', icon: 'patientService', roles: PATIENT },
+    ],
+  },
+  {
+    sectionKey: 'nav.sectionResearch',
+    items: [
+      { labelKey: 'nav.researchDesk', path: '/research/desk', icon: 'documentation', roles: [...RESEARCHER, ...ADMIN] },
+      { labelKey: 'nav.researchEval', path: '/research/evaluation', icon: 'documentation', roles: [...RESEARCHER, ...ADMIN] },
     ],
   },
   {
@@ -89,14 +81,18 @@ export const NAV_STRUCTURE = [
   {
     sectionKey: 'nav.sectionGovernance',
     items: [
-      { labelKey: 'nav.governance', path: '/ai/governance', icon: 'governance', roles: [...ADMIN, ...RESEARCHER] },
-      { labelKey: 'nav.researchEval', path: '/research/evaluation', icon: 'documentation', roles: [...RESEARCHER, ...ADMIN] },
+      { labelKey: 'nav.governance', path: '/ai/governance', icon: 'governance', roles: ADMIN },
     ],
   },
 ];
 
 export const HIDDEN_ROUTES = [
   { prefix: '/ai/reviews/', roles: [...PHARMACIST, ...TECH, ...PRESCRIBER, ...ADMIN] },
+  { prefix: '/workbench', roles: [...PRESCRIBER, ...PHARMACIST, ...TECH, ...ADMIN, ...RESEARCHER, ...PATIENT] },
+  { prefix: '/intake', roles: PRESCRIBER },
+  { prefix: '/ai/cases', roles: [...PRESCRIBER, ...PHARMACIST, ...ADMIN] },
+  { prefix: '/patient-service', roles: PHARMACIST },
+  { prefix: '/distribution', roles: TECH },
 ];
 
 export function buildNav(t, role) {
@@ -130,6 +126,6 @@ export function getPageTitleForPath(pathname, t) {
     }
   }
   if (pathname.startsWith('/ai/reviews/')) return t('nav.reviewDetail');
-  if (pathname.startsWith('/research')) return t('nav.researchEval');
+  if (pathname.startsWith('/research')) return t('nav.researchDesk');
   return t('app.defaultPageTitle');
 }

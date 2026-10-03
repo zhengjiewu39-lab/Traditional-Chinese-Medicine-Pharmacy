@@ -6,25 +6,33 @@ const { ensureDemoPrescriptions } = require('./prescriptionGenerator');
 const { ensureCatalogData } = require('./herbCatalog');
 const { ensureTraceabilityData, hydrateTraceability } = require('./traceabilityGenerator');
 
-const DATA_DIR = path.join(__dirname, '../../data');
-const STORE_FILE = path.join(DATA_DIR, 'store.json');
+function storeDir() {
+  return process.env.STORE_DIR || process.env.AI_DATA_DIR || path.join(__dirname, '../../data');
+}
+
+function storeFile() {
+  return path.join(storeDir(), 'store.json');
+}
+
+const STORE_FILE = storeFile();
 
 function ensureDir() {
-  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+  const dir = storeDir();
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 }
 
 function load() {
   ensureDir();
-  if (!fs.existsSync(STORE_FILE)) {
+  if (!fs.existsSync(storeFile())) {
     const seed = buildSeed();
-    fs.writeFileSync(STORE_FILE, JSON.stringify(seed, null, 2), 'utf8');
+    fs.writeFileSync(storeFile(), JSON.stringify(seed, null, 2), 'utf8');
     return seed;
   }
   try {
-    const data = JSON.parse(fs.readFileSync(STORE_FILE, 'utf8'));
+    const data = JSON.parse(fs.readFileSync(storeFile(), 'utf8'));
     if ((data.meta?.version || 0) < 3) {
       const seed = buildSeed();
-      fs.writeFileSync(STORE_FILE, JSON.stringify(seed, null, 2), 'utf8');
+      fs.writeFileSync(storeFile(), JSON.stringify(seed, null, 2), 'utf8');
       return seed;
     }
     let migrated = false;
@@ -72,7 +80,7 @@ function save(data) {
   data.meta = data.meta || {};
   data.meta.updatedAt = new Date().toISOString();
   if (data.traceability?.byCode) delete data.traceability.byCode;
-  fs.writeFileSync(STORE_FILE, JSON.stringify(data, null, 2), 'utf8');
+  fs.writeFileSync(storeFile(), JSON.stringify(data, null, 2), 'utf8');
 }
 
 function nextId(data, key) {

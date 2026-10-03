@@ -32,6 +32,15 @@ const ENTRY_SCHEMA = {
     validFrom: { type: 'string', format: 'date' },
     validTo: { type: 'string', format: 'date' },
     issuingAuthority: { type: 'string', minLength: 1 },
+    sourceUrl: { type: 'string', maxLength: 500 },
+    retrievedAt: { type: 'string' },
+    license: { type: 'string', maxLength: 200 },
+    fragment: { type: 'string', maxLength: 2000 },
+    section: { type: 'string', maxLength: 120 },
+    page: { type: ['string', 'null'] },
+    population: { type: ['string', 'null'] },
+    sourceType: { type: 'string', maxLength: 40 },
+    pmid: { type: 'string', maxLength: 20 },
   },
 };
 

@@ -3,6 +3,8 @@
  * Direct identifiers never reach the model or the audit payload; secrets never reach any log.
  */
 
+const { clinicalProjection } = require('../workflow/clinicalFacts');
+
 const IDENTIFIER_KEYS = new Set(['name', 'patientName', 'phone', 'mobile', 'idCard', 'address', 'email', 'contact', 'contactPhone']);
 const SECRET_KEYS = new Set(['token', 'accessToken', 'apiKey', 'authorization', 'password', 'passwordHash', 'secret']);
 const MAX_LOG_STRING = 500;
@@ -65,7 +67,7 @@ function weightKgRounded(kg) {
  * age reduced to a band; free text scrubbed of phone and ID patterns.
  */
 function minimiseCaseForModel(c) {
-  const p = c.patient || {};
+  const p = clinicalProjection(c.patient || {});
   const rx = c.prescription || {};
   const clinical = c.clinical || {};
   return {
@@ -76,11 +78,17 @@ function minimiseCaseForModel(c) {
       sex: p.sex || 'unknown',
       pregnancy: p.pregnancy ?? 'unknown',
       lactation: p.lactation ?? 'unknown',
-      allergies: (p.allergies || []).map(scrubText),
-      allergySeverity: p.allergySeverity || 'unknown',
-      liverImpairment: Boolean(p.liverImpairment),
-      renalImpairment: Boolean(p.renalImpairment),
-      currentMedications: (p.currentMedications || []).map(scrubText),
+      allergies: {
+        status: p.allergyStatus,
+        names: (p.allergies || []).map(scrubText),
+      },
+      allergySeverity: c.patient?.allergySeverity || 'unknown',
+      liverImpairment: { status: p.liverStatus, reportedTrue: p.liverImpairment === true },
+      renalImpairment: { status: p.renalStatus, reportedTrue: p.renalImpairment === true },
+      currentMedications: {
+        status: p.medicationStatus,
+        names: (p.currentMedications || []).map(scrubText),
+      },
     },
     diagnosisText: scrubText(rx.diagnosisText || clinical.diagnosisText || ''),
     clinicalNotes: scrubText(rx.clinicalNotes || clinical.notes || ''),

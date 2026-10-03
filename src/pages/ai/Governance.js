@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box, Paper, Typography, Grid, Alert, Chip, Stack, Button, TextField, Table, TableBody, TableCell, TableRow, CircularProgress,
 } from '@mui/material';
@@ -24,6 +25,7 @@ function Metric({ label, value, hint }) {
 export default function Governance() {
   const { user } = useAuth();
   const { t } = useLanguage();
+  const navigate = useNavigate();
   const [m, setM] = useState(null);
   const [error, setError] = useState('');
   const [reason, setReason] = useState('');
@@ -56,7 +58,10 @@ export default function Governance() {
 
   return (
     <Box>
-      <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>{t('ai.gov.title')}</Typography>
+      <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }} flexWrap="wrap" useFlexGap>
+        <Typography variant="h5" sx={{ fontWeight: 700 }}>{t('ai.gov.title')}</Typography>
+        <Button size="small" onClick={() => navigate('/ai/knowledge')}>{t('nav.aiKnowledge')}</Button>
+      </Stack>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       {m.label && <Alert severity="warning" sx={{ mb: 2 }}>{m.label}</Alert>}
       {user?.role === 'admin' && (

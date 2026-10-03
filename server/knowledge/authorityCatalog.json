@@ -1,0 +1,56 @@
+{
+  "version": "2026-10-02",
+  "disclaimer": "Catalog of where authoritative text can be verified. This file does not contain pharmacopoeia dosages or invented monographs.",
+  "sources": [
+    {
+      "id": "cn-pharmacopoeia",
+      "name": "中华人民共和国药典",
+      "authority": "国家药典委员会 / 国家药品监督管理局",
+      "access": "no_open_fulltext_api",
+      "clinicalUse": false,
+      "verifyUrl": "https://www.nmpa.gov.cn/",
+      "license": "copyrighted; licensed excerpts only",
+      "note": "No public full-text API. Pharmacist-signed licensed excerpts may be imported later. Do not scrape or invent ChP text."
+    },
+    {
+      "id": "nmpa-query",
+      "name": "国家药品监督管理局数据查询",
+      "authority": "国家药品监督管理局",
+      "access": "manual_verify",
+      "clinicalUse": false,
+      "verifyUrl": "https://www.nmpa.gov.cn/",
+      "note": "Staff verify a drug or device on the official site. Results are not auto-ingested."
+    },
+    {
+      "id": "pubmed",
+      "name": "NCBI PubMed",
+      "authority": "U.S. National Library of Medicine",
+      "access": "connector",
+      "connector": "pubmed",
+      "clinicalUse": false,
+      "verifyUrl": "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/",
+      "docsUrl": "https://www.ncbi.nlm.nih.gov/books/NBK25500/",
+      "license": "NLM data use / publisher copyright on abstracts",
+      "note": "Live bibliographic search. Stored records keep PMID, URL, retrievedAt and hash. Draft until pharmacist review. Citation ≠ supporting claim."
+    },
+    {
+      "id": "nccih",
+      "name": "NCCIH herb fact sheets",
+      "authority": "National Center for Complementary and Integrative Health",
+      "access": "manual_verify",
+      "clinicalUse": false,
+      "verifyUrl": "https://www.nccih.nih.gov/health/herbsataglance",
+      "note": "Public consumer summaries. Not a Chinese pharmacopoeia substitute."
+    },
+    {
+      "id": "bencaodian",
+      "name": "本草典开放数据",
+      "authority": "本草典编辑部",
+      "access": "open_dataset",
+      "clinicalUse": false,
+      "verifyUrl": "https://bencaodian.org/en/about/data/",
+      "license": "CC BY-SA 4.0",
+      "note": "Community dataset with checksums. Not an official pharmacopoeia. Import only with attribution and pharmacist review."
+    }
+  ]
+}

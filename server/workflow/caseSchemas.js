@@ -117,7 +117,7 @@ const PHARMACIST_DECISION = {
   properties: {
     action: {
       type: 'string',
-      enum: ['approve', 'reject', 'request_information', 'return_to_prescriber', 'override_ai_alert', 'confirm_ai_alert', 'request_second_review'],
+      enum: ['approve', 'fast_approve', 'reject', 'request_information', 'return_to_prescriber', 'override_ai_alert', 'confirm_ai_alert', 'request_second_review'],
     },
     analysisId: str(80, { minLength: 1 }),
     alertCodes: strList(20, 80),
@@ -188,7 +188,7 @@ const DISPENSING_ACTION = {
   additionalProperties: false,
   required: ['action'],
   properties: {
-    action: { type: 'string', enum: ['start', 'submit_final_check', 'final_check_pass', 'final_check_fail', 'handover'] },
+    action: { type: 'string', enum: ['start', 'auto_pick', 'submit_final_check', 'final_check_pass', 'final_check_fail', 'handover'] },
     note: str(500),
     weighedItems: {
       type: 'array',
@@ -202,6 +202,18 @@ const DISPENSING_ACTION = {
     },
     expectedVersion: { type: 'integer', minimum: 1 },
     idempotencyKey: str(80),
+  },
+};
+
+const RESTOCK_APPLY = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    inventoryIds: {
+      type: 'array',
+      maxItems: 200,
+      items: { type: 'integer', minimum: 1 },
+    },
   },
 };
 
@@ -273,6 +285,7 @@ module.exports = {
   PATIENT_CONFIRMATION,
   PATIENT_FEEDBACK,
   DISPENSING_ACTION,
+  RESTOCK_APPLY,
   OVERRIDE_REASONS,
   FORBIDDEN_CLIENT_FIELDS,
   forbiddenFieldsIn,

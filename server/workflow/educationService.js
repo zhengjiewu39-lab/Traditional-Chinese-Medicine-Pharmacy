@@ -17,24 +17,45 @@ function structuredFacts(c) {
   };
 }
 
+function escapeRe(s) {
+  return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 function factsMatchText(facts, text) {
   const blob = String(text || '');
   const problems = [];
+  const numerals = [...blob.matchAll(/(\d+(?:\.\d+)?)\s*(g|kg|克|千克|mg)?/gi)].map((m) => ({
+    n: Number(m[1]), unit: (m[2] || '').toLowerCase(), raw: m[0],
+  }));
   for (const h of facts.herbs) {
-    if (h.dosage != null && !blob.includes(String(h.dosage))) {
-      problems.push({ code: 'dose_missing_or_changed', herb: h.name, expected: h.dosage, unit: h.unit });
+    if (h.dosage == null) continue;
+    const expected = Number(h.dosage);
+    const herbNearby = blob.includes(h.name);
+    const exact = new RegExp(`(?<!\\d)${escapeRe(String(h.dosage))}(?!\\d)`);
+    if (herbNearby) {
+      const wrong = numerals.filter((x) => x.n !== expected && (x.unit === 'kg' || x.n === expected * 10 || x.n === expected * 100));
+      if (wrong.length) problems.push({ code: 'dose_changed', herb: h.name, expected: h.dosage, unit: h.unit, found: wrong.map((w) => w.raw) });
     }
-    if (h.unit && blob.includes(String(h.dosage)) && h.dosage != null) {
-      const re = new RegExp(`${h.dosage}\\s*(${h.unit}|g|克)`);
-      if (!re.test(blob) && blob.includes(String(h.dosage))) {
-        /* dosage numeral present; unit may be implied — record only if a different unit appears */
-      }
+    if (blob.includes(String(h.dosage)) && !exact.test(blob)) {
+      problems.push({ code: 'dose_substring_match', herb: h.name, expected: h.dosage, unit: h.unit });
+    }
+    if (h.unit === 'g' && /(?:kg|千克)/i.test(blob) && herbNearby) {
+      problems.push({ code: 'unit_changed', herb: h.name, expected: h.unit });
+    }
+    if (h.decoctionTiming === '先煎' && /后下/.test(blob) && herbNearby) {
+      problems.push({ code: 'decoction_changed', herb: h.name, expected: '先煎' });
+    }
+    if (h.decoctionTiming === '后下' && /先煎/.test(blob) && herbNearby) {
+      problems.push({ code: 'decoction_changed', herb: h.name, expected: '后下' });
     }
   }
-  if (facts.doseCount != null && !blob.includes(String(facts.doseCount))) {
-    problems.push({ code: 'dose_count_changed', expected: facts.doseCount });
+  if (facts.doseCount != null) {
+    if (/每周/.test(blob) && /每日|一天/.test(String(facts.frequency || facts.usage || ''))) {
+      problems.push({ code: 'frequency_changed', expected: facts.frequency || facts.usage });
+    }
   }
-  return { ok: problems.length === 0, problems };
+  if (!blob.trim()) problems.push({ code: 'empty_text' });
+  return { ok: problems.length === 0, problems, autoConsistent: problems.length === 0 };
 }
 
 function createDraft(c, actor, { text, source = 'pharmacist' } = {}) {
@@ -91,7 +112,9 @@ function approve(c, documentId, actor) {
 function publish(c, documentId, actor) {
   const doc = (c.educationDocuments || []).find((d) => d.documentId === documentId);
   if (!doc) throw new ServiceError(404, 'education_not_found', 'Education document not found');
+  if (doc.status === 'superseded') throw new ServiceError(409, 'education_superseded', 'Superseded education cannot be revived');
   if (doc.status !== 'approved') throw new ServiceError(409, 'not_approved', 'Education must be approved before publish');
+  if (!c.approval?.valid) throw new ServiceError(409, 'prescription_not_approved', 'Education cannot be published before the current prescription is approved');
   if (doc.caseContentVersion !== c.contentVersion) {
     throw new ServiceError(409, 'stale_education', 'Cannot publish education for a previous content version');
   }

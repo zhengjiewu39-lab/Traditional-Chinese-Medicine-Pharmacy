@@ -11,7 +11,7 @@ const { getStore } = require('./server/data/store');
 const { computeSalesStats } = require('./server/services/stats');
 const { analyzePrescription } = require('./server/services/prescriptionAnalyzer');
 const {
-  requireAuth, authenticate, verifyToken, sanitizeProfileUpdate, ALLOW_DEMO,
+  requireAuth, authenticate, verifyToken, sanitizeProfileUpdate, ALLOW_DEMO, getUserById,
 } = require('./server/security/auth');
 const { validateUploadedText, MAX_BYTES } = require('./server/security/uploadValidation');
 
@@ -91,7 +91,7 @@ const upload = multer({
 app.use(roleApiGuard);
 
 app.use((req, res, next) => {
-  const url = req.url.replace(/\/(confirmation|feedback)\/[^/?]+/, '/$1/[token]');
+  const url = req.url.replace(/\/(confirmation|feedback|clarification)\/[^/?]+/, '/$1/[token]');
   console.log(`${new Date().toISOString()} - ${req.method} ${url}`);
   next();
 });
@@ -162,11 +162,25 @@ app.post('/api/prescriptions/analyze/file', (req, res) => {
 
 // ── 认证 ──
 app.post('/api/auth/login', (req, res) => {
-  const { username, password } = req.body || {};
-  const result = authenticate(username, password);
+  const { username, password, patientRef } = req.body || {};
+  const result = authenticate(username, password, { patientRef });
   if (!result) {
     return res.status(401).json({ success: false, message: '用户名或密码错误' });
   }
+  return res.json({ success: true, ...result });
+});
+
+app.get('/api/auth/demo-patients', (req, res) => {
+  if (!ALLOW_DEMO) return res.status(404).json({ error: { code: 'not_found', message: 'Not available' } });
+  const { listDemoPatients } = require('./server/workflow/patientIdentity');
+  res.json(listDemoPatients({ q: req.query.q, limit: req.query.limit, offset: req.query.offset }));
+});
+
+app.post('/api/auth/assume-patient', (req, res) => {
+  if (!ALLOW_DEMO) return res.status(403).json({ error: { code: 'forbidden', message: 'Demo only' } });
+  if (req.user?.role !== 'patient') return res.status(403).json({ error: { code: 'forbidden', message: 'Patient login required' } });
+  const result = authenticate('patient', process.env.TCM_PATIENT_PASSWORD || 'patient123', { patientRef: req.body?.patientRef });
+  if (!result) return res.status(404).json({ error: { code: 'not_found', message: 'Unknown synthetic patient' } });
   return res.json({ success: true, ...result });
 });
 
@@ -177,6 +191,8 @@ app.post('/api/auth/logout', (req, res) => {
 app.get('/api/auth/me', (req, res) => {
   const user = verifyToken(req.headers.authorization);
   if (!user) return res.status(401).json({ success: false, message: '未授权访问' });
+  const fresh = getUserById(user.id);
+  if (fresh?.patientRef && !user.patientRef) user.patientRef = fresh.patientRef;
   return res.json(user);
 });
 
@@ -212,9 +228,14 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+const migrated = importIfNeeded();
+if (migrated && migrated.ok === false) {
+  console.error('[migrate] JSON import failed; refusing to listen so incomplete data is not served:', migrated.error);
+  process.exit(1);
+}
+getStore();
+
 const server = app.listen(port, () => {
-  getStore();
-  const migrated = importIfNeeded();
   console.log(`中药数字药学服务 API http://localhost:${port}`, migrated?.skipped ? '(sqlite already imported)' : '');
   if (ALLOW_DEMO) {
     console.log('  演示账号: admin/admin123 · pharmacist/pharm123 · pharmacist2/pharm456 · prescriber/doc123 · technician/tech123 · researcher/research123 · patient/patient123 (仅 DEV / ALLOW_DEMO_AUTH)');

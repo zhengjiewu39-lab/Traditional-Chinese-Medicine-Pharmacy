@@ -17,6 +17,14 @@ export const aiCasesApi = {
   replay: (id, analysisId) => api.post(`/ai/cases/${id}/replay`, analysisId ? { analysisId } : {}),
   workbench: () => api.get('/ai/workbench/summary'),
   reviewQueue: () => api.get('/ai/review-queue'),
+  opsDesk: () => api.get('/ai/ops/desk'),
+  restock: (body) => api.post('/ai/ops/restock', body || {}),
+  issueClarification: (id, body) => api.post(`/ai/cases/${id}/clarifications`, body),
+  reviewClarification: (id, taskId) => api.post(`/ai/cases/${id}/clarifications/${taskId}/review`, {}),
+  createEducation: (id, body) => api.post(`/ai/cases/${id}/education`, body),
+  decideEducation: (id, documentId, body) => api.post(`/ai/cases/${id}/education/${documentId}`, body),
+  issueFeedbackToken: (id) => api.post(`/ai/cases/${id}/feedback-token`, {}),
+  setFollowUpPlan: (id, body) => api.post(`/ai/cases/${id}/follow-up-plan`, body),
 };
 
 export const aiDraftsApi = {
@@ -33,6 +41,9 @@ export const aiDraftsApi = {
 export const aiGovernanceApi = {
   models: () => api.get('/ai/models'),
   knowledge: () => api.get('/ai/knowledge/sources'),
+  authorities: () => api.get('/ai/knowledge/authorities'),
+  searchKnowledge: (q) => api.get('/ai/knowledge/search', { params: { q } }),
+  fetchKnowledge: (body) => api.post('/ai/knowledge/fetch', body, { timeout: 90000 }),
   metrics: () => api.get('/ai/governance/metrics'),
   killSwitch: (enabled, reason) => api.post('/ai/governance/kill-switch', { enabled, reason }),
   sample: (rate, seed) => api.post('/ai/governance/sampling', {
@@ -55,6 +66,8 @@ export const aiFollowUpApi = {
 
 export const researchEvalApi = {
   home: () => api.get('/research/evaluation'),
+  protocol: () => api.get('/research/evaluation/protocol'),
+  saveProtocol: (body) => api.put('/research/evaluation/protocol', body),
 };
 
 /** Token links are public; no session header is attached. */
@@ -65,7 +78,12 @@ export const patientPortalApi = {
   getClarification: (token) => publicApi.get(`/patient/clarification/${token}`),
   submitClarification: (token, body) => publicApi.post(`/patient/clarification/${token}`, body),
   myCases: () => api.get('/patient/me/cases'),
+  myCase: (id) => api.get(`/patient/me/cases/${id}`),
+  confirmOwn: (id, body) => api.post(`/patient/me/cases/${id}/confirm`, body),
+  answerOwnClarification: (id, taskId, body) => api.post(`/patient/me/cases/${id}/clarifications/${taskId}`, body),
+  submitOwnFeedback: (id, body) => api.post(`/patient/me/cases/${id}/feedback`, body),
   myProfile: () => api.get('/patient/me/profile'),
+  updateProfile: (body) => api.patch('/patient/me/profile', body),
 };
 
 export const pickupApi = {

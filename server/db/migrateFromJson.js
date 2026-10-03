@@ -26,18 +26,50 @@ function importIfNeeded() {
   const run = db.transaction(() => {
     if (fs.existsSync(casesPath)) {
       const data = JSON.parse(fs.readFileSync(casesPath, 'utf8'));
+      const nowIso = new Date().toISOString();
+      const putMap = (obj, collection) => {
+        for (const [id, doc] of Object.entries(obj || {})) {
+          insertDoc.run(collection, id, JSON.stringify(doc), 1, doc.updatedAt || doc.createdAt || doc.issuedAt || nowIso);
+          report[collection] = (report[collection] || 0) + 1;
+        }
+      };
       for (const [id, c] of Object.entries(data.cases || {})) {
-        const r = insertDoc.run('cases', id, JSON.stringify(c), c.contentVersion || 1, c.updatedAt || new Date().toISOString());
+        const normalized = {
+          ...c,
+          patient: attachFacts(c.patient || {}),
+          recordVersion: c.recordVersion || 1,
+          clarificationTasks: c.clarificationTasks || [],
+          educationDocuments: c.educationDocuments || [],
+          followUpTasks: c.followUpTasks || [],
+          followUpPlan: c.followUpPlan || null,
+        };
+        const r = insertDoc.run('cases', id, JSON.stringify(normalized), normalized.contentVersion || 1, normalized.updatedAt || nowIso);
         if (r.changes) report.cases += 1;
         else report.skippedCases += 1;
       }
       for (const [hash, rec] of Object.entries(data.tokens || {})) {
-        const r = insertDoc.run('tokens', hash, JSON.stringify(rec), 1, rec.issuedAt || new Date().toISOString());
+        const r = insertDoc.run('tokens', hash, JSON.stringify(rec), 1, rec.issuedAt || nowIso);
         if (r.changes) report.tokens += 1;
       }
-      for (const [id, d] of Object.entries(data.drafts || {})) insertDoc.run('drafts', id, JSON.stringify(d), 1, d.updatedAt || new Date().toISOString());
-      for (const [id, s] of Object.entries(data.suggestions || {})) insertDoc.run('suggestions', id, JSON.stringify(s), 1, s.createdAt || new Date().toISOString());
-      for (const [hash, rec] of Object.entries(data.pickupTokens || {})) insertDoc.run('pickupTokens', hash, JSON.stringify(rec), 1, rec.issuedAt || new Date().toISOString());
+      putMap(data.drafts, 'drafts');
+      putMap(data.suggestions, 'suggestions');
+      putMap(data.pickupTokens, 'pickupTokens');
+      putMap(data.pickupFailures, 'pickupFailures');
+      putMap(data.proposals, 'proposals');
+      putMap(data.datasets, 'datasets');
+      putMap(data.modelRegistry, 'modelRegistry');
+      if (data.settings && typeof data.settings === 'object') {
+        insertDoc.run('settings', 'default', JSON.stringify(data.settings), 1, nowIso);
+        report.settings = 1;
+      }
+      for (const row of data.learningExports || []) {
+        insertDoc.run('learningExports', row.exportId || `exp-${report.learningExports || 0}`, JSON.stringify(row), 1, nowIso);
+        report.learningExports = (report.learningExports || 0) + 1;
+      }
+      for (const row of data.samplingLog || []) {
+        insertDoc.run('samplingLog', `${row.caseId || 's'}-${row.sampledAt || report.samplingLog || 0}`, JSON.stringify(row), 1, nowIso);
+        report.samplingLog = (report.samplingLog || 0) + 1;
+      }
     }
     if (fs.existsSync(storePath)) {
       const store = JSON.parse(fs.readFileSync(storePath, 'utf8'));

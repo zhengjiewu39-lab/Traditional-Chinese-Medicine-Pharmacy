@@ -35,15 +35,19 @@ export const AuthProvider = ({ children }) => {
     initAuth();
   }, []);
 
-  const login = async (username, password) => {
+  const applyUser = (user, token) => {
+    if (token) localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(user));
+    setUser(user);
+    return user;
+  };
+
+  const login = async (username, password, extra = {}) => {
     try {
-      const response = await authApi.login({ username, password });
+      const response = await authApi.login({ username, password, ...extra });
       
       if (response.data.success) {
-        localStorage.setItem('token', response.data.token);
-        localStorage.setItem('user', JSON.stringify(response.data.user));
-        setUser(response.data.user);
-        return response.data.user;
+        return applyUser(response.data.user, response.data.token);
       } else {
         throw new Error(response.data.message || '登录失败');
       }
@@ -65,10 +69,16 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const assumePatient = async (patientRef) => {
+    const response = await authApi.assumePatient(patientRef);
+    return applyUser(response.data.user, response.data.token);
+  };
+
   const value = {
     user,
     loading,
     login,
+    assumePatient,
     logout,
     role: user?.role,
     isAdmin: user?.role === 'admin',

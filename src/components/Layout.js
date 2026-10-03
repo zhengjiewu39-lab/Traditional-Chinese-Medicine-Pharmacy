@@ -207,7 +207,9 @@ function Layout({ children }) {
           </Typography>
           <LanguageSwitcher />
           <Chip
-            label={user?.username === 'pharmacist2' ? t('roles.pharmacist2') : t(`roles.${role}Mode`)}
+            label={user?.role === 'patient' && user?.patientRef
+              ? `${user.name || t('roles.patient')} · ${user.patientRef}`
+              : (user?.username === 'pharmacist2' ? t('roles.pharmacist2') : t(`roles.${role}Mode`))}
             size="small"
             sx={{ mr: 2, bgcolor: alpha('#fff', 0.15), color: '#fff', fontWeight: 600 }}
           />
@@ -218,7 +220,7 @@ function Layout({ children }) {
           </IconButton>
           <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={() => setAnchorEl(null)}>
             <MenuItem disabled>
-              <Typography variant="body2">{user?.name} · {roleLabel}</Typography>
+              <Typography variant="body2">{user?.name}{user?.patientRef ? ` · ${user.patientRef}` : ''} · {roleLabel}</Typography>
             </MenuItem>
             <Divider />
             <MenuItem onClick={() => { logout(); navigate('/login'); }}>

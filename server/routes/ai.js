@@ -20,6 +20,8 @@ const { migrateLegacyPrescriptions } = require('../workflow/legacyMigrate');
 const { issuePickupToken } = require('../workflow/pickupService');
 const { inventoryCounts } = require('../workflow/inventoryDeduct');
 const { getStore } = require('../data/store');
+const pharmacyOps = require('../workflow/pharmacyOps');
+const { staffPatientDisplay } = require('../workflow/patientIdentity');
 
 const router = express.Router();
 
@@ -40,7 +42,7 @@ function summary(c) {
     createdAt: c.createdAt,
     updatedAt: c.updatedAt,
     synthetic: c.synthetic,
-    patientLabel: c.patient?.name ? `${String(c.patient.name).slice(0, 1)}**` : (c.patient?.patientRef || '未登记'),
+    ...staffPatientDisplay(c),
     herbCount: c.prescription?.herbs?.length || 0,
     riskTier: a?.riskTier || null,
     recommendation: a?.recommendation || null,
@@ -50,6 +52,8 @@ function summary(c) {
     missingCritical: a ? a.missingInformation.filter((m) => m.critical).length : 0,
     approvalValid: Boolean(c.approval?.valid && c.approval.contentHash === c.contentHash),
     secondReviewPending: c.secondReview?.status === 'pending',
+    reviewLane: c.reviewLane || null,
+    firstSigner: c.secondReview?.firstSigner || null,
     patientDeclined: c.patientDeclined,
     priority: service.isPriorityReview(c),
     displaySource: a?.displaySource || null,
@@ -60,7 +64,12 @@ function summary(c) {
 
 router.post('/cases', requirePermission('case:create'), validateBody(S.CREATE_CASE), handle(async (req, res) => {
   const c = service.createCase(req.body, actorOf(req));
-  res.status(201).json({ case: c });
+  try {
+    const out = await service.analyze(c.caseId);
+    res.status(201).json({ case: out.case, analysis: out.analysis.output, reviewLane: out.case.reviewLane || null });
+  } catch (err) {
+    res.status(201).json({ case: service.getCaseOr404(c.caseId), analysis: null, reviewLane: null, screeningError: err.message });
+  }
 }));
 
 router.get('/cases', requirePermission('case:read'), handle(async (req, res) => {
@@ -92,6 +101,7 @@ router.get('/workbench/summary', requirePermission('case:read'), handle(async (r
     batchReview: service.reviewQueue().batch.length,
     shortage: inv.shortage,
     nearExpiry: inv.nearExpiry,
+    restockSuggested: pharmacyOps.planDesk(cases).restock.length,
     ai: runtime.describeRuntime(),
     auditChainValid: audit.verify().valid,
   });
@@ -102,7 +112,18 @@ router.get('/cases/:id', requirePermission('case:read'), handle(async (req, res)
   if (req.user.role === 'prescriber' && c.createdBy?.id !== String(req.user.id) && c.prescriber?.userId !== String(req.user.id)) {
     return sendError(res, 403, 'not_own_case', 'Prescribers may only view their own cases');
   }
-  res.json({ case: c, summary: summary(c) });
+  const display = staffPatientDisplay(c);
+  res.json({
+    case: {
+      ...c,
+      patient: {
+        ...(c.patient || {}),
+        name: display.patientName || c.patient?.name,
+        patientRef: display.patientRef || c.patient?.patientRef,
+      },
+    },
+    summary: summary(c),
+  });
 }));
 
 router.patch('/cases/:id', requirePermission('case:update_content'), validateBody(S.UPDATE_CONTENT), handle(async (req, res) => {
@@ -132,7 +153,22 @@ router.post('/cases/:id/patient-confirmation', requirePermission('patient:issue_
 
 router.post('/cases/:id/dispensing', requirePermission('rx:dispense'), validateBody(S.DISPENSING_ACTION), handle(async (req, res) => {
   const c = service.dispensingAction(req.params.id, req.body, actorOf(req));
-  res.json({ case: summary(c), dispensingRecords: c.dispensingRecords });
+  res.json({ case: summary(c), dispensingRecords: c.dispensingRecords, allocation: c.allocation || null });
+}));
+
+router.get('/ops/desk', requirePermission('ops:read'), handle(async (req, res) => {
+  res.json(pharmacyOps.planDesk());
+}));
+
+router.post('/ops/restock', requirePermission('ops:execute'), validateBody(S.RESTOCK_APPLY), handle(async (req, res) => {
+  const out = pharmacyOps.applyRestock(actorOf(req), req.body);
+  audit.append({
+    eventType: 'ops_restock_applied',
+    actorType: req.user.role,
+    actorId: req.user.id,
+    payload: { added: out.applied.length, items: out.applied.map((a) => a.name) },
+  });
+  res.json(out);
 }));
 
 router.get('/cases/:id/audit', requirePermission('case:audit_read'), handle(async (req, res) => {
@@ -250,6 +286,25 @@ router.post('/runtime/test', requirePermission('ai:runtime_configure'), handle(a
   }
 }));
 
+router.get('/knowledge/authorities', requirePermission('ai:knowledge_read'), handle(async (req, res) => {
+  res.json(require('../knowledge/authorityIngest').listAuthorities());
+}));
+
+router.get('/knowledge/search', requirePermission('ai:knowledge_read'), handle(async (req, res) => {
+  res.json(require('../knowledge/search').searchKnowledge(req.query.q || ''));
+}));
+
+router.post('/knowledge/fetch', requirePermission('ai:knowledge_read'), validateBody({
+  type: 'object', additionalProperties: false, required: ['herb'],
+  properties: { herb: { type: 'string', minLength: 1, maxLength: 40 }, connector: { type: 'string', enum: ['pubmed'] } },
+}), handle(async (req, res) => {
+  const out = await require('../knowledge/authorityIngest').fetchPubmed(req.body.herb);
+  res.json({
+    ...out,
+    note: 'Draft bibliographic records only. Not pharmacopoeia text. Not usable for clinical rules until a pharmacist reviews them.',
+  });
+}));
+
 router.get('/knowledge/sources', requirePermission('ai:knowledge_read'), handle(async (req, res) => {
   const herbs = (getStore().herbs || []).slice(0, 200).map((h) => ({
     id: h.id, name: h.name, category: h.category || null, stock: h.stock ?? null, catalogOnly: true, clinicalEvidence: false,
@@ -284,6 +339,17 @@ router.post('/governance/kill-switch', requirePermission('ai:kill_switch'), vali
 }));
 
 // Archived operations/digital-twin routes are not mounted.
+
+router.post('/cases/:id/clarifications/:taskId/review', requirePermission('patient:clarification'), requirePharmacistCredential, handle(async (req, res) => {
+  res.json({ task: service.reviewClarification(req.params.id, req.params.taskId, actorOf(req)) });
+}));
+
+router.post('/cases/:id/follow-up-plan', requirePermission('rx:followup'), requirePharmacistCredential, validateBody({
+  type: 'object', additionalProperties: false,
+  properties: { dueAt: { type: 'string', maxLength: 40 }, ownerId: { type: 'string', maxLength: 40 }, note: { type: 'string', maxLength: 300 } },
+}), handle(async (req, res) => {
+  res.json({ plan: service.setFollowUpPlan(req.params.id, req.body, actorOf(req)) });
+}));
 
 router.post('/cases/:id/clarifications', requirePermission('patient:clarification'), requirePharmacistCredential, validateBody({
   type: 'object', additionalProperties: false, required: ['fieldPath', 'question'],
@@ -450,9 +516,10 @@ router.post('/learning/models', requirePermission('ai:model_publish'), validateB
 router.post('/learning/models/:id/shadow-complete', requirePermission('ai:model_publish'), validateBody({
   type: 'object',
   additionalProperties: false,
-  required: ['evaluationReportId'],
+  required: ['evaluationReportId', 'evaluationReportHash'],
   properties: {
     evaluationReportId: { type: 'string', minLength: 1, maxLength: 80 },
+    evaluationReportHash: { type: 'string', minLength: 8, maxLength: 128 },
     metrics: {
       type: 'object',
       additionalProperties: false,
@@ -465,6 +532,10 @@ router.post('/learning/models/:id/shadow-complete', requirePermission('ai:model_
   },
 }), handle(async (req, res) => {
   res.json(learning.recordShadowComplete(req.params.id, req.body, actorOf(req)));
+}));
+
+router.post('/learning/models/:id/sign', requirePermission('ai:learning_review'), requirePharmacistCredential, handle(async (req, res) => {
+  res.json(learning.signCandidate(req.params.id, actorOf(req)));
 }));
 
 router.post('/learning/models/:id/status', requirePermission('ai:model_publish'), validateBody({

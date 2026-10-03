@@ -35,6 +35,7 @@ const PatientRecords = lazy(() => import('./pages/PatientRecords'));
 const TraceabilitySystem = lazy(() => import('./pages/TraceabilitySystem'));
 const PrescriptionTemplates = lazy(() => import('./pages/PrescriptionTemplates'));
 const ResearchEvaluation = lazy(() => import('./pages/research/Evaluation'));
+const ResearchDesk = lazy(() => import('./pages/research/ResearchDesk'));
 
 const Loading = () => (
   <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
@@ -92,7 +93,10 @@ function App() {
               <Route path="/ai/follow-up" element={<FollowUpBoard />} />
               <Route path="/dispensing" element={<DispensingBoard />} />
               <Route path="/patient-service" element={<PatientService />} />
-              <Route path="/patient/me" element={<MyPrescriptions />} />
+              <Route path="/patient/me" element={<MyPrescriptions view="all" />} />
+              <Route path="/patient/clarifications" element={<MyPrescriptions view="clarifications" />} />
+              <Route path="/patient/education" element={<MyPrescriptions view="education" />} />
+              <Route path="/patient/feedback" element={<MyPrescriptions view="feedback" />} />
               <Route path="/patient/profile" element={<PatientProfile />} />
               <Route path="/doctor" element={<DoctorWorkbench />} />
               <Route path="/patients" element={<PatientRecords />} />
@@ -103,13 +107,14 @@ function App() {
               <Route path="/inventory" element={<Inventory />} />
               <Route path="/orders" element={<Orders />} />
               <Route path="/traceability" element={<TraceabilitySystem />} />
+              <Route path="/research/desk" element={<ResearchDesk />} />
               <Route path="/research/evaluation" element={<ResearchEvaluation />} />
               <Route path="/prescriptions/review" element={<Navigate to="/ai/review-queue" replace />} />
               <Route path="/knowledge" element={<Navigate to="/ai/knowledge" replace />} />
-              <Route path="/dashboard" element={<Navigate to="/workbench" replace />} />
-              <Route path="/simulation/*" element={<Navigate to="/research/evaluation" replace />} />
-              <Route path="/legacy/*" element={<Navigate to="/workbench" replace />} />
-              <Route path="/research" element={<Navigate to="/research/evaluation" replace />} />
+              <Route path="/dashboard" element={<Navigate to="/" replace />} />
+              <Route path="/simulation/*" element={<Navigate to="/research/desk" replace />} />
+              <Route path="/legacy/*" element={<Navigate to="/" replace />} />
+              <Route path="/research" element={<Navigate to="/research/desk" replace />} />
               <Route path="/customers" element={<Navigate to="/patients" replace />} />
               <Route path="/membership" element={<Navigate to="/patients" replace />} />
               <Route path="/quality" element={<Navigate to="/traceability" replace />} />

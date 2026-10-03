@@ -151,6 +151,7 @@ function verifyToken(authHeader) {
 function isPublicPath(path) {
   const p = String(path || '').split('?')[0];
   if (p === '/api/health' || p === '/api/auth/login') return true;
+  if (p === '/api/auth/demo-patients') return true;
   if (p === '/api/pickup/redeem' || /^\/api\/pickup\/redeem\/?$/.test(p)) return true;
   if (/^\/api\/patient\/(confirmation|feedback|clarification)\/[A-Za-z0-9_-]{20,100}$/.test(p)) return true;
   return false;
@@ -161,15 +162,44 @@ function requireAuth(req, res, next) {
   if (!p.startsWith('/api/') || isPublicPath(p)) return next();
   const user = verifyToken(req.headers.authorization);
   if (!user) return res.status(401).json({ success: false, message: '未授权，请先登录' });
+  const fresh = getUserById(user.id);
+  if (fresh?.patientRef && !user.patientRef) user.patientRef = fresh.patientRef;
   req.user = user;
   return next();
 }
 
-function authenticate(username, password) {
+function authenticate(username, password, { patientRef } = {}) {
   if (typeof username !== 'string' || typeof password !== 'string') return null;
+  const { bindDemoPatient, parsePatientRef } = require('../workflow/patientIdentity');
+  const demoPatientPassword = process.env.TCM_PATIENT_PASSWORD || 'patient123';
   const account = Object.prototype.hasOwnProperty.call(getUsers(), username) ? getUsers()[username] : null;
-  if (!account || !bcrypt.compareSync(password, account.passwordHash)) return null;
-  return { user: account.user, token: signToken(account.user) };
+  if (account && bcrypt.compareSync(password, account.passwordHash)) {
+    const user = { ...account.user };
+    if (user.role === 'patient' && ALLOW_DEMO) {
+      const bound = bindDemoPatient(patientRef || user.patientRef || 'P1');
+      if (bound) {
+        user.patientRef = bound.patientRef;
+        user.name = bound.name;
+        user.username = bound.patientRef === 'P1' && username === 'patient' ? 'patient' : bound.patientRef;
+      }
+    }
+    return { user, token: signToken(user) };
+  }
+  if (ALLOW_DEMO && password === demoPatientPassword) {
+    const ref = parsePatientRef(username) || parsePatientRef(patientRef);
+    const bound = bindDemoPatient(ref);
+    if (bound) {
+      const user = {
+        id: 6,
+        username: bound.patientRef,
+        name: bound.name,
+        role: 'patient',
+        patientRef: bound.patientRef,
+      };
+      return { user, token: signToken(user) };
+    }
+  }
+  return null;
 }
 
 /**

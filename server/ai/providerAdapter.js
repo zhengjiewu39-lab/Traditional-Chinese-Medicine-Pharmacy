@@ -7,7 +7,7 @@ const PROVIDERS = ['mock', 'openai-compatible', 'disabled'];
 function configuredProviderId(env = process.env) {
   const e = effectiveEnv(env);
   if (e.AI_PROVIDER) return e.AI_PROVIDER;
-  return e.NODE_ENV === 'production' ? 'disabled' : 'mock';
+  return 'disabled';
 }
 
 /** Refuse to start in production with the mock provider, so mock output can never pass as real AI. */

@@ -85,6 +85,7 @@ export default function DoctorWorkbench() {
 
   const runAi = async ({ submitAfter = false } = {}) => {
     if (!prescriptionText.trim()) { setError(t('ai.doctor.needRx')); return; }
+    if (submitAfter && !patient) { setError(t('ai.doctor.needPatient')); return; }
     setBusy(true);
     setError('');
     try {
@@ -99,10 +100,13 @@ export default function DoctorWorkbench() {
         },
         patient: {
           ...(patient ? {
+            patientRef: patient.patientRef || `P${patient.id}`,
+            legacyPatientId: String(patient.id),
             name: patient.name,
             ageYears: patient.age,
             sex: patient.gender === '男' ? 'male' : patient.gender === '女' ? 'female' : 'unknown',
             allergies: patient.allergies || [],
+            phone: patient.phone,
           } : {}),
           ...(Number.isFinite(Number(weightKg)) && String(weightKg).trim() !== '' ? { weightKg: Number(weightKg) } : {}),
           allergySeverity,
@@ -187,10 +191,10 @@ export default function DoctorWorkbench() {
           <Paper sx={{ p: 2 }}>
             <Autocomplete
               options={patients}
-              getOptionLabel={(p) => `${p.name} · ${p.gender || ''} ${p.age != null && p.age !== '' ? t('ai.doctor.years', { n: p.age }) : ''}`}
+              getOptionLabel={(p) => `${p.name} · ${p.patientRef || `P${p.id}`} · ${p.gender || ''} ${p.age != null && p.age !== '' ? t('ai.doctor.years', { n: p.age }) : ''}`}
               value={patient}
               onChange={(_, v) => setPatient(v)}
-              renderInput={(params) => <TextField {...params} label={t('ai.doctor.patient')} size="small" sx={{ mb: 2 }} />}
+              renderInput={(params) => <TextField {...params} label={t('ai.doctor.patient')} size="small" sx={{ mb: 2 }} helperText={patient ? t('ai.doctor.boundRef', { ref: patient.patientRef || `P${patient.id}` }) : t('ai.doctor.needPatient')} />}
               sx={{ mb: 2 }}
             />
             <Autocomplete

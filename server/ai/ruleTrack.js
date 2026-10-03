@@ -11,6 +11,7 @@
 const { loadRules } = require('../services/ruleLoader');
 const { analyzePrescription: legacyReview } = require('../services/prescriptionAnalyzer');
 const safetyRules = require('../config/ai-safety-rules.json');
+const { clinicalProjection } = require('../workflow/clinicalFacts');
 
 const TIER_ORDER = { A0: 0, A1: 1, A2: 2, A3: 3 };
 const maxTier = (a, b) => (TIER_ORDER[a] >= TIER_ORDER[b] ? a : b);
@@ -67,7 +68,7 @@ function runRuleTrack(caseRecord, { now = new Date() } = {}) {
   const rules = loadRules();
   const { herbRules, eighteenIncompatible, nineteenFear } = rules;
   const L = safetyRules.limits;
-  const patient = caseRecord.patient || {};
+  const patient = clinicalProjection(caseRecord.patient || {});
   const rx = caseRecord.prescription || {};
   const prescriber = caseRecord.prescriber || {};
   const herbs = (rx.herbs || []).map((h) => ({ ...h, name: String(h.name).trim() }));
