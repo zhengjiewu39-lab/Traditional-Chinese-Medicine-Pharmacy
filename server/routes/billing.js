@@ -2,6 +2,7 @@ const express = require('express');
 const { getStore, updateStore, nextId } = require('../data/store');
 const { requirePermission } = require('../security/rbac');
 const { appendTimeline } = require('../services/prescriptionWorkflow');
+const catalog = require('../workflow/catalogAlign');
 
 const router = express.Router();
 
@@ -27,27 +28,41 @@ router.post('/checkout', requirePermission('billing:checkout'), (req, res) => {
   let bill;
   let order;
   try {
-    updateStore(data => {
-      let subtotal = 0;
-      const lineItems = [];
-      for (const item of items) {
-        const inv = data.inventory.find(i => i.id === item.herbId || i.name === item.name);
-        if (!inv) throw new Error(`未找到药品：${item.name}`);
-        const qty = Number(item.quantity);
-        if (!Number.isFinite(qty) || qty <= 0 || qty > 10000) throw new Error('数量必须为正数');
-        if (inv.stock < qty) throw new Error(`${inv.name} 库存不足（剩余 ${inv.stock}${inv.unit}）`);
-        subtotal += inv.price * qty;
-        inv.stock -= qty;
-        const herb = data.herbs.find(h => h.name === inv.name);
-        if (herb) herb.stock = inv.stock;
-        lineItems.push({ herbId: inv.id, name: inv.name, quantity: qty, price: inv.price, unit: inv.unit });
-      }
+    const planned = [];
+    let subtotal = 0;
+    for (const item of items) {
+      const inv = catalog.resolve({ id: item.herbId, name: item.name });
+      if (!inv) throw new Error(`未找到药品：${item.name}`);
+      const qty = Number(item.quantity);
+      if (!Number.isFinite(qty) || qty <= 0 || qty > 10000) throw new Error('数量必须为正数');
+      if (inv.stock < qty) throw new Error(`${inv.name} 库存不足（剩余 ${inv.stock}${inv.unit || ''}）`);
+      subtotal += (inv.price || 0) * qty;
+      planned.push({ inv, qty });
+    }
+    const disc = Number(discount || 0);
+    if (disc < 0 || disc > subtotal) throw new Error('折扣不合法');
+    const total = Math.round((subtotal - disc) * 100) / 100;
+    if (total < 0) throw new Error('总价不能为负');
 
-      const disc = Number(discount || 0);
-      if (disc < 0 || disc > subtotal) throw new Error('折扣不合法');
-      const total = Math.round((subtotal - disc) * 100) / 100;
-      if (total < 0) throw new Error('总价不能为负');
-      const cust = customerId ? data.customers.find(c => c.id === customerId) : null;
+    const lineItems = [];
+    for (const line of planned) {
+      catalog.outbound(line.inv, line.qty, {
+        reason: 'checkout',
+        actorId: req.user?.id,
+        note: '收银台出库',
+      });
+      lineItems.push({
+        herbId: line.inv.id,
+        name: line.inv.name,
+        quantity: line.qty,
+        price: line.inv.price,
+        unit: line.inv.unit,
+        warehouseStock: catalog.resolve(line.inv).stock,
+      });
+    }
+
+    updateStore((data) => {
+      const cust = customerId ? data.customers.find((c) => c.id === customerId) : null;
       const name = customerName || cust?.name || '散客';
 
       order = {
@@ -56,7 +71,9 @@ router.post('/checkout', requirePermission('billing:checkout'), (req, res) => {
         customerId: customerId || null,
         customerName: name,
         items: lineItems,
-        subtotal, discount: disc, total,
+        subtotal,
+        discount: disc,
+        total,
         status: '已完成',
         paymentMethod: paymentMethod || '现金',
         date: new Date().toISOString().slice(0, 10),
@@ -81,12 +98,10 @@ router.post('/checkout', requirePermission('billing:checkout'), (req, res) => {
       data.bills = data.bills || [];
       data.bills.unshift(bill);
 
-      if (cust) {
-        cust.lastVisit = order.date;
-      }
+      if (cust) cust.lastVisit = order.date;
 
       if (prescriptionId) {
-        const rxIdx = data.prescriptions.findIndex(p => p.id === +prescriptionId);
+        const rxIdx = data.prescriptions.findIndex((p) => p.id === +prescriptionId);
         if (rxIdx >= 0) {
           const rx = data.prescriptions[rxIdx];
           data.prescriptions[rxIdx] = {

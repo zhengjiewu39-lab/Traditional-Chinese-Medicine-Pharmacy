@@ -36,6 +36,7 @@ import {
   Switch,
   FormControlLabel,
   Snackbar,
+  Autocomplete,
 } from '@mui/material';
 import {
   Visibility as VisibilityIcon,
@@ -51,7 +52,7 @@ import {
   Refresh as RefreshIcon,
 } from '@mui/icons-material';
 
-import { ordersApi } from '../services/api';
+import { ordersApi, herbsApi } from '../services/api';
 
 const initialOrders = [];
 
@@ -85,10 +86,15 @@ function Orders() {
     status: '待付款',
     items: [],
   });
+  const [catalogHerbs, setCatalogHerbs] = useState([]);
+  const [receiveIntoStock, setReceiveIntoStock] = useState(true);
   const [newOrderItem, setNewOrderItem] = useState({
     name: '',
+    herbId: null,
     quantity: 1,
     price: 0,
+    unit: '',
+    stock: 0,
   });
   const [notification, setNotification] = useState({
     open: false,
@@ -96,10 +102,12 @@ function Orders() {
     severity: 'success',
   });
 
-  // 从 API 加载订单
   useEffect(() => {
-    ordersApi.getOrders().then(res => {
+    ordersApi.getOrders().then((res) => {
       if (res.data?.length) setOrders(res.data);
+    }).catch(console.error);
+    herbsApi.getAllHerbs().then((res) => {
+      setCatalogHerbs(res.data || []);
     }).catch(console.error);
   }, []);
 
@@ -110,7 +118,7 @@ function Orders() {
     if (autoAddEnabled) {
       autoAddInterval = setInterval(() => {
         const randomOrder = generateRandomOrder();
-        addNewOrder(randomOrder);
+        if (randomOrder) addNewOrder(randomOrder);
         
         setNotification({
           open: true,
@@ -125,7 +133,7 @@ function Orders() {
         clearInterval(autoAddInterval);
       }
     };
-  }, [autoAddEnabled]);
+  }, [autoAddEnabled, catalogHerbs]);
 
   const getStatusColor = (status) => {
     return statusMap[status] || 'default';
@@ -134,16 +142,7 @@ function Orders() {
   // 生成随机订单
   const generateRandomOrder = () => {
     const customers = ['王明', '李芳', '张伟', '赵丽', '刘强', '陈红', '杨雪', '周刚'];
-    const medicines = [
-      { name: '人参', price: 500 },
-      { name: '当归', price: 93.33 },
-      { name: '黄芪', price: 140 },
-      { name: '枸杞', price: 120 },
-      { name: '灵芝', price: 400 },
-      { name: '何首乌', price: 180 },
-      { name: '百合', price: 150 },
-      { name: '甘草', price: 60 }
-    ];
+    const medicines = catalogHerbs.filter((h) => Number(h.stock) >= 0);
     const addresses = [
       '北京市朝阳区建国路88号',
       '上海市浦东新区陆家嘴1号',
@@ -156,21 +155,22 @@ function Orders() {
     ];
     const paymentMethods = ['微信支付', '支付宝', '银联', '现金支付'];
     
-    // 随机生成订单项
-    const itemCount = Math.floor(Math.random() * 3) + 1;
+    if (!medicines.length) return null;
+    const itemCount = Math.min(medicines.length, Math.floor(Math.random() * 3) + 1);
     const items = [];
     let total = 0;
-    
+
     for (let i = 0; i < itemCount; i++) {
       const medicine = medicines[Math.floor(Math.random() * medicines.length)];
       const quantity = Math.floor(Math.random() * 5) + 1;
-      const item = {
+      items.push({
+        herbId: medicine.id,
         name: medicine.name,
-        quantity: quantity,
-        price: medicine.price
-      };
-      items.push(item);
-      total += item.price * item.quantity;
+        quantity,
+        price: medicine.price,
+        unit: medicine.unit,
+      });
+      total += Number(medicine.price || 0) * quantity;
     }
     
     // 生成当前日期
@@ -197,11 +197,17 @@ function Orders() {
   
   // 添加新订单
   const addNewOrder = async (order) => {
+    if (!order) return;
     try {
-      const res = await ordersApi.createOrder({ ...order, deductStock: false });
-      setOrders(prev => [res.data, ...prev]);
-    } catch {
-      setOrders(prev => [order, ...prev]);
+      const res = await ordersApi.createOrder({ ...order, deductStock: false, receiveIntoStock: false });
+      setOrders((prev) => [res.data, ...prev]);
+      herbsApi.getAllHerbs().then((r) => setCatalogHerbs(r.data || [])).catch(() => {});
+    } catch (e) {
+      setNotification({
+        open: true,
+        message: e.response?.data?.message || '自动订单未写入：药品须在仓库目录中',
+        severity: 'error',
+      });
     }
   };
 
@@ -227,13 +233,21 @@ function Orders() {
       shippingAddress: newOrderForm.shippingAddress,
       paymentMethod: newOrderForm.paymentMethod,
       deductStock: false,
+      receiveIntoStock,
+      orderType: receiveIntoStock ? '采购' : '销售',
     };
 
     try {
       const res = await ordersApi.createOrder(newOrder);
-      setOrders(prev => [res.data, ...prev]);
-    } catch {
-      addNewOrder({ ...newOrder, id: Math.floor(1000 + Math.random() * 9000) });
+      setOrders((prev) => [res.data, ...prev]);
+      herbsApi.getAllHerbs().then((r) => setCatalogHerbs(r.data || [])).catch(() => {});
+    } catch (e) {
+      setNotification({
+        open: true,
+        message: e.response?.data?.message || '创建订单失败。药品必须在仓库目录中。',
+        severity: 'error',
+      });
+      return;
     }
     setOpenNewOrderDialog(false);
     setNewOrderForm({
@@ -254,25 +268,29 @@ function Orders() {
   
   // 添加新订单项
   const handleAddOrderItem = () => {
-    if (!newOrderItem.name || newOrderItem.quantity <= 0 || newOrderItem.price <= 0) {
+    if (!newOrderItem.herbId || !newOrderItem.name || newOrderItem.quantity <= 0) {
+      setNotification({ open: true, message: '请从仓库目录选择药品', severity: 'error' });
       return;
     }
-    
-    const newItem = {
-      name: newOrderItem.name,
-      quantity: newOrderItem.quantity,
-      price: newOrderItem.price,
-    };
-    
+
     setNewOrderForm({
       ...newOrderForm,
-      items: [...newOrderForm.items, newItem],
+      items: [...newOrderForm.items, {
+        herbId: newOrderItem.herbId,
+        name: newOrderItem.name,
+        quantity: newOrderItem.quantity,
+        price: newOrderItem.price,
+        unit: newOrderItem.unit,
+      }],
     });
-    
+
     setNewOrderItem({
       name: '',
+      herbId: null,
       quantity: 1,
       price: 0,
+      unit: '',
+      stock: 0,
     });
   };
   
@@ -402,7 +420,10 @@ function Orders() {
   return (
     <div>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4">订单管理</Typography>
+        <Box>
+          <Typography variant="h4">采购与订单</Typography>
+          <Typography variant="body2" color="text.secondary">药品只能从仓库目录选择，数量与收银、溯源共用可用批次</Typography>
+        </Box>
         <Box>
           <FormControlLabel
             control={
@@ -792,16 +813,30 @@ function Orders() {
             </Grid>
             
             <Grid item xs={12}>
+              <FormControlLabel
+                control={<Switch checked={receiveIntoStock} onChange={(e) => setReceiveIntoStock(e.target.checked)} />}
+                label="采购入库（确认后增加仓库可用库存，与收银/溯源同步）"
+              />
+            </Grid>
+            <Grid item xs={12}>
               <Typography variant="subtitle1" gutterBottom>
                 添加商品
               </Typography>
               <Grid container spacing={2}>
                 <Grid item xs={12} md={4}>
-                  <TextField
-                    fullWidth
-                    label="商品名称"
-                    value={newOrderItem.name}
-                    onChange={(e) => setNewOrderItem({ ...newOrderItem, name: e.target.value })}
+                  <Autocomplete
+                    options={catalogHerbs}
+                    getOptionLabel={(o) => o.name ? `${o.name}（库存 ${o.stock}${o.unit || ''}）` : ''}
+                    value={catalogHerbs.find((h) => h.id === newOrderItem.herbId) || null}
+                    onChange={(_, v) => setNewOrderItem({
+                      name: v?.name || '',
+                      herbId: v?.id || null,
+                      quantity: newOrderItem.quantity,
+                      price: v?.price || 0,
+                      unit: v?.unit || '',
+                      stock: v?.stock || 0,
+                    })}
+                    renderInput={(params) => <TextField {...params} label="仓库药品" required />}
                   />
                 </Grid>
                 <Grid item xs={12} md={3}>
@@ -848,6 +883,7 @@ function Orders() {
                     <TableHead>
                       <TableRow>
                         <TableCell>商品名称</TableCell>
+                        <TableCell>仓库库存</TableCell>
                         <TableCell>数量</TableCell>
                         <TableCell>单价</TableCell>
                         <TableCell>小计</TableCell>
@@ -858,6 +894,7 @@ function Orders() {
                       {newOrderForm.items.map((item, index) => (
                         <TableRow key={index}>
                           <TableCell>{item.name}</TableCell>
+                          <TableCell>{catalogHerbs.find((h) => h.id === item.herbId)?.stock ?? '—'}</TableCell>
                           <TableCell>{item.quantity}</TableCell>
                           <TableCell>¥{item.price.toFixed(2)}</TableCell>
                           <TableCell>¥{(item.quantity * item.price).toFixed(2)}</TableCell>
@@ -873,7 +910,7 @@ function Orders() {
                         </TableRow>
                       ))}
                       <TableRow>
-                        <TableCell colSpan={3} align="right">
+                        <TableCell colSpan={4} align="right">
                           <Typography variant="subtitle2">总计:</Typography>
                         </TableCell>
                         <TableCell>

@@ -23,6 +23,10 @@ const education = require('../workflow/educationService');
 const followUp = require('../workflow/followUpService');
 const { importIfNeeded } = require('../db/migrateFromJson');
 const billingRoutes = require('../routes/billing');
+const inventoryRoutes = require('../routes/inventory');
+const herbRoutes = require('../routes/herbs');
+const orderRoutes = require('../routes/orders');
+const traceabilityRoutes = require('../routes/traceability');
 const patientsRoutes = require('../routes/patients');
 const evaluationRoutes = require('../research/evaluationRoutes');
 const researchProtocol = require('../workflow/researchProtocol');
@@ -53,6 +57,10 @@ before(async () => {
   app.use('/api/ai', aiRoutes);
   app.use('/api/patient', patientRoutes);
   app.use('/api/billing', billingRoutes);
+  app.use('/api/inventory', inventoryRoutes);
+  app.use('/api/herbs', herbRoutes);
+  app.use('/api/orders', orderRoutes);
+  app.use('/api/traceability', traceabilityRoutes);
   app.use('/api/patients', patientsRoutes);
   app.use('/api/research/evaluation', evaluationRoutes);
   app.all('/api/simulation', (req, res) => res.status(410).json({ error: { code: 'archived' } }));
@@ -588,10 +596,25 @@ describe('authority knowledge catalog', () => {
     if (restock) {
       const ok = await call('POST', '/api/ai/desk/admin-confirm', {
         as: 'admin',
-        body: { type: 'restock', decision: 'accept', payload: restock.payload },
+        body: { id: restock.id, type: 'restock', decision: 'accept', payload: restock.payload },
       });
       assert.strictEqual(ok.status, 200, JSON.stringify(ok.body));
       assert.ok((ok.body.requests || []).length >= 1);
+      const still = (ok.body.brief?.proposals || []).find((p) => p.id === restock.id);
+      assert.ok(!still, 'confirmed restock must leave the pending list');
+      const after = await call('GET', '/api/ai/desk/assist?lane=admin', { as: 'admin' });
+      assert.strictEqual(after.status, 200);
+      assert.ok(!(after.body.brief.proposals || []).some((p) => p.id === restock.id));
+      assert.ok((after.body.brief.decided || []).some((d) => d.id === restock.id && d.decision === 'accept'));
+      const knowledge = (after.body.brief.proposals || []).find((p) => p.type === 'knowledge_fetch');
+      if (knowledge) {
+        const rej = await call('POST', '/api/ai/desk/admin-confirm', {
+          as: 'admin',
+          body: { id: knowledge.id, type: 'knowledge_fetch', decision: 'reject', payload: knowledge.payload },
+        });
+        assert.strictEqual(rej.status, 200, JSON.stringify(rej.body));
+        assert.ok(!(rej.body.brief?.proposals || []).some((p) => p.id === knowledge.id));
+      }
     }
   });
 
@@ -1319,6 +1342,70 @@ describe('d14c1a9 review gates', () => {
     lots.rebuildCatalogCache();
     assert.strictEqual(getStore().inventory.find((i) => i.id === item.id).stock, 8);
     assert.strictEqual(getStore().inventory.find((i) => i.id === item.id).stockSource, 'lot_rollup');
+  });
+
+  it('warehouse, POS, purchase catalog and traceability share kinds and lot qty', async () => {
+    const catalog = require('../workflow/catalogAlign');
+    catalog.bootstrap();
+    const [inv, herbs, trace] = await Promise.all([
+      call('GET', '/api/inventory', { as: 'admin' }),
+      call('GET', '/api/herbs', { as: 'admin' }),
+      call('GET', '/api/traceability?limit=200', { as: 'admin' }),
+    ]);
+    assert.strictEqual(inv.status, 200);
+    assert.strictEqual(herbs.status, 200);
+    assert.strictEqual(trace.status, 200);
+    const invNames = new Set(inv.body.map((i) => i.name));
+    const herbNames = new Set(herbs.body.map((h) => h.name));
+    const traceNames = new Set((trace.body.records || []).map((r) => r.name));
+    assert.ok(invNames.size >= 20);
+    assert.strictEqual(invNames.size, herbNames.size);
+    assert.strictEqual(invNames.size, traceNames.size);
+    for (const n of invNames) {
+      assert.ok(herbNames.has(n), n);
+      assert.ok(traceNames.has(n), n);
+    }
+    const target = '黄芪';
+    const beforeInv = inv.body.find((i) => i.name === target);
+    const beforeHerb = herbs.body.find((h) => h.name === target);
+    const beforeTrace = trace.body.records.find((r) => r.name === target);
+    assert.ok(beforeInv && beforeHerb && beforeTrace);
+    assert.strictEqual(beforeInv.stock, beforeHerb.stock);
+    assert.strictEqual(beforeInv.stock, beforeTrace.inventoryStock);
+    const sold = 2;
+    const checkout = await call('POST', '/api/billing/checkout', {
+      as: 'technician',
+      body: { items: [{ herbId: beforeInv.id, name: target, quantity: sold }] },
+    });
+    assert.strictEqual(checkout.status, 201, JSON.stringify(checkout.body));
+    const afterSell = await Promise.all([
+      call('GET', '/api/inventory', { as: 'admin' }),
+      call('GET', '/api/herbs', { as: 'admin' }),
+      call('GET', '/api/traceability/lookup/' + encodeURIComponent(target), { as: 'admin' }),
+    ]);
+    assert.strictEqual(afterSell[0].body.find((i) => i.name === target).stock, beforeInv.stock - sold);
+    assert.strictEqual(afterSell[1].body.find((h) => h.name === target).stock, beforeInv.stock - sold);
+    assert.strictEqual(afterSell[2].body.inventoryStock, beforeInv.stock - sold);
+    const buy = 3;
+    const po = await call('POST', '/api/orders', {
+      as: 'admin',
+      body: { customerName: '对齐采购', items: [{ herbId: beforeInv.id, name: target, quantity: buy }], receiveIntoStock: true, status: '已完成' },
+    });
+    assert.strictEqual(po.status, 201, JSON.stringify(po.body));
+    assert.ok(po.body.items.every((i) => i.herbId === beforeInv.id));
+    const unknown = await call('POST', '/api/orders', {
+      as: 'admin',
+      body: { items: [{ name: '不存在药材灵芝XYZ', quantity: 1 }] },
+    });
+    assert.strictEqual(unknown.status, 400);
+    const afterBuy = await Promise.all([
+      call('GET', '/api/inventory', { as: 'admin' }),
+      call('GET', '/api/herbs', { as: 'admin' }),
+      call('GET', '/api/traceability/lookup/' + encodeURIComponent(target), { as: 'admin' }),
+    ]);
+    assert.strictEqual(afterBuy[0].body.find((i) => i.name === target).stock, beforeInv.stock - sold + buy);
+    assert.strictEqual(afterBuy[1].body.find((h) => h.name === target).stock, beforeInv.stock - sold + buy);
+    assert.strictEqual(afterBuy[2].body.inventoryStock, beforeInv.stock - sold + buy);
   });
 
   it('riskTier is applied before pagination and matches count', async () => {

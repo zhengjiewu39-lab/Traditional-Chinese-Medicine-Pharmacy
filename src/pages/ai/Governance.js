@@ -52,9 +52,16 @@ export default function Governance() {
   const decide = async (p, decision) => {
     setBusy(p.id);
     setNotice('');
+    setError('');
     try {
-      await aiCasesApi.adminConfirm({ type: p.type, decision, payload: p.payload || {} });
-      setNotice(decision === 'accept' ? t('ai.gov.confirmed') : t('ai.gov.rejected'));
+      const res = await aiCasesApi.adminConfirm({
+        id: p.id, type: p.type, decision, payload: p.payload || {},
+      });
+      if (res.data?.brief) setAssist(res.data.brief);
+      if (decision === 'reject') setNotice(t('ai.gov.rejected'));
+      else if (Array.isArray(res.data?.requests)) setNotice(t('ai.gov.assistRestockOk', { n: res.data.requests.length }));
+      else if (res.data?.written != null) setNotice(t('ai.gov.assistFetchOk', { n: res.data.written }));
+      else setNotice(t('ai.gov.confirmed'));
       await load();
     } catch (e) {
       setError(formatApiError(e));
@@ -91,6 +98,9 @@ export default function Governance() {
         <Paper sx={{ p: 2, mb: 2 }}>
           <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>{t('ai.gov.assistTitle')}</Typography>
           <Alert severity="info" sx={{ my: 1 }}>{t('ai.gov.assistHint')}</Alert>
+          {(assist.proposals || []).length === 0 && (
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>{t('ai.gov.assistEmpty')}</Typography>
+          )}
           {(assist.proposals || []).map((p) => (
             <Stack key={p.id} direction="row" spacing={1} alignItems="flex-start" sx={{ mb: 1 }}>
               <Box sx={{ flex: 1 }}>
@@ -105,6 +115,18 @@ export default function Governance() {
               )}
             </Stack>
           ))}
+          {(assist.decided || []).length > 0 && (
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>{t('ai.gov.assistDone')}</Typography>
+              {(assist.decided || []).map((d) => (
+                <Stack key={`${d.id}-${d.at}`} direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
+                  <Chip size="small" color={d.decision === 'accept' ? 'success' : 'default'} label={d.decision === 'accept' ? t('ai.gov.assistAccepted') : t('ai.gov.assistRejected')} />
+                  <Typography variant="body2">{d.title}</Typography>
+                  {d.note && <Typography variant="caption" color="text.secondary">{d.note}</Typography>}
+                </Stack>
+              ))}
+            </Box>
+          )}
         </Paper>
       )}
       {user?.role === 'admin' && (

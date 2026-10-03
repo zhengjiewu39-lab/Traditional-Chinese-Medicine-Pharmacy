@@ -116,7 +116,7 @@ function TraceabilitySystem() {
         中药溯源系统
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        与药材目录同步 · {total || '—'} 条溯源记录 · 支持溯源码 / 批次号 / 药名查询
+        与仓库/收银/采购同一目录 · {total || '—'} 条 · 库存为当前可用批次
       </Typography>
 
       {error && <Alert severity="warning" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
@@ -263,6 +263,7 @@ function TraceabilitySystem() {
                 <TableRow>
                   <TableCell>溯源码</TableCell>
                   <TableCell>药材</TableCell>
+                  <TableCell>库存</TableCell>
                   <TableCell>批次</TableCell>
                   <TableCell>产地</TableCell>
                   <TableCell>质检</TableCell>
@@ -274,6 +275,7 @@ function TraceabilitySystem() {
                   <TableRow key={row.traceCode} hover>
                     <TableCell><code>{row.traceCode}</code></TableCell>
                     <TableCell>{row.name}</TableCell>
+                    <TableCell>{row.inventoryStock} {row.unit}</TableCell>
                     <TableCell>{row.batchNumber}</TableCell>
                     <TableCell>{row.origin}</TableCell>
                     <TableCell><Chip label={row.testingResults} size="small" color="success" /></TableCell>

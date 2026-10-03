@@ -149,7 +149,7 @@ function Billing() {
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
         <Box>
           <Typography variant="h5" fontWeight={700}>智慧收银台</Typography>
-          <Typography variant="body2" color="text.secondary">取药码预填 · 自动扣库存 · 处方状态同步</Typography>
+          <Typography variant="body2" color="text.secondary">药品与数量来自仓库可用批次 · 与采购、溯源对齐</Typography>
         </Box>
         <Chip icon={<PointOfSale />} label={`收银员：${user?.name || '—'}`} color="primary" variant="outlined" />
       </Box>

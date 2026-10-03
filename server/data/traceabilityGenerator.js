@@ -181,5 +181,6 @@ module.exports = {
   lookupTraceability,
   hydrateTraceability,
   rebuildByCode,
+  buildTraceRecord,
   traceCodeForHerb,
 };

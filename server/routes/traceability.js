@@ -1,17 +1,21 @@
 const express = require('express');
 const { getStore } = require('../data/store');
 const { lookupTraceability, ensureTraceabilityData, hydrateTraceability } = require('../data/traceabilityGenerator');
+const catalog = require('../workflow/catalogAlign');
 
 const router = express.Router();
 
-router.get('/', (req, res) => {
+function liveRecords() {
+  catalog.alignKinds();
   const store = getStore();
-  if (!store.traceability?.records?.length) {
-    ensureTraceabilityData(store);
-  }
+  if (!store.traceability?.records?.length) ensureTraceabilityData(store);
   hydrateTraceability(store);
+  return catalog.snapshot().records;
+}
+
+router.get('/', (req, res) => {
   const { q, limit = 50, offset = 0 } = req.query;
-  let records = store.traceability?.records || [];
+  let records = liveRecords();
   if (q) {
     const term = q.toLowerCase();
     records = records.filter((r) =>
@@ -27,10 +31,11 @@ router.get('/', (req, res) => {
     total: records.length,
     offset: +offset,
     limit: +limit,
-    sampleCodes: (store.traceability?.records || []).slice(0, 6).map((r) => ({
+    sampleCodes: (catalog.snapshot().records || []).slice(0, 6).map((r) => ({
       traceCode: r.traceCode,
       name: r.name,
       batchNumber: r.batchNumber,
+      inventoryStock: r.inventoryStock,
     })),
     records: slice,
   });
@@ -38,15 +43,15 @@ router.get('/', (req, res) => {
 
 router.get('/lookup/:code', (req, res) => {
   const store = getStore();
-  if (!store.traceability?.records?.length) {
-    ensureTraceabilityData(store);
-  }
+  catalog.alignKinds();
+  if (!store.traceability?.records?.length) ensureTraceabilityData(store);
   hydrateTraceability(store);
   const result = lookupTraceability(store, req.params.code);
   if (!result) {
     return res.status(404).json({ message: '未找到溯源信息', code: req.params.code });
   }
-  res.json(result);
+  const live = catalog.snapshot().records.find((r) => r.traceCode === result.traceCode || r.name === result.name);
+  res.json(live || result);
 });
 
 module.exports = router;

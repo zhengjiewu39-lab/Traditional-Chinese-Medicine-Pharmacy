@@ -194,6 +194,7 @@ router.post('/desk/admin-confirm', requirePermission('ai:runtime_configure'), va
   additionalProperties: false,
   required: ['type', 'decision'],
   properties: {
+    id: { type: 'string', minLength: 1, maxLength: 120 },
     type: { type: 'string', enum: ['restock', 'knowledge_fetch', 'info', 'kill_switch', 'promote_live', 'approve', 'dispense'] },
     decision: { type: 'string', enum: ['accept', 'reject'] },
     payload: { type: 'object' },

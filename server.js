@@ -234,6 +234,7 @@ if (migrated && migrated.ok === false) {
   process.exit(1);
 }
 getStore();
+require('./server/workflow/catalogAlign').bootstrap();
 
 const server = app.listen(port, () => {
   console.log(`中药数字药学服务 API http://localhost:${port}`, migrated?.skipped ? '(sqlite already imported)' : '');

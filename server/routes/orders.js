@@ -1,6 +1,6 @@
 const express = require('express');
 const { getStore, updateStore, nextId } = require('../data/store');
-const { logInventoryHistory } = require('../services/stats');
+const catalog = require('../workflow/catalogAlign');
 
 const router = express.Router();
 
@@ -8,15 +8,20 @@ function genOrderNo() {
   return `ORD${Date.now()}`;
 }
 
+router.get('/catalog', (req, res) => {
+  const snap = catalog.snapshot();
+  res.json({ herbs: snap.herbs, inventory: snap.inventory });
+});
+
 router.get('/', (req, res) => {
   const { status } = req.query;
   let orders = getStore().orders;
-  if (status) orders = orders.filter(o => o.status === status);
+  if (status) orders = orders.filter((o) => o.status === status);
   res.json(orders);
 });
 
 router.get('/:id', (req, res) => {
-  const o = getStore().orders.find(x => x.id === +req.params.id);
+  const o = getStore().orders.find((x) => x.id === +req.params.id);
   if (!o) return res.status(404).json({ message: '未找到' });
   res.json(o);
 });
@@ -24,25 +29,46 @@ router.get('/:id', (req, res) => {
 router.post('/', (req, res) => {
   let created;
   try {
-    updateStore(data => {
-      const items = req.body.items || [];
-      let subtotal = 0;
-      const lineItems = items.map(item => {
-        const inv = data.inventory.find(i => i.id === item.herbId || i.name === item.name);
-        const price = item.price ?? inv?.price ?? 0;
-        const qty = item.quantity || 1;
-        subtotal += price * qty;
-        if (inv && req.body.deductStock !== false) {
-          if (inv.stock < qty) throw new Error(`${inv.name} 库存不足（剩余 ${inv.stock}${inv.unit}）`);
-          inv.stock -= qty;
-          logInventoryHistory(data, inv.id, 'sale', qty, `订单出库`);
-          const herb = data.herbs.find(h => h.name === inv.name);
-          if (herb) herb.stock = inv.stock;
-        }
-        return { herbId: inv?.id, name: item.name || inv?.name, quantity: qty, price, unit: inv?.unit || item.unit };
+    const items = req.body.items || [];
+    if (!items.length) throw new Error('订单至少需要一味药品');
+    const lineItems = [];
+    let subtotal = 0;
+    for (const item of items) {
+      const inv = catalog.resolve({ id: item.herbId, name: item.name });
+      if (!inv) throw new Error(`未找到药品：${item.name || item.herbId}。只能从仓库目录选择。`);
+      const qty = Number(item.quantity) || 1;
+      if (!Number.isFinite(qty) || qty <= 0) throw new Error('数量必须为正数');
+      const price = item.price ?? inv.price ?? 0;
+      subtotal += price * qty;
+      lineItems.push({
+        herbId: inv.id,
+        name: inv.name,
+        quantity: qty,
+        price,
+        unit: inv.unit || item.unit,
+        warehouseStock: inv.stock,
       });
+    }
 
-      const discount = req.body.discount || 0;
+    if (req.body.receiveIntoStock) {
+      for (const line of lineItems) {
+        catalog.inbound(line, line.quantity, {
+          reason: 'purchase',
+          note: '采购入库',
+          batchNo: req.body.batchNo,
+          expiresAt: req.body.expiresAt,
+        });
+        line.warehouseStock = catalog.resolve(line).stock;
+      }
+    } else if (req.body.deductStock === true) {
+      for (const line of lineItems) {
+        catalog.outbound(line, line.quantity, { reason: 'sale', note: '订单出库' });
+        line.warehouseStock = catalog.resolve(line).stock;
+      }
+    }
+
+    const discount = req.body.discount || 0;
+    updateStore((data) => {
       created = {
         id: nextId(data, 'order'),
         orderNo: genOrderNo(),
@@ -52,13 +78,17 @@ router.post('/', (req, res) => {
         discount,
         total: Math.round((subtotal - discount) * 100) / 100,
         source: req.body.source || '手动',
+        orderType: req.body.receiveIntoStock ? '采购' : (req.body.orderType || '销售'),
         items: lineItems,
-        ...req.body,
+        customerName: req.body.customerName,
+        customerId: req.body.customerId,
+        shippingAddress: req.body.shippingAddress,
+        paymentMethod: req.body.paymentMethod,
       };
       data.orders.unshift(created);
 
       if (created.customerId && created.status === '已完成') {
-        const cust = data.customers.find(c => c.id === created.customerId);
+        const cust = data.customers.find((c) => c.id === created.customerId);
         if (cust) {
           cust.visits = (cust.visits || 0) + 1;
           cust.spending = (cust.spending || 0) + created.total;
@@ -75,14 +105,14 @@ router.post('/', (req, res) => {
 
 router.put('/:id', (req, res) => {
   let updated;
-  updateStore(data => {
-    const idx = data.orders.findIndex(o => o.id === +req.params.id);
+  updateStore((data) => {
+    const idx = data.orders.findIndex((o) => o.id === +req.params.id);
     if (idx === -1) return;
     const prev = data.orders[idx];
     data.orders[idx] = { ...prev, ...req.body, id: +req.params.id };
     updated = data.orders[idx];
     if (req.body.status === '已完成' && prev.status !== '已完成' && updated.customerId) {
-      const cust = data.customers.find(c => c.id === updated.customerId);
+      const cust = data.customers.find((c) => c.id === updated.customerId);
       if (cust) {
         cust.visits = (cust.visits || 0) + 1;
         cust.spending = (cust.spending || 0) + updated.total;
@@ -95,8 +125,8 @@ router.put('/:id', (req, res) => {
 });
 
 router.delete('/:id', (req, res) => {
-  updateStore(data => {
-    data.orders = data.orders.filter(o => o.id !== +req.params.id);
+  updateStore((data) => {
+    data.orders = data.orders.filter((o) => o.id !== +req.params.id);
   });
   res.json({ success: true });
 });
