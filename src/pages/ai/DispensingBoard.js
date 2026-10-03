@@ -147,11 +147,9 @@ export default function DispensingBoard() {
                     </Stack>
                     <Typography variant="body2" sx={{ fontWeight: 600 }}>{t('ai.dispense.patient')}: {patientLabel}</Typography>
                     <Typography variant="caption" display="block">{t('ai.dispense.herbsN', { n: (c.prescription.herbs || []).length, doses: c.prescription.doseCount ?? '?', fulfill })}</Typography>
-                    {(c.deskNotes?.dispensing || t('ai.dispense.aiBriefEmpty')) && (
-                      <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
-                        {t('ai.dispense.aiBrief')}：{c.deskNotes?.dispensing || t('ai.dispense.aiBriefEmpty')}
-                      </Typography>
-                    )}
+                    <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
+                      {t('ai.dispense.aiBrief')}：{c.deskNotes?.dispensing || t('ai.dispense.aiBriefEmpty')}
+                    </Typography>
                     <AllocationLines plan={plan} t={t} />
                     {c.serviceChoices?.substitutionConsent === 'accept' && <Chip size="small" label={t('ai.dispense.subst')} sx={{ mt: 0.5 }} />}
                     {w && <Chip size="small" color={deviations ? 'warning' : 'success'} label={deviations ? t('ai.dispense.weighOff', { n: deviations }) : t('ai.dispense.weighOk')} sx={{ mt: 0.5 }} />}

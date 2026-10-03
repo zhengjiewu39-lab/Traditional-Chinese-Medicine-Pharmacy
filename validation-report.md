@@ -2,35 +2,49 @@
 
 Research prototype only. Passing tests is not clinical validation. This build can be described as a Traditional-Chinese-Medicine digital-pharmacy AI research prototype. It is not a validated AI active-clarification system.
 
-Checked after the 2026-10-03 integrity pass (local Node may be newer than `engines.node`; CI uses Node 20).
+Checked after the 2026-10-03 d14c1a9 gate-repair pass (local Node may be newer than `engines.node`; CI uses Node 20).
+
+| Layer | What it is | This pass |
+|---|---|---|
+| Code implementation | Functions and API routes in the repo | Required-fact gate, deskNotes policy, research drafts, case access, search kill-switch, workbench/list counts |
+| Automated tests | `npm run verify:pharmacy` / `test:server` / `lint` | 100/100, 148/148, lint 0 warnings |
+| Field / live-model check | Paid model or clinic path | **Not re-run**. Earlier self-reported 500-person shadow screen and 7-role login walk remain repository notes only |
+| Professional review | Independent labels | **not_evaluated** — worksheet still blank |
 
 | Check | Result |
 |---|---|
-| `npm run verify:pharmacy` | 94/94 pass |
-| `npm run test:server` | 142/142 pass (37 groups) |
+| `npm run verify:pharmacy` | 101/101 pass |
+| `npm run test:server` | 149/149 pass (38 groups) |
 | `npm run lint` | pass, 0 warnings |
-| Live A/B/C/D | Overlay present (`openai-compatible` / `deepseek-chat` / `api.deepseek.com`, key saved, **AI_MODE=shadow**, not promoted). `AI_COMPARE_SMOKE=1 npm run ai:evaluate:compare` wrote gitignored `results-live/compare-smoke.json`: 4 cases (IT01–IT04), engineering failures 0, model schema failures 2 (`C/IT04`, `RAG_off/IT04`). API `providerMeta.model` was `deepseek-flash`. Clinical labels / effect remain `not_evaluated`. Not a D-vs-C claim. Full six-case test split was not run. |
-| 500-person live screen | **model invoked for 500/500** on existing store prescriptions after the key was recharged (441 ok / 53 schema_invalid / 6 policy_violation). `AI_MODE` stays **shadow**. Nobody approved. Counts in gitignored `results-live/screen-500-latest.json`. Not a clinical validation. |
-| Browser role E2E | **pass** for 7 demo roles — see `benchmarks/ai-review/browser-role-e2e-2026-10-03.md` |
+| Live A/B/C/D | Not re-run this pass. Earlier overlay note stays **AI_MODE=shadow**, not promoted. Clinical labels / effect remain `not_evaluated`. |
+| 500-person live screen | Repository self-report only; not independently re-run here. Not a clinical validation. |
+| Browser role E2E | Earlier login walk only. Approve / dispense / weigh / concurrency were not re-walked in this pass. |
 | Independent expert labels | **not_evaluated** — worksheet `benchmarks/ai-review/expert-label-worksheet.md` is blank; pack `expertReviewStatus` is still `unreviewed` |
 
 Mock compare only tests that the ask→script-answer→reanalyze loop runs and stays isolated. It does not support a model-effect or clinical-benefit claim. Do not assume D outperforms C.
 
 ## Completion marks
 
-| Item | Has function | Wired into service | End-to-end | Live model | Expert review |
+| Item | Has function | Wired into service | Automated test | Live model | Expert review |
 |---|---|---|---|---|---|
 | Dual-sign version binding | Yes | Yes | API tests | n/a | n/a |
 | Replay append-only | Yes | Independent `replays` collection | Concurrent probes | n/a | n/a |
 | Candidate confirm authorization | Yes | Bound patient or pharmacist; patient DTO only | Cross-patient 403/404, no write | n/a | n/a |
 | Candidate confirm versions content | Yes | Hash/version/history; voids approval; rescreens | Approved-case pregnancy probe | n/a | n/a |
-| Required safety questions gate approve | Yes | Critical/pregnancy `requiredForDecision`; unknown/deny still block unless independently verified | Female pregnancy approve blocked | n/a | n/a |
+| Required safety questions gate approve | Yes | Current facts, not task `reviewed`; flag-only verify rejected | View then approve blocked; value+source+evidence then approve | n/a | n/a |
+| Official desk notes isolation | Yes | Policy walks all model text; shadow stays in `shadowResult` | live/shadow/rules unsafe deskNotes | n/a | n/a |
+| PubMed drafts vs clinical evidence | Yes | `researchDrafts`; drafts do not clear `no_evidence` | Title-only / irrelevant title probes | n/a | n/a |
+| Case access on assist/summary | Yes | One `caseAccess` check + same list filter | Other-prescriber 403 on detail/assist/replay/list | n/a | n/a |
+| Auto-search follows AI master switch | Yes | `allowedCapabilities` after input screen | rules / kill switch / injection call count 0 | n/a | n/a |
+| Workbench risk and lane counts | Yes | SQL counts in authorized scope | A3 ≥ 1; risk filter before page | n/a | n/a |
 | AI disable covers extract | Yes | `allowedModelProvider()` / `modelCallsAllowed()` | Provider call count 0 when off | **未验证** | n/a |
 | Live unknown lots quarantined | Yes | Non-demo catalog rows are unverified and unusable | Unit probe | n/a | n/a |
-| Interactive experiment loop | Yes | Cumulative burden; reanalyze after answers | mock + 4-case live smoke | smoke only; not promoted | unreviewed pack |
+| Interactive experiment loop | Yes | Cumulative burden; reanalyze after answers | mock + earlier 4-case smoke | smoke only; not promoted | unreviewed pack |
 
-JSON catalog stock is still a roll-up beside SQLite lots and movements. That is not a single catalog+SQLite rollback.
+Case-path quantity decisions now read SQLite lots. JSON `inventory[].stock` is rebuilt from the lot roll-up. The SKU list is still a JSON catalog, so this is not a single-database inventory and not a real-dispensing go-live condition.
 
-Fact extraction calls a model only when AI is enabled and the mode allows model calls. Heuristic output is labelled `heuristic_fallback`. History alone is not treated as current-negative liver impairment. Denying a candidate does not infer disease denial. Stopping questions is not approval.
+Independent professional labels were not filled. The worksheet is blank on purpose. `node scripts/ai/print-rater-pack.js` only prints visible facts for a human rater.
+
+Fact extraction calls a model only when AI is enabled and the mode allows model calls. Heuristic output is labelled `heuristic_fallback`. History alone is not treated as current-negative liver impairment. Denying a candidate does not infer disease denial. Stopping questions is not approval. Marking a clarification `reviewed` is not a resolved fact.
 
 `cases-v1.json` remains the engineering rule pack. The main clarification experiment uses `benchmarks/ai-review/cases-interactive-v1.json`. Rule-derived `expected` is not a medical gold standard.

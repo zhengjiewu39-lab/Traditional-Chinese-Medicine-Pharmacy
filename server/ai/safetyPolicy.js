@@ -59,11 +59,16 @@ function screenInput(caseRecord) {
 }
 
 function textFieldsOf(out) {
-  return [
-    out.ruleHitSummary, out.pharmacistExplanation, out.patientExplanation,
-    ...(out.warnings || []).map((w) => w.message),
-    ...(out.suggestedActions || []).map((a) => a.detail),
-  ].filter(Boolean);
+  const texts = [];
+  const skip = new Set(['evidenceIds', 'code', 'type', 'field', 'severity', 'suggestedRiskTier', 'evidenceStrength']);
+  function walk(v, key) {
+    if (skip.has(key)) return;
+    if (typeof v === 'string') texts.push(v);
+    else if (Array.isArray(v)) v.forEach((item) => walk(item));
+    else if (v && typeof v === 'object') Object.entries(v).forEach(([k, val]) => walk(val, k));
+  }
+  walk(out);
+  return texts;
 }
 
 /**

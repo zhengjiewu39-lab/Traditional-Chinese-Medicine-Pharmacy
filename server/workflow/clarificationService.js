@@ -16,6 +16,10 @@ const FIELD_WHITELIST = new Set([
 const TASK_STATUSES = ['draft', 'sent', 'answered', 'reviewed', 'cancelled', 'expired'];
 const SOURCES = ['rule', 'model', 'pharmacist'];
 const FORBIDDEN_ANSWER_KEYS = ['herbs', 'dosage', 'doseCount', 'usage', 'role', 'state', 'approval', 'approved'];
+const INDEPENDENT_SOURCES = new Set([
+  'pharmacist_chart', 'pharmacist_interview', 'medical_record', 'lab_report',
+]);
+const RESOLVED_FACT_STATUSES = new Set(['none', 'reported', 'verified', 'not_applicable']);
 
 function assertField(fieldPath) {
   if (!FIELD_WHITELIST.has(fieldPath)) {
@@ -99,9 +103,15 @@ function answerTask(c, task, body) {
 function reviewTask(c, taskId, actor) {
   const task = (c.clarificationTasks || []).find((t) => t.taskId === taskId);
   if (!task) throw new ServiceError(404, 'clarification_not_found', 'Clarification task not found');
-  task.status = 'reviewed';
-  task.reviewedAt = new Date().toISOString();
-  task.reviewedBy = String(actor.id);
+  const now = new Date().toISOString();
+  task.viewedAt = now;
+  task.viewedBy = String(actor.id);
+  // Viewed is not resolved. Unsent, unanswered and expired tasks stay in place.
+  if (task.status === 'answered') {
+    task.status = 'reviewed';
+    task.reviewedAt = now;
+    task.reviewedBy = String(actor.id);
+  }
   return task;
 }
 
@@ -123,15 +133,36 @@ function openRequired(c) {
   return (c.clarificationTasks || []).filter((t) => t.requiredForDecision && ['draft', 'sent'].includes(t.status));
 }
 
+function currentFact(c, fieldPath) {
+  if (fieldPath === 'patient.sex') {
+    return c.patient?.facts?.sex || { status: c.patient?.sex ? 'reported' : 'not_asked', value: c.patient?.sex || null };
+  }
+  const key = fieldPath.replace('patient.facts.', '');
+  return c.patient?.facts?.[key] || { status: 'not_asked', value: null };
+}
+
+function factSatisfiesRequired(c, fieldPath) {
+  const f = currentFact(c, fieldPath);
+  if (!RESOLVED_FACT_STATUSES.has(f.status)) return false;
+  if (f.status === 'none' || f.status === 'not_applicable') return true;
+  return f.value !== undefined && f.value !== null && f.value !== '';
+}
+
+function verificationRecordComplete(t) {
+  if (!t?.independentlyVerified) return false;
+  if (t.independentValue === undefined || t.independentValue === null || t.independentValue === '') return false;
+  if (!INDEPENDENT_SOURCES.has(t.independentSource)) return false;
+  if (!t.verifiedBy || !t.verifiedAt) return false;
+  if (!t.independentEvidence) return false;
+  return true;
+}
+
 function unresolvedRequired(c) {
   return (c.clarificationTasks || []).filter((t) => {
     if (!t.requiredForDecision || t.source === 'model') return false;
-    if (['draft', 'sent'].includes(t.status)) return true;
-    if (t.status === 'answered') {
-      const st = t.response?.status || t.response?.kind;
-      if (['unknown', 'denied', 'declined'].includes(st) && !t.independentlyVerified) return true;
-    }
-    return false;
+    if (t.status === 'cancelled') return false;
+    if (factSatisfiesRequired(c, t.fieldPath)) return false;
+    return true;
   });
 }
 
@@ -370,6 +401,7 @@ module.exports = {
   FIELD_WHITELIST,
   TASK_STATUSES,
   QUESTION_WEIGHTS,
+  INDEPENDENT_SOURCES,
   createTask,
   sendTask,
   answerTask,
@@ -378,6 +410,8 @@ module.exports = {
   retainOpenOnFactChange,
   openRequired,
   unresolvedRequired,
+  factSatisfiesRequired,
+  verificationRecordComplete,
   generateRiskQuestions,
   selectQuestions,
   recordStop,

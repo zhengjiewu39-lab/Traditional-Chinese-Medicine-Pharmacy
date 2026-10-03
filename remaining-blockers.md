@@ -22,5 +22,8 @@ These are not software defects that Cursor can honestly close, plus engineering 
 - `react-organizational-chart` is unused after Organization was archived; not removed in this pass to avoid a lockfile-only churn.
 - Local runtime Node may be v24; project `engines` and CI stay on Node 20. No framework upgrade was performed.
 - Knowledge fragment quality vs strength naming still coexists; synthetic knowledge is an external professional block.
+- Inventory quantity authority is now SQLite lots and `stock_movements`. JSON `inventory[].stock` is a rebuilt cache (`stockSource=lot_rollup`). The SKU master (name, unit, minStock, location) still lives in JSON. That is not a single-database cut-over and is not a real-dispensing go-live condition. Legacy POS/billing routes can still write JSON stock and are not the case dispense path.
+- Independent professional labels remain blank. `expert-label-worksheet.md` and pack `expertReviewStatus` stay `unreviewed`. Agents must not invent gold labels. A licensed rater can print visible cards with `node scripts/ai/print-rater-pack.js`.
+- This pass did not re-run a full browser approve/dispense/weigh/concurrency path or a paid live-model suite.
 
 Do not read this list as “the system is clinically validated” or “ready for real dispensing”.

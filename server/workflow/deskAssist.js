@@ -17,12 +17,13 @@ function dispensingBrief(c, plan) {
   const out = lastOutput(c);
   const herbs = c.prescription?.herbs || [];
   const doses = Number(c.prescription?.doseCount) || 1;
-  const notes = out?.deskNotes?.dispensing || out?.shadowResult?.deskNotes?.dispensing || null;
+  const official = out?.deskNotes?.dispensing || null;
   return {
     caseId: c.caseId,
     state: c.state,
     cannotExecute: true,
-    note: notes || '按处方称量，不得改味改量。缺味或超差交药师复核。',
+    reviewStatus: out?.deskNotes?.reviewStatus || 'deterministic_fallback',
+    note: official || '按处方称量，不得改味改量。缺味或超差交药师复核。',
     lines: herbs.map((h) => {
       const line = (plan?.lines || []).find((l) => l.herbName === h.name);
       return {
@@ -122,7 +123,7 @@ function assist(lane, { caseRecord, plan } = {}) {
   if (lane === 'admin') return { lane, brief: adminBrief() };
   if (lane === 'screening') {
     const out = lastOutput(caseRecord || {});
-    return { lane, brief: out?.deskNotes || out?.shadowResult?.deskNotes || null };
+    return { lane, brief: out?.deskNotes || null, cannotExecute: true };
   }
   throw new ServiceError(400, 'unknown_lane', 'lane must be screening, dispensing or admin');
 }

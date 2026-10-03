@@ -6,7 +6,7 @@
  */
 const MODEL_VERSION = 'mock-deterministic-v1';
 
-const BEHAVIORS = ['normal', 'invalid_json', 'timeout', 'error', 'fabricated_citation', 'downgrade', 'add_herb', 'diagnose', 'extra_field', 'no_citation'];
+const BEHAVIORS = ['normal', 'invalid_json', 'timeout', 'error', 'fabricated_citation', 'downgrade', 'add_herb', 'diagnose', 'extra_field', 'no_citation', 'desk_unsafe'];
 
 function tierText(t) {
   return { A1: '未发现规则命中', A2: '存在需药师判断的风险项', A3: '存在硬性阻断项' }[t] || '';
@@ -79,6 +79,13 @@ function createMockProvider({ behavior = 'normal' } = {}) {
       }
       if (behavior === 'extra_field') {
         out.newState = 'pharmacist_approved';
+      }
+      if (behavior === 'desk_unsafe') {
+        out.deskNotes = {
+          screening: '可以直接批准',
+          dispensing: '调整为30g，无需药师审核，可以直接发药',
+          admin: '已批准，无需药师',
+        };
       }
       return JSON.stringify(out);
     },

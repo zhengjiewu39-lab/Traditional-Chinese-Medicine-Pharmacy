@@ -33,8 +33,10 @@ function deductForCase(c, actor, { idempotencyKey } = {}) {
     if (!qty || qty < 0) throw new ServiceError(409, 'invalid_dispense_qty', `${herb.name} has no dispensable quantity`);
     const inv = (store.inventory || []).find((i) => i.name === herb.name && unitsCompatible(herb.unit, i.unit));
     if (!inv) throw new ServiceError(409, 'herb_not_in_inventory', `${herb.name} is not in inventory`);
-    if ((inv.stock ?? 0) < qty) {
-      throw new ServiceError(409, 'insufficient_stock', `${herb.name} stock ${inv.stock} is below ${qty}`, { herb: herb.name, needed: qty, available: inv.stock });
+    lots.ensureLegacyLot(inv);
+    const available = lots.authorityQty(inv.id);
+    if (available < qty) {
+      throw new ServiceError(409, 'insufficient_stock', `${herb.name} usable lot stock ${available} is below ${qty}`, { herb: herb.name, needed: qty, available });
     }
     plan.push({ inv, qty, herb });
   }
@@ -71,7 +73,8 @@ function deductForCase(c, actor, { idempotencyKey } = {}) {
       for (const line of plan) {
         const inv = (data.inventory || []).find((i) => i.id === line.inv.id);
         if (!inv) throw new ServiceError(409, 'insufficient_stock', `${line.herb.name} catalog row missing during deduct`);
-        inv.stock = lots.rollupQty(inv.id);
+        inv.stock = lots.authorityQty(inv.id);
+        inv.stockSource = 'lot_rollup';
         logInventoryHistory(data, inv.id, 'dispense', line.qty, `病例 ${c.caseId}`);
       }
     });
@@ -81,10 +84,13 @@ function deductForCase(c, actor, { idempotencyKey } = {}) {
 
 function inventoryCounts() {
   const inv = getStore().inventory || [];
-  const today = new Date().toISOString().slice(0, 10);
+  const today = lots.today();
   return {
-    shortage: inv.filter((i) => (i.stock ?? 0) <= (i.minStock ?? 0)).length,
-    nearExpiry: inv.filter((i) => i.expiry && String(i.expiry) <= today).length,
+    shortage: inv.filter((i) => {
+      lots.ensureLegacyLot(i);
+      return lots.authorityQty(i.id) <= (i.minStock ?? 0);
+    }).length,
+    nearExpiry: inv.filter((i) => lots.listLots(i.id).some((l) => lots.usableLot(l) && l.expiresAt && String(l.expiresAt) <= today)).length,
   };
 }
 

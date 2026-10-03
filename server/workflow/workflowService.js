@@ -234,6 +234,7 @@ async function runAnalysis(c, trigger) {
   }
   const analysis = { analysisId: output.analysisId, contentHash: c.contentHash, contentVersion: c.contentVersion, at: output.generatedAt, trigger, output };
   c.analyses.push(analysis);
+  c.lastRiskTier = output.riskTier || null;
   audit.append({
     caseId: c.caseId,
     eventType: 'ai_analysis',
@@ -447,7 +448,7 @@ async function screen(c, trigger) {
     clarification.recordStop(c, c.questionPlan);
   }
   const aiActor = { role: 'ai', id: analysis.output.modelVersion };
-  const to = (c.clarificationTasks || []).some((t) => t.requiredForDecision && t.status === 'sent')
+  const to = clarification.unresolvedRequired(c).length
     ? 'information_incomplete'
     : 'pharmacist_review_required';
   transition(c, to, aiActor, `AI筛查：${analysis.output.riskTier} / ${analysis.output.recommendation}`);
@@ -600,7 +601,7 @@ function persistScreenResult(caseId, screened) {
   const fields = [
     'analyses', 'staleAnalyses', 'questionPlan', 'clarificationTasks', 'clarificationRound',
     'clarificationBurden', 'lastClarificationIssuedAt', 'clarificationStop', 'factCandidates',
-    'state', 'transitions', 'reviewLane', 'reviewProtocol', 'secondReview',
+    'state', 'transitions', 'reviewLane', 'reviewProtocol', 'secondReview', 'lastRiskTier',
   ];
   for (let attempt = 0; attempt < 8; attempt += 1) {
     const latest = getCaseOr404(caseId);
@@ -1010,28 +1011,99 @@ function getOwnCase(caseId, actor) {
   return patientCaseDto(c);
 }
 
-function reviewClarification(caseId, taskId, actor, body = {}) {
+async function reviewClarification(caseId, taskId, actor, body = {}) {
   if (!hasPharmacistCredential(actor) || actor.role !== 'pharmacist') {
     throw new ServiceError(403, 'pharmacist_credential_required', 'Only a pharmacist can review clarification answers');
   }
   const c = getCaseOr404(caseId);
+  const loadedContentVersion = c.contentVersion;
+  const loadedRecordVersion = c.recordVersion || 0;
   const task = clarification.reviewTask(c, taskId, actor);
+  let factChanged = false;
   if (body.independentlyVerified) {
+    const value = body.value !== undefined ? body.value : body.factValue;
+    const source = body.source;
+    const evidence = String(body.evidenceRef || '').trim();
+    if (value === undefined || value === null || value === '') {
+      throw new ServiceError(400, 'verification_value_required', 'Independent verification requires a concrete fact value');
+    }
+    if (!clarification.INDEPENDENT_SOURCES.has(source)) {
+      throw new ServiceError(400, 'verification_source_required', 'Independent verification requires a listed source');
+    }
+    if (!evidence) {
+      throw new ServiceError(400, 'verification_evidence_required', 'Independent verification requires an evidence reference');
+    }
+    const coerced = facts.coerceFactValue(task.fieldPath, body.status || 'verified', value);
+    if (['unknown', 'not_asked', 'denied', 'conflicting'].includes(coerced.status)) {
+      throw new ServiceError(400, 'verification_value_unresolved', 'Independent verification cannot leave the fact unknown, denied or conflicting');
+    }
+    const before = { hash: c.contentHash, snapshot: structuredClone(contentOf(c)) };
+    const applied = facts.applyFactChange(c.patient, {
+      changeId: randomId('fch'),
+      kind: 'correct',
+      fieldPath: task.fieldPath,
+      newValue: coerced.value,
+      newStatus: coerced.status === 'none' ? 'none' : 'verified',
+    }, actor);
+    c.patient = applied.patient;
+    const key = task.fieldPath === 'patient.sex' ? 'sex' : task.fieldPath.replace('patient.facts.', '');
+    if (c.patient.facts?.[key]) {
+      c.patient.facts[key] = facts.fact({
+        ...c.patient.facts[key],
+        status: coerced.status === 'none' ? 'none' : 'verified',
+        value: coerced.value,
+        verifiedBy: String(actor.id),
+        verifiedAt: new Date().toISOString(),
+        source,
+      });
+      facts.projectFromFacts(c.patient);
+    }
     task.independentlyVerified = true;
-    task.independentSource = body.source || 'pharmacist_chart';
+    task.independentValue = coerced.value;
+    task.independentSource = source;
     task.independentNote = String(body.note || '').slice(0, 300);
+    task.independentEvidence = evidence;
     task.verifiedBy = String(actor.id);
     task.verifiedAt = new Date().toISOString();
+    const pending = (c.patient.factChangeLog || []).find((x) => x.fieldPath === task.fieldPath && x.status === 'pending_verification');
+    if (pending) c.patient = facts.verifyChange(c.patient, pending.changeId, actor);
+    const newHash = hashObject(contentOf(c));
+    if (newHash !== before.hash) {
+      const last = c.contentHistory.at(-1);
+      if (last) last.snapshot = before.snapshot;
+      c.contentVersion += 1;
+      c.contentHash = newHash;
+      c.contentHistory.push({
+        version: c.contentVersion, contentHash: newHash,
+        changedBy: { role: actor.role, id: String(actor.id) },
+        at: new Date().toISOString(), reason: 'independent_verification', changedFields: [task.fieldPath],
+      });
+      record(c, 'content_changed', actor, { fromHash: before.hash, toHash: newHash, version: c.contentVersion, reason: 'independent_verification' });
+      clarification.retainOpenOnFactChange(c);
+      invalidateApproval(c, actor, 'independent_verification');
+      factChanged = true;
+    }
   }
-  const change = (c.patient.factChangeLog || []).find((x) => x.fieldPath === task.fieldPath && x.status === 'pending_verification');
-  if (change) c.patient = facts.verifyChange(c.patient, change.changeId, actor);
-  record(c, 'clarification_reviewed', actor, { taskId, independentlyVerified: Boolean(body.independentlyVerified) });
+  record(c, 'clarification_reviewed', actor, {
+    taskId,
+    independentlyVerified: Boolean(task.independentlyVerified),
+    viewedOnly: !body.independentlyVerified,
+  });
   if (c.state === 'information_incomplete' && !clarification.unresolvedRequired(c).length) {
-    transition(c, 'pharmacist_review_required', actor, 'required_questions_independently_verified');
+    transition(c, 'pharmacist_review_required', actor, 'required_questions_resolved');
   }
-  persistCase(c, c.recordVersion != null ? { expectedRecordVersion: c.recordVersion } : {});
+  persistCase(c, { expectedVersion: loadedContentVersion, expectedRecordVersion: loadedRecordVersion });
   syncPatientMaster(c);
-  return task;
+  if (factChanged) {
+    const fresh = getCaseOr404(caseId);
+    if (['pharmacist_approved', 'patient_confirmation_required', 'patient_confirmed', 'pharmacist_review_required', 'information_incomplete'].includes(fresh.state)
+      || POST_APPROVAL_STATES.has(fresh.state)) {
+      await screen(fresh, 'independent_verification');
+      persistScreenResult(caseId, fresh);
+    }
+  }
+  const stored = getCaseOr404(caseId);
+  return (stored.clarificationTasks || []).find((t) => t.taskId === taskId) || task;
 }
 
 function setFollowUpPlan(caseId, plan, actor) {

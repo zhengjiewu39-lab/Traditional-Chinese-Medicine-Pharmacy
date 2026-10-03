@@ -68,16 +68,17 @@ async function searchGaps({ unknownHerbs = [], herbNames = [], fetchImpl, search
 
 function mergeRetrieval(retrieval, search) {
   if (!search?.drafts?.length) return retrieval;
-  const seen = new Set(retrieval.retrieved.map((e) => e.sourceId));
+  const seen = new Set((retrieval.researchDrafts || []).map((e) => e.sourceId));
   const extra = search.drafts.filter((d) => !seen.has(d.sourceId));
   return {
     ...retrieval,
-    retrieved: [...retrieval.retrieved, ...extra],
+    researchDrafts: [...(retrieval.researchDrafts || []), ...extra],
     externalSearch: {
       used: true,
       draftCount: extra.length,
       queried: search.queried,
       clinicalUse: false,
+      liftsNoEvidence: false,
       note: search.note,
     },
   };

@@ -33,7 +33,10 @@ function findInventoryItem(inventory, herb) {
 
 function planAllocation(c, { inventory, reserved } = {}) {
   const inv = inventory || getStore().inventory || [];
-  const stock = reserved || new Map(inv.map((i) => [i.id, lots.listLots(i.id).length ? lots.rollupQty(i.id) : (i.stock ?? 0)]));
+  const stock = reserved || new Map(inv.map((i) => {
+    lots.ensureLegacyLot(i);
+    return [i.id, lots.authorityQty(i.id)];
+  }));
   const lines = [];
   for (const herb of c.prescription?.herbs || []) {
     const qty = herbQty(herb, c.prescription.doseCount);
@@ -51,7 +54,7 @@ function planAllocation(c, { inventory, reserved } = {}) {
       });
       continue;
     }
-    const lotQty = lots.listLots(item.id).length ? lots.rollupQty(item.id) : (stock.get(item.id) ?? 0);
+    const lotQty = stock.get(item.id) ?? lots.authorityQty(item.id);
     const available = lotQty;
     const ok = qty > 0 && available >= qty;
     if (ok) stock.set(item.id, available - qty);
@@ -79,7 +82,10 @@ function planAllocation(c, { inventory, reserved } = {}) {
 
 function planDesk(cases = repo.listCases()) {
   const inventory = getStore().inventory || [];
-  const reserved = new Map(inventory.map((i) => [i.id, lots.listLots(i.id).length ? lots.rollupQty(i.id) : (i.stock ?? 0)]));
+  const reserved = new Map(inventory.map((i) => {
+    lots.ensureLegacyLot(i);
+    return [i.id, lots.authorityQty(i.id)];
+  }));
   const allocations = [];
   for (const c of cases) {
     if (!FILL_STATES.has(c.state)) continue;
@@ -97,7 +103,8 @@ function planDesk(cases = repo.listCases()) {
   const restock = [];
   for (const item of inventory) {
     const pending = demand.get(item.name) || 0;
-    const stock = item.stock ?? 0;
+    lots.ensureLegacyLot(item);
+    const stock = lots.authorityQty(item.id);
     const min = item.minStock ?? 0;
     const target = Math.max(min * 2, min + pending);
     const suggestedQty = Math.max(0, Math.ceil(target - stock));

@@ -380,10 +380,11 @@ export default function ReviewDetail() {
                 <Section title={t('ai.review.shadowTitle')}>
                   <Alert severity="info" sx={{ mb: 1 }}>{t('ai.review.shadowHint')}</Alert>
                   <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>{out.shadowResult.pharmacistExplanation}</Typography>
-                  {(out.deskNotes || out.shadowResult.deskNotes) && (
+                  {out.shadowResult.deskNotes && (
                     <Box sx={{ mt: 1 }}>
+                      <Alert severity="warning" sx={{ mb: 1 }}>{t('ai.review.deskShadowOnly')}</Alert>
                       {['screening', 'dispensing', 'admin'].map((k) => {
-                        const text = (out.deskNotes || out.shadowResult.deskNotes || {})[k];
+                        const text = out.shadowResult.deskNotes[k];
                         if (!text) return null;
                         const titleKey = k === 'screening' ? 'ai.review.deskScreening' : k === 'dispensing' ? 'ai.review.deskDispensing' : 'ai.review.deskAdmin';
                         return (
@@ -419,6 +420,22 @@ export default function ReviewDetail() {
                 <Divider sx={{ my: 1 }} />
                 <Typography variant="caption" color="text.secondary">{t('ai.review.patientExplain')}</Typography>
                 <Typography variant="body2">{out.patientExplanation}</Typography>
+                {out.deskNotes && (
+                  <Box sx={{ mt: 1 }}>
+                    <Alert severity="info" sx={{ mb: 1 }}>{t('ai.review.deskOfficialHint')}</Alert>
+                    {['screening', 'dispensing', 'admin'].map((k) => {
+                      const text = out.deskNotes[k];
+                      if (!text) return null;
+                      const titleKey = k === 'screening' ? 'ai.review.deskScreening' : k === 'dispensing' ? 'ai.review.deskDispensing' : 'ai.review.deskAdmin';
+                      return (
+                        <Box key={k} sx={{ mt: 1 }}>
+                          <Typography variant="caption" color="text.secondary">{t(titleKey)}</Typography>
+                          <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>{text}</Typography>
+                        </Box>
+                      );
+                    })}
+                  </Box>
+                )}
               </Section>
 
               <Section title={t('ai.review.cites')}>
@@ -433,6 +450,11 @@ export default function ReviewDetail() {
                   ))}
                 </List>
                 {out.retrievalTrackResult.missingEvidenceFor.length > 0 && <Alert severity="info">{t('ai.review.missingEvid', { v: out.retrievalTrackResult.missingEvidenceFor.join(', ') })}</Alert>}
+                {(out.retrievalTrackResult.researchDrafts || []).length > 0 && (
+                  <Alert severity="warning" sx={{ mt: 1 }}>
+                    {t('ai.review.researchDrafts', { n: out.retrievalTrackResult.researchDrafts.length })}
+                  </Alert>
+                )}
               </Section>
 
               <Section title={t('ai.review.ops')}>
