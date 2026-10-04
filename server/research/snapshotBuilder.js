@@ -3,14 +3,22 @@
  * Does not invent clinical facts. Unlabeled seed rows stay synthetic.
  */
 const { hashObject, sha256 } = require('../common/hash');
+const safetyRules = require('../config/ai-safety-rules.json');
 
 const SELECTION_RULE = {
   id: 'one-rx-per-patient-date-asc-id-asc@1',
   text: 'For each patient, choose the prescription with the earliest date, then the lowest numeric id. One patient yields one base case.',
 };
 
+const ENCOUNTER_RULE = {
+  id: 'issued-at-as-encounter@1',
+  text: 'Analyze as of the frozen issuedAt date. The original issue date is kept. Stale-at-evaluation-now is a stratum, not a rewritten date. The expiry rule is not deleted.',
+};
+
 const DATASET_ID = 'research-500-v1';
-const DATASET_VERSION = '1.0.0';
+const DATASET_VERSION = '1.1.0';
+const ANALYZABLE_UNITS = new Set(['g', '克']);
+const UNSUPPORTED_UNITS = new Set(['kg', '千克', 'ml', '毫升', '盒', '瓶', '袋']);
 
 function sexOf(gender) {
   if (gender === '男' || gender === 'male') return 'male';
@@ -25,12 +33,28 @@ function parseDose(raw) {
     return { ok: true, qty: raw, unit: 'g' };
   }
   const s = String(raw).trim();
-  const m = s.match(/^(\d+(?:\.\d+)?)\s*(g|克|kg|千克|ml|毫升|盒|瓶|袋)?$/i);
+  const m = s.match(/^(-?\d+(?:\.\d+)?)\s*([A-Za-zµμ\u4e00-\u9fff]+)?$/);
   if (!m) return { ok: false, reason: 'unparsed_dose', raw: s };
   const qty = Number(m[1]);
   if (!Number.isFinite(qty) || qty <= 0) return { ok: false, reason: 'invalid_dose', raw: s };
-  const unit = ({ 克: 'g', 千克: 'kg', 毫升: 'ml' }[m[2]] || m[2] || 'g');
-  return { ok: true, qty, unit };
+  const unitRaw = m[2];
+  if (!unitRaw) return { ok: false, reason: 'missing_unit', raw: s };
+  if (UNSUPPORTED_UNITS.has(unitRaw) || !ANALYZABLE_UNITS.has(unitRaw)) {
+    return { ok: false, reason: 'unsupported_unit', raw: s, unit: unitRaw };
+  }
+  return { ok: true, qty, unit: 'g' };
+}
+
+function parseDoseCount(raw) {
+  if (raw == null || raw === '') return { ok: false, reason: 'missing_dose_count', raw };
+  if (typeof raw === 'string' && !/^\d+$/.test(String(raw).trim())) {
+    return { ok: false, reason: 'invalid_dose_count', raw };
+  }
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n <= 0 || !Number.isInteger(n)) {
+    return { ok: false, reason: 'invalid_dose_count', raw };
+  }
+  return { ok: true, value: n };
 }
 
 function parseHerbs(rx) {
@@ -45,12 +69,39 @@ function parseHerbs(rx) {
     }
     const dose = parseDose(h.dosage);
     if (!dose.ok) {
-      errors.push({ reason: dose.reason, herb: name, raw: h.dosage });
+      errors.push({ reason: dose.reason, herb: name, raw: h.dosage, unit: dose.unit || null });
       continue;
     }
-    herbs.push({ name, dosage: dose.qty, unit: h.unit || dose.unit });
+    herbs.push({ name, dosage: dose.qty, unit: 'g' });
   }
-  return { herbs, errors };
+  return {
+    herbs: errors.length ? [] : herbs,
+    errors,
+    sourceHerbs: lines,
+    unanalyzable: errors.length > 0,
+  };
+}
+
+function daysBetween(isoDate, now) {
+  return Math.floor((new Date(now).getTime() - new Date(`${String(isoDate).slice(0, 10)}T00:00:00Z`).getTime()) / 86400000);
+}
+
+function scriptsFromKnown(known) {
+  const script = {};
+  if (known.ageYears != null) {
+    script['patient.facts.ageYears'] = { status: 'reported', value: known.ageYears, source: 'script_from_source' };
+  } else {
+    script['patient.facts.ageYears'] = { status: 'unknown', value: null, source: 'script_absent_in_source' };
+  }
+  if (known.allergies?.value?.length) {
+    script['patient.facts.allergies'] = { status: 'reported', value: known.allergies.value, source: 'script_from_source' };
+  } else {
+    script['patient.facts.allergies'] = { status: 'unknown', value: null, source: 'script_absent_in_source' };
+  }
+  script['patient.facts.pregnancy'] = { status: 'unknown', value: null, source: 'script_absent_in_source' };
+  script['patient.facts.currentMedications'] = { status: 'unknown', value: null, source: 'script_absent_in_source' };
+  script['patient.facts.liverImpairment'] = { status: 'unknown', value: null, source: 'script_absent_in_source' };
+  return script;
 }
 
 function provenanceOf(patient, rx) {
@@ -106,6 +157,7 @@ function pickPrescription(rxs) {
 function buildScenes(base, known) {
   const scenes = [];
   const split = base.split;
+  const askable = scriptsFromKnown(known);
   scenes.push({
     id: `${base.baseId}:complete`,
     baseId: base.baseId,
@@ -114,7 +166,7 @@ function buildScenes(base, known) {
     description: 'All facts present in the source record are visible. Absent fields stay unknown.',
     initialObservedFacts: { ...known },
     hiddenPatientFacts: {},
-    patientAnswerScript: {},
+    patientAnswerScript: { ...askable },
     narrativeText: narrativeFromFacts(known, base.prescription),
   });
   if (known.allergies?.value?.length) {
@@ -127,9 +179,7 @@ function buildScenes(base, known) {
       description: 'Known allergy list withheld from the initial chart; script reports the same list.',
       initialObservedFacts: rest,
       hiddenPatientFacts: { allergies: allergies.value },
-      patientAnswerScript: {
-        'patient.facts.allergies': { status: 'reported', value: allergies.value, source: 'script_from_source' },
-      },
+      patientAnswerScript: { ...askable, 'patient.facts.allergies': { status: 'reported', value: allergies.value, source: 'script_from_source' } },
       narrativeText: narrativeFromFacts(rest, base.prescription),
     });
   } else {
@@ -141,9 +191,7 @@ function buildScenes(base, known) {
       description: 'Source has no usable allergy list. Script answers unknown. Empty list is not treated as none.',
       initialObservedFacts: { ...known },
       hiddenPatientFacts: { allergies: 'unknown' },
-      patientAnswerScript: {
-        'patient.facts.allergies': { status: 'unknown', value: null, source: 'script_absent_in_source' },
-      },
+      patientAnswerScript: { ...askable },
       narrativeText: narrativeFromFacts(known, base.prescription),
     });
   }
@@ -155,7 +203,7 @@ function buildScenes(base, known) {
     description: 'Natural-language paraphrase of the same visible facts. Wording is not a new clinical fact.',
     initialObservedFacts: { ...known },
     hiddenPatientFacts: {},
-    patientAnswerScript: {},
+    patientAnswerScript: { ...askable },
     narrativeText: narrativeFromFacts(known, base.prescription, { colloquial: true }),
     paraphraseOf: `${base.baseId}:complete`,
   });
@@ -166,6 +214,9 @@ function buildScenes(base, known) {
     clinicalCorrectness: 'not_evaluated',
     prescription: base.prescription,
     researchCaseId: s.id,
+    encounterAt: base.encounterAt,
+    evaluationNow: base.evaluationNow,
+    staleAtEvaluationNow: base.staleAtEvaluationNow,
   }));
 }
 
@@ -179,7 +230,9 @@ function narrativeFromFacts(facts, prescription, { colloquial } = {}) {
   return `${sex}，${age}。${alg}。处方：${herbs || '未解析'}。`;
 }
 
-function buildSnapshot({ patients = [], prescriptions = [], sourceVersion = 'store' } = {}) {
+function buildSnapshot({ patients = [], prescriptions = [], sourceVersion = 'store', evaluationNow = null } = {}) {
+  const frozenEvalNow = evaluationNow || new Date().toISOString();
+  const validityDays = Number(safetyRules.limits?.prescriptionValidityDays || 3);
   const exceptions = [];
   const seenRef = new Set();
   const seenCase = new Set();
@@ -217,18 +270,27 @@ function buildSnapshot({ patients = [], prescriptions = [], sourceVersion = 'sto
       continue;
     }
     const parsed = parseHerbs(rx);
-    if (!parsed.herbs.length || parsed.errors.length) {
+    if (parsed.unanalyzable || !parsed.herbs.length) {
       exceptions.push({
-        code: 'illegal_prescription',
+        code: 'unanalyzable_prescription',
         patientRef: ref,
         prescriptionId: rx.id,
         errors: parsed.errors,
+        sourceHerbs: parsed.sourceHerbs,
+        executable: false,
       });
-      if (!parsed.herbs.length) continue;
+      continue;
     }
-    const doseCount = Number(rx.doseCount) || 7;
-    if (!Number.isFinite(doseCount) || doseCount <= 0) {
-      exceptions.push({ code: 'illegal_dose_count', patientRef: ref, prescriptionId: rx.id, raw: rx.doseCount });
+    const doseParsed = parseDoseCount(rx.doseCount);
+    if (rx.doseCount != null && rx.doseCount !== '' && !doseParsed.ok) {
+      exceptions.push({
+        code: 'unanalyzable_dose_count',
+        patientRef: ref,
+        prescriptionId: rx.id,
+        raw: rx.doseCount,
+        reason: doseParsed.reason,
+        executable: false,
+      });
       continue;
     }
     const baseId = researchCaseId(ref, rx.id);
@@ -238,19 +300,29 @@ function buildSnapshot({ patients = [], prescriptions = [], sourceVersion = 'sto
     }
     seenCase.add(baseId);
     const known = knownFactsFromPatient(patient);
+    const declaredDefaults = {};
+    if (!doseParsed.ok) declaredDefaults.doseCount = 7;
+    if (!rx.usage) declaredDefaults.usage = '水煎服';
+    if (!rx.form) declaredDefaults.form = 'decoction';
+    const issuedAt = String(rx.date || '').slice(0, 10) || null;
     const prescription = {
       herbs: parsed.herbs,
-      doseCount,
-      usage: rx.usage || '水煎服',
-      form: 'decoction',
-      issuedAt: String(rx.date || '').slice(0, 10) || null,
+      doseCount: doseParsed.ok ? doseParsed.value : declaredDefaults.doseCount,
+      usage: rx.usage || declaredDefaults.usage,
+      form: rx.form || declaredDefaults.form,
+      issuedAt,
+      declaredDefaults,
     };
+    const staleAtEvaluationNow = Boolean(issuedAt && daysBetween(issuedAt, frozenEvalNow) > validityDays);
     bases.push({
       baseId,
       split: splitOf(baseId),
       provenance: provenanceOf(patient, rx),
       knownCompleteFacts: known,
       prescription,
+      encounterAt: issuedAt,
+      evaluationNow: frozenEvalNow,
+      staleAtEvaluationNow,
       source: { storePatientRef: ref, storePrescriptionId: rx.id },
     });
   }
@@ -263,7 +335,10 @@ function buildSnapshot({ patients = [], prescriptions = [], sourceVersion = 'sto
   const payload = {
     datasetId: DATASET_ID,
     version: DATASET_VERSION,
-    generatedAt: new Date().toISOString(),
+    generatedAt: frozenEvalNow,
+    evaluationNow: frozenEvalNow,
+    encounterRule: ENCOUNTER_RULE,
+    prescriptionValidityDays: validityDays,
     sourceVersion,
     selectionRule: SELECTION_RULE,
     purpose: {
@@ -285,6 +360,9 @@ function buildSnapshot({ patients = [], prescriptions = [], sourceVersion = 'sto
       provenance: b.provenance,
       knownCompleteFacts: b.knownCompleteFacts,
       prescription: b.prescription,
+      encounterAt: b.encounterAt,
+      evaluationNow: b.evaluationNow,
+      staleAtEvaluationNow: b.staleAtEvaluationNow,
       source: b.source,
     })),
     cases,
@@ -298,30 +376,48 @@ function buildSnapshot({ patients = [], prescriptions = [], sourceVersion = 'sto
       unlabeledSynthetic: bases.filter((b) => b.provenance.evidence.includes('unlabeled_initialization_record')).length,
     },
   };
-  const contentHash = hashObject({
+  payload.contentHash = hashSnapshotContent(payload);
+  return payload;
+}
+
+function hashSnapshotContent(payload) {
+  return hashObject({
     datasetId: payload.datasetId,
     version: payload.version,
+    evaluationNow: payload.evaluationNow,
+    encounterRule: payload.encounterRule,
+    defaults: payload.defaults,
     selectionRule: payload.selectionRule,
     baseCases: payload.baseCases,
-    cases: payload.cases.map((c) => ({
-      id: c.id, baseId: c.baseId, split: c.split, category: c.category,
-      initialObservedFacts: c.initialObservedFacts, hiddenPatientFacts: c.hiddenPatientFacts,
-      patientAnswerScript: c.patientAnswerScript, prescription: c.prescription,
+    cases: (payload.cases || []).map((c) => ({
+      id: c.id,
+      baseId: c.baseId,
+      split: c.split,
+      category: c.category,
+      initialObservedFacts: c.initialObservedFacts,
+      hiddenPatientFacts: c.hiddenPatientFacts,
+      patientAnswerScript: c.patientAnswerScript,
+      prescription: c.prescription,
+      narrativeText: c.narrativeText || null,
+      encounterAt: c.encounterAt || null,
+      staleAtEvaluationNow: Boolean(c.staleAtEvaluationNow),
     })),
     exceptions: payload.exceptions,
   });
-  payload.contentHash = contentHash;
-  return payload;
 }
 
 module.exports = {
   SELECTION_RULE,
+  ENCOUNTER_RULE,
   DATASET_ID,
   DATASET_VERSION,
   parseDose,
+  parseDoseCount,
   parseHerbs,
+  scriptsFromKnown,
   provenanceOf,
   knownFactsFromPatient,
+  hashSnapshotContent,
   buildSnapshot,
   researchCaseId,
 };

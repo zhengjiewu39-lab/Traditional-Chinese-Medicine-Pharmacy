@@ -66,12 +66,17 @@ export default function Evaluation() {
   const [jobs, setJobs] = useState([]);
   const [selectedJob, setSelectedJob] = useState(null);
   const [results, setResults] = useState([]);
+  const [resultsJobId, setResultsJobId] = useState(null);
+  const [resultsTotal, setResultsTotal] = useState(0);
+  const [resultPage, setResultPage] = useState(1);
+  const [selectedSceneId, setSelectedSceneId] = useState('');
   const [trace, setTrace] = useState(null);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [page, setPage] = useState(1);
   const [q, setQ] = useState('');
   const [busyAdvise, setBusyAdvise] = useState(false);
+  const [busyStart, setBusyStart] = useState(false);
   const [cfg, setCfg] = useState({
     groups: ['A', 'C', 'D'],
     split: 'test',
@@ -82,6 +87,7 @@ export default function Evaluation() {
     maxBurden: 6,
     maxRounds: 3,
     confirmLive: false,
+    confirmFullLive: false,
     contentHash: '',
     newRun: false,
   });
@@ -90,7 +96,7 @@ export default function Evaluation() {
     const [h, s, c, e, j] = await Promise.all([
       researchEvalApi.home(),
       researchEvalApi.snapshot(),
-      researchEvalApi.snapshotCases({ q, offset: (page - 1) * 10, limit: 10 }),
+      researchEvalApi.snapshotCases({ q, offset: (page - 1) * 10, limit: 10, contentHash: cfg.contentHash || undefined }),
       researchEvalApi.snapshotExceptions(),
       researchEvalApi.listJobs(),
     ]);
@@ -99,7 +105,7 @@ export default function Evaluation() {
     setCases(c.data);
     setExceptions(e.data.records || []);
     setJobs(j.data.jobs || []);
-  }, [page, q]);
+  }, [page, q, cfg.contentHash]);
 
   useEffect(() => {
     load().catch((err) => setError(formatApiError(err)));
@@ -111,12 +117,21 @@ export default function Evaluation() {
     const tmr = setInterval(() => {
       load().catch(() => {});
       if (selectedJob?.id) {
-        researchEvalApi.getJob(selectedJob.id).then((r) => setSelectedJob(r.data.job)).catch(() => {});
-        researchEvalApi.jobResults(selectedJob.id).then((r) => setResults(r.data.results || [])).catch(() => {});
+        const jobId = selectedJob.id;
+        researchEvalApi.getJob(jobId).then((r) => {
+          if (r.data.job?.id === jobId) setSelectedJob(r.data.job);
+        }).catch(() => {});
+        researchEvalApi.jobResults(jobId, { offset: (resultPage - 1) * 20, limit: 20 }).then((r) => {
+          if (r.data.jobId === jobId) {
+            setResults(r.data.results || []);
+            setResultsTotal(r.data.total ?? (r.data.results || []).length);
+            setResultsJobId(jobId);
+          }
+        }).catch(() => {});
       }
     }, 2000);
     return () => clearInterval(tmr);
-  }, [jobs, selectedJob?.id, load]);
+  }, [jobs, selectedJob?.id, load, resultPage]);
 
   const start = async (preset) => {
     setError('');
@@ -125,10 +140,16 @@ export default function Evaluation() {
       setError(t('researchEval.needGroup'));
       return;
     }
+    if (preset === 'single' && !selectedSceneId) {
+      setError(t('researchEval.needCase'));
+      return;
+    }
+    setBusyStart(true);
     try {
       const body = {
         groups: preset === 'single' ? ['D'] : cfg.groups,
         split: cfg.split,
+        selectUnit: 'base_case',
         limit: preset === 'single' ? 1 : preset === 'pilot' ? Math.min(8, Number(cfg.limit) || 8) : cfg.limit,
         replicates: cfg.replicates,
         inferenceMode: cfg.inferenceMode,
@@ -136,15 +157,24 @@ export default function Evaluation() {
         maxBurden: cfg.maxBurden,
         maxRounds: cfg.maxRounds,
         confirmLive: cfg.confirmLive,
+        confirmFullLive: cfg.confirmFullLive,
+        ...(preset === 'single' && selectedSceneId ? { ids: [selectedSceneId] } : {}),
         ...(cfg.contentHash ? { contentHash: cfg.contentHash } : {}),
         ...(cfg.newRun ? { runTag: `rerun-${Date.now()}` } : {}),
       };
       const res = await researchEvalApi.createJob(body);
       setNotice(res.data.replayed ? t('researchEval.replayed') : t('researchEval.created', { id: res.data.job.id }));
       setSelectedJob(res.data.job);
+      setResults([]);
+      setResultsJobId(res.data.job.id);
+      setResultsTotal(0);
+      setResultPage(1);
+      setTrace(null);
       await load();
     } catch (err) {
       setError(formatApiError(err));
+    } finally {
+      setBusyStart(false);
     }
   };
 
@@ -160,8 +190,19 @@ export default function Evaluation() {
 
   const openResults = async (job) => {
     setSelectedJob(job);
-    const res = await researchEvalApi.jobResults(job.id);
-    setResults(res.data.results || []);
+    setResults([]);
+    setTrace(null);
+    setResultsJobId(job.id);
+    setResultPage(1);
+    try {
+      const res = await researchEvalApi.jobResults(job.id, { offset: 0, limit: 20 });
+      if (res.data.jobId === job.id) {
+        setResults(res.data.results || []);
+        setResultsTotal(res.data.total ?? (res.data.results || []).length);
+      }
+    } catch (err) {
+      setError(formatApiError(err));
+    }
   };
 
   const downloadExport = async (id, format) => {
@@ -249,7 +290,15 @@ export default function Evaluation() {
           </TableHead>
           <TableBody>
             {(cases.records || []).map((c) => (
-              <TableRow key={c.id} hover onClick={() => researchEvalApi.snapshotCase(c.id).then((r) => setTrace({ kind: 'case', ...r.data }))}>
+              <TableRow
+                key={c.id}
+                hover
+                selected={selectedSceneId === c.id}
+                onClick={() => {
+                  setSelectedSceneId(c.id);
+                  researchEvalApi.snapshotCase(c.id, { contentHash: cfg.contentHash || snap?.contentHash }).then((r) => setTrace({ kind: 'case', ...r.data })).catch((err) => setError(formatApiError(err)));
+                }}
+              >
                 <TableCell>{c.id}</TableCell>
                 <TableCell>{c.baseId}</TableCell>
                 <TableCell>{c.split}</TableCell>
@@ -316,11 +365,12 @@ export default function Evaluation() {
               <MenuItem value="end_to_end_nl">{t('researchEval.e2e')}</MenuItem>
             </Select>
           </FormControl>
-          <FormControl size="small" sx={{ minWidth: 220 }}>
+          <FormControl size="small" sx={{ minWidth: 260 }}>
             <InputLabel>{t('researchEval.split')}</InputLabel>
             <Select label={t('researchEval.split')} value={cfg.split} onChange={(e) => setCfg({ ...cfg, split: e.target.value })}>
               <MenuItem value="test">{t('researchEval.splitTest')}</MenuItem>
               <MenuItem value="dev">{t('researchEval.splitDev')}</MenuItem>
+              <MenuItem value="all">{t('researchEval.splitAll')}</MenuItem>
             </Select>
           </FormControl>
           <TextField size="small" type="number" label={t('researchEval.limit')} value={cfg.limit} onChange={(e) => setCfg({ ...cfg, limit: Number(e.target.value) })} sx={{ width: 120 }} />
@@ -334,9 +384,24 @@ export default function Evaluation() {
           label={t('researchEval.confirmLive')}
         />
         <FormControlLabel
+          control={<Switch checked={cfg.confirmFullLive} onChange={(e) => setCfg({ ...cfg, confirmFullLive: e.target.checked })} />}
+          label={t('researchEval.confirmFullLive')}
+        />
+        <FormControlLabel
           control={<Switch checked={cfg.newRun} onChange={(e) => setCfg({ ...cfg, newRun: e.target.checked })} />}
           label={t('researchEval.newRun')}
         />
+        {selectedSceneId && <Typography variant="caption" display="block">{t('researchEval.selectedCase')}: {selectedSceneId}</Typography>}
+        {selectedJob?.estimate && (
+          <Typography variant="caption" display="block">
+            {t('researchEval.estimate', {
+              bases: selectedJob.estimate.baseCases,
+              scenes: selectedJob.estimate.scenes,
+              groups: selectedJob.estimate.groups,
+              tasks: selectedJob.estimate.tasks,
+            })}
+          </Typography>
+        )}
         <Alert severity={home?.limits?.allowLive ? 'success' : 'warning'} sx={{ mt: 1 }}>
           {home?.limits?.allowLive
             ? t('researchEval.liveOpen', { n: home.limits.maxCasesLive || 8 })
@@ -344,9 +409,9 @@ export default function Evaluation() {
         </Alert>
         <Typography variant="caption" display="block">{t('researchEval.noKeys')}</Typography>
         <Stack direction="row" spacing={1} sx={{ mt: 2 }} flexWrap="wrap" useFlexGap>
-          <Button variant="contained" onClick={() => start('single')}>{t('researchEval.startSingle')}</Button>
-          <Button onClick={() => start('pilot')}>{t('researchEval.startPilot')}</Button>
-          <Button color="warning" onClick={() => start('full')}>{t('researchEval.startRange')}</Button>
+          <Button variant="contained" disabled={busyStart} onClick={() => start('single')}>{t('researchEval.startSingle')}</Button>
+          <Button disabled={busyStart} onClick={() => start('pilot')}>{t('researchEval.startPilot')}</Button>
+          <Button color="warning" disabled={busyStart} onClick={() => start('full')}>{t('researchEval.startRange')}</Button>
         </Stack>
       </Paper>
 
@@ -398,8 +463,8 @@ export default function Evaluation() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {results.map((r) => (
-              <TableRow key={r.key || `${r.groupId}-${r.researchCaseId}`} hover onClick={() => setTrace({ kind: 'result', row: r, advisor: r.advisor })}>
+            {resultsJobId === selectedJob?.id && results.map((r) => (
+              <TableRow key={r.key || `${r.groupId}-${r.researchCaseId}`} hover onClick={() => setTrace({ kind: 'result', row: r, advisor: r.advisor, jobId: selectedJob.id })}>
                 <TableCell>{r.groupId}</TableCell>
                 <TableCell>{r.researchCaseId}</TableCell>
                 <TableCell>{r.filteredRisk || '—'}</TableCell>
@@ -419,6 +484,7 @@ export default function Evaluation() {
             ))}
           </TableBody>
         </Table>
+        <Pagination count={Math.max(1, Math.ceil((resultsTotal || 0) / 20))} page={resultPage} onChange={(_, p) => setResultPage(p)} sx={{ mt: 1 }} />
       </Paper>
 
       {trace && (
@@ -432,11 +498,11 @@ export default function Evaluation() {
               <Typography variant="body2">{t('researchEval.rawRisk')} {trace.row.rawRisk || '—'} / {t('researchEval.filteredRisk')} {trace.row.filteredRisk || '—'} / {t('researchEval.reviewBox')} {trace.row.professionalReview?.clinicalCorrectness || 'not_evaluated'}</Typography>
               {(trace.row.clarificationTurns || []).map((turn, i) => (
                 <Typography key={`${turn.fieldPath}-${i}`} variant="caption" display="block">
-                  {turn.round} · {turn.fieldPath} · {t('researchEval.whyAsk')}：{turn.whyAsked} · {t('researchEval.scriptAns')} {turn.answered ? '✓' : '—'} · {turn.kind}
+                  {turn.round} · {turn.fieldPath} · {t('researchEval.whyAsk')}：{turn.whyAsked} · {t('researchEval.scriptAns')} {turn.factResolved ? '✓' : (turn.answeredUnknown ? 'unknown' : (turn.noScript ? 'no_script' : '—'))} · {turn.kind}
                 </Typography>
               ))}
-              <Typography variant="subtitle2" sx={{ mt: 1 }}>{t('researchEval.raw')}</Typography>
-              <pre style={{ whiteSpace: 'pre-wrap', fontSize: 12 }}>{JSON.stringify(trace.row.rawModelOutput, null, 2)}</pre>
+              <Typography variant="subtitle2" sx={{ mt: 1 }}>{t('researchEval.filteredSemantic')}</Typography>
+              <pre style={{ whiteSpace: 'pre-wrap', fontSize: 12 }}>{JSON.stringify(trace.row.semanticResult || trace.row.filteredOutput, null, 2)}</pre>
               <Typography variant="subtitle2">{t('researchEval.filtered')}</Typography>
               <pre style={{ whiteSpace: 'pre-wrap', fontSize: 12 }}>{JSON.stringify(trace.row.filteredOutput, null, 2)}</pre>
             </Box>
@@ -445,7 +511,12 @@ export default function Evaluation() {
           {user?.role === 'researcher' ? (
             <Button size="small" onClick={() => {
               const id = trace.case?.id || trace.row?.researchCaseId;
-              if (id) researchEvalApi.snapshotCase(id, { annotate: 1 }).then((r) => setTrace({ kind: 'annotate', ...r.data, advisor: trace.advisor }));
+              const hash = selectedJob?.datasetHash || cfg.contentHash || snap?.contentHash;
+              if (id) {
+                researchEvalApi.snapshotCase(id, { annotate: 1, contentHash: hash })
+                  .then((r) => setTrace({ kind: 'reference', ...r.data, advisor: trace.advisor, jobId: selectedJob?.id }))
+                  .catch((err) => setError(formatApiError(err)));
+              }
             }}
             >
               {t('researchEval.annotate')}

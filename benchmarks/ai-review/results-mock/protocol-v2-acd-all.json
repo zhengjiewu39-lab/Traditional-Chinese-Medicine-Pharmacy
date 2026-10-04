@@ -1,0 +1,83 @@
+{
+  "generatedAt": "2026-10-04T15:31:58.082Z",
+  "engineVersion": "research-engine@2.0.0",
+  "inferenceMode": "mock",
+  "clinicalAccuracy": "not_evaluated",
+  "datasetId": "research-500-v1",
+  "datasetVersion": "1.1.0",
+  "contentHash": "3eeb6bf962de68ee672c4d53881a0fc0e0c817017070172a6277dd57f3669e30",
+  "evaluationNow": "2026-10-04T15:31:56.609Z",
+  "encounterRule": {
+    "id": "issued-at-as-encounter@1",
+    "text": "Analyze as of the frozen issuedAt date. The original issue date is kept. Stale-at-evaluation-now is a stratum, not a rewritten date. The expiry rule is not deleted."
+  },
+  "baseCases": 500,
+  "scenes": 1500,
+  "groups": [
+    "A",
+    "C",
+    "D"
+  ],
+  "replicates": 1,
+  "tasks": 4500,
+  "byGroup": {
+    "A": {
+      "rows": 1500,
+      "risk": {
+        "A1": 0,
+        "A2": 1017,
+        "A3": 483,
+        "other": 0
+      },
+      "expiredRuleHits": 0,
+      "staleAtEvaluationNow": 1500,
+      "asked": 5234,
+      "scriptResponded": 5234,
+      "factResolved": 383,
+      "answeredUnknown": 4851,
+      "noScript": 0,
+      "refused": 0,
+      "engineeringFailures": 0,
+      "ok": 1500
+    },
+    "C": {
+      "rows": 1500,
+      "risk": {
+        "A1": 372,
+        "A2": 645,
+        "A3": 483,
+        "other": 0
+      },
+      "expiredRuleHits": 0,
+      "staleAtEvaluationNow": 1500,
+      "asked": 9000,
+      "scriptResponded": 5234,
+      "factResolved": 383,
+      "answeredUnknown": 4851,
+      "noScript": 3766,
+      "refused": 0,
+      "engineeringFailures": 0,
+      "ok": 1500
+    },
+    "D": {
+      "rows": 1500,
+      "risk": {
+        "A1": 372,
+        "A2": 645,
+        "A3": 483,
+        "other": 0
+      },
+      "expiredRuleHits": 0,
+      "staleAtEvaluationNow": 1500,
+      "asked": 9000,
+      "scriptResponded": 5234,
+      "factResolved": 383,
+      "answeredUnknown": 4851,
+      "noScript": 3766,
+      "refused": 0,
+      "engineeringFailures": 0,
+      "ok": 1500
+    }
+  },
+  "note": "Offline mock only. Not a live model. Not clinical correctness. Dev and test scenes are both included because this is an engineering queue check."
+}

@@ -24,14 +24,20 @@ const AI_LABEL = 'AI生成，需药师审核';
 async function callWithTimeout(provider, args, timeoutMs) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const onOuter = () => controller.abort();
+  if (args.signal) {
+    if (args.signal.aborted) controller.abort();
+    else args.signal.addEventListener('abort', onOuter, { once: true });
+  }
   try {
     return await provider.complete({ ...args, signal: controller.signal });
   } finally {
     clearTimeout(timer);
+    if (args.signal) args.signal.removeEventListener('abort', onOuter);
   }
 }
 
-async function runSemanticTrack({ provider, caseRecord, ruleTrack, retrieval, timeoutMs, inputScreen }) {
+async function runSemanticTrack({ provider, caseRecord, ruleTrack, retrieval, timeoutMs, inputScreen, signal }) {
   const base = {
     provider: provider?.id || 'disabled',
     isMock: Boolean(provider?.isMock),
@@ -57,7 +63,7 @@ async function runSemanticTrack({ provider, caseRecord, ruleTrack, retrieval, ti
   const started = process.hrtime.bigint();
   let raw;
   try {
-    raw = await callWithTimeout(provider, { messages, context: { ruleSummary, evidence: retrieval.retrieved, minimisedCase }, jsonSchema: SEMANTIC_OUTPUT_SCHEMA }, timeoutMs);
+    raw = await callWithTimeout(provider, { messages, context: { ruleSummary, evidence: retrieval.retrieved, minimisedCase }, jsonSchema: SEMANTIC_OUTPUT_SCHEMA, signal }, timeoutMs);
   } catch (err) {
     const latencyMs = Number(process.hrtime.bigint() - started) / 1e6;
     const status = err.code === 'circuit_open' ? 'circuit_open' : err.name === 'AbortError' ? 'timeout' : 'error';
@@ -162,7 +168,7 @@ function emptyRetrieval(ruleHits = []) {
 async function analyzeCase(caseRecord, {
   provider = null, aiEnabled = true, timeoutMs = 8000, now = new Date(), aiMode,
   rulesEnabled = true, retrievalEnabled = true, clarificationMode = 'none',
-  searchExternal, fetchImpl, searchHerbImpl,
+  searchExternal, fetchImpl, searchHerbImpl, signal,
 } = {}) {
   const mode = aiMode || getAiMode();
   const ruleTrack = runRuleTrack(caseRecord, { now });
@@ -194,6 +200,7 @@ async function analyzeCase(caseRecord, {
     retrieval: semanticRetrieval,
     timeoutMs,
     inputScreen,
+    signal,
   });
   if (!aiEnabled && provider) semantic.status = 'disabled_by_kill_switch';
 

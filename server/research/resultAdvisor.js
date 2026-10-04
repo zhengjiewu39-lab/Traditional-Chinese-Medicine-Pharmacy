@@ -4,9 +4,8 @@
  * Hidden scripts never enter the model payload.
  */
 const runtime = require('../ai/aiRuntime');
-const { createMockProvider } = require('../ai/mockProvider');
-const { createProvider } = require('../ai/providerAdapter');
 const { screenOutput } = require('../ai/safetyPolicy');
+const { resolveCapabilities, providerForKind } = require('./capabilityPolicy');
 
 const CLINICAL = 'not_evaluated';
 
@@ -69,7 +68,7 @@ function deterministicResult(job, row, lang) {
 
   if (p.asked > 0 && p.answered === 0) {
     meaning.push(copy('脚本没有可确认的事实。源记录缺这项时保持未知，不会补成“无过敏/未孕”。', 'The script had no confirmable fact. Missing source fields stay unknown and are not filled as none.', lang));
-    nextSteps.push(copy('打开标注视图核对该场景的隐藏脚本（不会发给被测模型）。', 'Open the label view to check the hidden script for this scene. It is not sent to the model under test.', lang));
+    nextSteps.push(copy('打开参考事实视图核对该场景的隐藏脚本（不是已完成的专业标注）。', 'Open the reference-fact view to check the hidden script. This is not a completed expert label.', lang));
   }
   if (p.stopReason === 'burden_cap') {
     nextSteps.push(copy('交互预算用尽。若要比较 C 与 D，保持两边预算相同后再看追问次数。', 'The interaction budget was used up. To compare C and D, keep the same budget on both sides.', lang));
@@ -150,12 +149,24 @@ function outputLooksUnsafe(text) {
 
 async function maybeModelPolish(base, { job, wantModel, lang }) {
   if (!wantModel) return base;
-  if (!runtime.isAiEnabled()) {
-    return { ...base, source: 'policy_paused', pathHint: copy('全局 AI 已关闭，仅保留规则解读，未安排外部模型。', 'The global AI switch is off. Only the rule reading is kept; no external model was called.', lang) };
+  const { limits } = require('./experimentJobs');
+  const cap = limits();
+  const requested = job.config?.inferenceMode === 'real' ? 'real' : 'mock';
+  const caps = resolveCapabilities({
+    requestedMode: requested,
+    groupCfg: { aiEnabled: true, retrievalEnabled: false },
+    allowLive: cap.allowLive,
+    runtimeEnabled: runtime.isAiEnabled(),
+  });
+  if (caps.pause || !runtime.isAiEnabled()) {
+    return { ...base, source: 'policy_paused', pathHint: copy('全局 AI 已关闭或研究调用未批准，仅保留规则解读，未安排外部模型。', 'The global AI switch is off or live research is not allowed. Only the rule reading is kept; no external model was called.', lang) };
+  }
+  if (requested === 'real' && (job.usage?.modelCalls || 0) >= (cap.maxModelCallsPerJob || 4000)) {
+    return { ...base, source: 'policy_paused', pathHint: copy('本任务模型调用额度已用尽，未再调用解读模型。', 'This job has no remaining model-call quota. The interpretation model was not called.', lang) };
   }
   let provider;
   try {
-    provider = job.config?.inferenceMode === 'real' && !base.isMock ? createProvider() : createMockProvider();
+    provider = providerForKind(caps.providerKind);
   } catch {
     return { ...base, source: 'rules' };
   }

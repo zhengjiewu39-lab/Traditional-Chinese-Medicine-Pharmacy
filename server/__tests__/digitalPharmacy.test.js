@@ -1543,5 +1543,14 @@ describe('500-case research console', () => {
     assert.strictEqual(JSON.stringify(getStore().inventory), beforeInv);
     const afterCases = (repo.listCases({ limit: 5 }) || []).map((c) => c.caseId);
     assert.deepStrictEqual(afterCases, beforeCases);
+    const otherResearcher = signToken({ id: 51, username: 'researcher2', name: '研究员乙', role: 'researcher' });
+    const peer = await call('POST', '/api/research/evaluation/jobs', {
+      token: otherResearcher,
+      body: { groups: ['A'], split: 'test', limit: 1, inferenceMode: 'mock', inputMode: 'structured', runTag: 'peer' },
+    });
+    assert.ok([200, 201].includes(peer.status), JSON.stringify(peer.body));
+    assert.notStrictEqual(peer.body.job.id, jobId);
+    const peek = await call('GET', `/api/research/evaluation/jobs/${jobId}`, { token: otherResearcher });
+    assert.strictEqual(peek.status, 403);
   });
 });

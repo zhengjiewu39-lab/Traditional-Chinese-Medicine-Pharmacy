@@ -2,7 +2,7 @@
 
 Research prototype only. Passing tests is not clinical validation. This build can be described as a Traditional-Chinese-Medicine digital-pharmacy AI research prototype. It is not a validated AI active-clarification system.
 
-Checked after the 2026-10-03 d14c1a9 gate-repair pass (local Node may be newer than `engines.node`; CI uses Node 20).
+Checked after the 2026-10-04 `research-engine@2.0.0` repair (local Node may be newer than `engines.node`; CI uses Node 20). Old `50cb7a6` job rows stay historical and are not a new-protocol formal analysis.
 
 | Layer | What it is | This pass |
 |---|---|---|
@@ -13,9 +13,10 @@ Checked after the 2026-10-03 d14c1a9 gate-repair pass (local Node may be newer t
 
 | Check | Result |
 |---|---|
-| `npm run verify:pharmacy` | 101/101 pass |
-| `npm run test:server` | 149/149 pass (38 groups) |
+| `npm run verify:pharmacy` | included in `test:server` |
+| `npm run test:server` | 168/168 pass (40 groups) |
 | `npm run lint` | pass, 0 warnings |
+| `npm run build` | production frontend compiled |
 | Live A/B/C/D | Not re-run this pass. Earlier overlay note stays **AI_MODE=shadow**, not promoted. Clinical labels / effect remain `not_evaluated`. |
 | 500-person live screen | Repository self-report only; not independently re-run here. Not a clinical validation. |
 | Browser role E2E | Earlier login walk only. Approve / dispense / weigh / concurrency were not re-walked in this pass. |
@@ -53,13 +54,13 @@ Fact extraction calls a model only when AI is enabled and the mode allows model 
 
 | Layer | Status | Note |
 |---|---|---|
-| Snapshot import | Implemented | One existing prescription per existing synthetic patient (`one-rx-per-patient-date-asc-id-asc@1`). Unlabeled init rows stay synthetic. Exceptions are listed, not dropped silently. |
-| Interactive scenes | Implemented from known facts only | complete / omit-allergy or unknown-allergy / paraphrase. Missing allergy is not filled as none. Pregnancy, meds, and liver are not invented. |
-| Shared engine | Implemented | Web jobs and `npm run ai:evaluate:compare` call `experimentEngine`. Groups A/B/C/D/RAG_off. Primary comparison D vs C. |
-| Background jobs | Implemented | Persistent `researchJobs` / `researchJobResults`. Duplicate start returns the same job. Refresh does not drop results. Live 500 is not auto-started. |
-| Researcher UI | Implemented | `/research/evaluation` dataset / config / run / single-case / results / export. Hidden facts only in authorized annotate view. |
-| Isolation | Tested (mock) | Job does not change inventory or operational cases. Researcher list omits hidden scripts. |
-| Mock | Tested | Isolated 1-scene A/C job in `digitalPharmacy.test.js`. |
-| Real model 500 | **Not run** | Requires admin `allowLive`, `confirmLive`, and (if over cap) `confirmFullLive`. Do not treat as done. |
+| Snapshot import | Implemented (dataset 1.1.0) | Selection is by **base case**, then scenes. Unanalyzable herbs/units/dose counts stay exceptions. Encounter time is the frozen `issuedAt`. Same-content snapshots are not overwritten. |
+| Interactive scenes | Implemented from known facts only | complete / omit-allergy or unknown-allergy / paraphrase. Askable fields have source-or-unknown scripts. Missing allergy is not filled as none. |
+| Shared engine | Implemented `research-engine@2.0.0` | Web and CLI share `capabilityPolicy`. rules never calls a model; mock is offline; real pauses when the kill-switch or `allowLive` is off. |
+| Background jobs | Implemented | Per-researcher idempotency; merge-save keeps cancel; actual model-call reserve; corrupt snapshot fails closed; retries keep the original row. |
+| Researcher UI | Implemented | `all` engineering split; selected-case single run; results bound to `jobId`; reference-fact view (not expert labeling). Admin research quotas are on the governance desk. |
+| Isolation | Tested | Two researchers with the same config get separate jobs. Hidden scripts stay out of the default list. |
+| Mock | Tested | Repair suite in `researchEngine.test.js` plus isolated digital-pharmacy job. Offline A/C/D on 500 bases × 1500 scenes × 3 groups = 4500 rows, 0 engineering failures. Encounter freeze: expiry hits 0; all 1500 scenes are `staleAtEvaluationNow`. A: A2=1017 / A3=483. C and D remain identical (A1=372 / A2=645 / A3=483). This is not a live-model result and does not show D > C. |
+| Real model 500 | **Not run** | `maxCasesLive` is a hard cap. `confirmFullLive` is only an extra confirm below that cap. Do not treat as done. |
 | Expert review | **unreviewed / not_evaluated** | No clinical accuracy, miss rate, or patient-benefit numbers. |
-| Autonomous prescribe / auto-approve | Not added | Experiment cannot sign, dispense, set keys, or promote live. |
+| Autonomous prescribe / auto-approve | Not added | Experiment cannot sign, dispense, set keys, change dose, or promote live. |

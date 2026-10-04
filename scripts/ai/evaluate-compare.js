@@ -6,11 +6,11 @@
  */
 const fs = require('fs');
 const path = require('path');
-const { createProvider } = require('../../server/ai/providerAdapter');
-const { effectiveEnv } = require('../../server/ai/runtimeConfig');
-const { createMockProvider } = require('../../server/ai/mockProvider');
+const runtime = require('../../server/ai/aiRuntime');
 const snapshotService = require('../../server/research/snapshotService');
 const engine = require('../../server/research/experimentEngine');
+const jobs = require('../../server/research/experimentJobs');
+const { resolveCapabilities, providerForKind } = require('../../server/research/capabilityPolicy');
 
 const ROOT = path.resolve(__dirname, '../..');
 
@@ -19,10 +19,12 @@ function fail(msg) {
   process.exit(2);
 }
 
-const env = effectiveEnv();
 const wantLive = process.env.AI_COMPARE_ALLOW_MOCK !== '1';
-if (wantLive && ((env.AI_PROVIDER || '') !== 'openai-compatible' || !env.AI_BASE_URL || !env.AI_MODEL || !env.AI_API_KEY)) {
-  fail('Live compare requires an openai-compatible provider with AI_BASE_URL, AI_MODEL and AI_API_KEY. No placeholder scores were written.');
+const requestedMode = wantLive ? 'real' : 'mock';
+const cap = jobs.limits();
+if (wantLive) {
+  if (!cap.allowLive) fail('Live compare is blocked: administrator allowLive is false.');
+  if (!runtime.isAiEnabled()) fail('Live compare is blocked: global AI switch is off.');
 }
 
 const archived = process.env.AI_COMPARE_PACK;
@@ -40,21 +42,28 @@ if (archived) {
 }
 
 const smoke = process.env.AI_COMPARE_SMOKE === '1';
+const split = process.env.AI_COMPARE_SPLIT || (smoke ? 'all' : 'test');
+const limit = smoke
+  ? Math.min(4, (pack.baseCases || pack.cases || []).length)
+  : (process.env.AI_COMPARE_LIMIT ? Number(process.env.AI_COMPARE_LIMIT) : null);
 const selected = engine.selectCases(pack, {
-  split: smoke ? 'all' : 'test',
-  limit: smoke ? Math.min(4, (pack.cases || []).length) : null,
+  split,
+  limit,
+  selectUnit: 'base_case',
 });
 
 async function main() {
-  const provider = wantLive ? createProvider() : createMockProvider();
   const outDir = path.resolve(ROOT, wantLive ? 'benchmarks/ai-review/results-live' : 'benchmarks/ai-review/results-mock');
   fs.mkdirSync(outDir, { recursive: true });
   const protocol = {
     generatedAt: new Date().toISOString(),
+    engineVersion: engine.ENGINE_VERSION,
+    requestedMode,
     frozenCasePack: {
       path: packRel,
       version: pack.version,
       contentHash: pack.contentHash || null,
+      evaluationNow: pack.evaluationNow || null,
       expertReviewStatus: pack.expertReviewStatus || 'unreviewed',
       defaultMainExperiment: !archived,
     },
@@ -66,11 +75,29 @@ async function main() {
       maxRounds: Number(process.env.AI_COMPARE_MAX_ROUNDS || 3),
       note: 'Experimental parameter, not a clinical standard.',
     },
+    selection: {
+      selectUnit: 'base_case',
+      split,
+      baseCases: new Set(selected.map((c) => c.baseId)).size,
+      scenes: selected.length,
+    },
     smoke,
-    note: 'Clinical outcomes are not_evaluated. Stopping questions is not approval. 500 synthetic bases are not real patients.',
+    note: 'Clinical outcomes are not_evaluated. Stopping questions is not approval. 500 synthetic bases are not real patients. Mock is not a live model.',
   };
   const groups = {};
   for (const g of ['A', 'B', 'C', 'D', 'RAG_off']) {
+    const caps = resolveCapabilities({
+      requestedMode,
+      groupCfg: engine.GROUPS[g],
+      allowLive: cap.allowLive,
+      runtimeEnabled: runtime.isAiEnabled(),
+    });
+    let provider = null;
+    try {
+      provider = providerForKind(caps.providerKind);
+    } catch (err) {
+      if (requestedMode === 'real') fail(err.message);
+    }
     const rows = [];
     for (const raw of selected) {
       rows.push(await engine.runOne({
@@ -82,7 +109,10 @@ async function main() {
           maxBurden: protocol.interactionBudget.maxBurden,
           maxRounds: protocol.interactionBudget.maxRounds,
           inputMode: 'structured',
-          aiMode: wantLive ? 'shadow' : 'rules',
+          requestedMode,
+          allowLive: cap.allowLive,
+          capabilities: caps,
+          policyAllows: () => runtime.isAiEnabled() && (requestedMode !== 'real' || cap.allowLive),
         },
       }));
     }
@@ -90,23 +120,34 @@ async function main() {
   }
   const report = {
     generatedAt: new Date().toISOString(),
-    inferenceMode: wantLive ? 'real' : 'mock',
+    inferenceMode: requestedMode,
+    engineVersion: engine.ENGINE_VERSION,
     clinicalLabels: 'not_evaluated',
     pharmacistTime: 'not_evaluated',
     clinicalEffect: 'not_estimated',
     protocol,
     groups,
     engineering: {
-      cases: selected.length,
-      failures: Object.values(groups).flat().filter((r) => !r.ok).length,
+      baseCases: protocol.selection.baseCases,
+      scenes: selected.length,
+      failures: Object.values(groups).flat().filter((r) => r.engineeringFailure).length,
       modelFailures: Object.values(groups).flat().filter((r) => r.modelFailure).length,
+      policyPaused: Object.values(groups).flat().filter((r) => r.executionStatus === 'policy_paused').length,
     },
   };
   const file = smoke ? 'compare-smoke.json' : 'compare-latest.json';
   fs.writeFileSync(path.join(outDir, file), `${JSON.stringify(report, null, 2)}\n`);
   fs.writeFileSync(path.join(outDir, 'compare-protocol.json'), `${JSON.stringify(protocol, null, 2)}\n`);
   console.log(JSON.stringify({
-    ok: true, inferenceMode: report.inferenceMode, cases: selected.length, smoke, failures: report.engineering.failures, outDir, pack: packRel,
+    ok: true,
+    inferenceMode: report.inferenceMode,
+    engineVersion: report.engineVersion,
+    baseCases: report.engineering.baseCases,
+    scenes: selected.length,
+    smoke,
+    failures: report.engineering.failures,
+    outDir,
+    pack: packRel,
   }, null, 2));
 }
 

@@ -47,6 +47,7 @@ const JOB_BODY = {
     offset: { type: 'integer', minimum: 0, maximum: 5000 },
     limit: { type: 'integer', minimum: 1, maximum: 2000 },
     ids: { type: 'array', items: { type: 'string', maxLength: 80 }, maxItems: 40 },
+    selectUnit: { type: 'string', enum: ['base_case', 'scene'] },
     replicates: { type: 'integer', minimum: 1, maximum: 3 },
     inferenceMode: { type: 'string', enum: ['mock', 'rules', 'real'] },
     inputMode: { type: 'string', enum: ['structured', 'end_to_end_nl'] },
@@ -67,6 +68,8 @@ const LIMITS_BODY = {
     maxConcurrency: { type: 'integer', minimum: 1, maximum: 4 },
     maxRequestsPerJob: { type: 'integer', minimum: 1, maximum: 20000 },
     maxCasesLive: { type: 'integer', minimum: 1, maximum: 500 },
+    maxModelCallsPerJob: { type: 'integer', minimum: 1, maximum: 20000 },
+    confirmCasesThreshold: { type: 'integer', minimum: 1, maximum: 500 },
   },
 };
 
@@ -103,7 +106,8 @@ router.get('/', requirePermission('research:evaluation'), handle(async (req, res
     mockEngineeringReport: fs.existsSync(mockPath) ? { path: 'benchmarks/ai-review/results/latest.md', notLiveModel: true } : null,
     warning: 'This console evaluates synthetic base cases. Mock is engineering only. A successful model call is not medical correctness. Clinical labels stay not_evaluated until an independent rater finishes.',
     medwear: { enabled: false, reason: 'No real MedWear interface; integration is disabled.' },
-    limits: { allowLive: jobs.limits().allowLive, maxCasesLive: jobs.limits().maxCasesLive },
+    limits: jobs.limits(),
+    engineVersion: engine.ENGINE_VERSION,
   });
 }));
 
@@ -116,8 +120,19 @@ router.get('/snapshot', requirePermission('research:evaluation'), handle(async (
   });
 }));
 
+function snapForRequest(req, res) {
+  try {
+    if (req.query.contentHash) return snapshotService.getByHash(String(req.query.contentHash));
+    return snapshotService.current();
+  } catch (err) {
+    sendError(res, err.code === 'snapshot_corrupt' || err.code === 'snapshot_missing' ? 404 : 400, err.code || 'snapshot_error', err.message);
+    return null;
+  }
+}
+
 router.get('/snapshot/cases', requirePermission('research:evaluation'), handle(async (req, res) => {
-  const snap = snapshotService.current();
+  const snap = snapForRequest(req, res);
+  if (!snap) return;
   res.json(snapshotService.listCases(snap, {
     q: req.query.q,
     split: req.query.split,
@@ -127,20 +142,23 @@ router.get('/snapshot/cases', requirePermission('research:evaluation'), handle(a
 }));
 
 router.get('/snapshot/exceptions', requirePermission('research:evaluation'), handle(async (req, res) => {
-  const snap = snapshotService.current();
+  const snap = snapForRequest(req, res);
+  if (!snap) return;
   res.json({ total: (snap.exceptions || []).length, records: snap.exceptions || [] });
 }));
 
 router.get('/snapshot/cases/:id', requirePermission('research:evaluation'), handle(async (req, res) => {
-  const snap = snapshotService.current();
-  const annotate = req.query.annotate === '1' && req.user.role === 'researcher';
-  const row = snapshotService.getCase(snap, req.params.id, { annotate });
+  const snap = snapForRequest(req, res);
+  if (!snap) return;
+  const reference = (req.query.annotate === '1' || req.query.view === 'reference') && req.user.role === 'researcher';
+  const row = snapshotService.getCase(snap, req.params.id, { annotate: reference });
   if (!row) return sendError(res, 404, 'not_found', 'Research case not found');
   res.json({
     case: row,
-    annotate,
-    note: annotate
-      ? 'Hidden facts and scripts are for authorized labeling only. They are not sent to the model under test.'
+    viewKind: reference ? 'reference_facts' : 'visible',
+    independentlyLabeled: false,
+    note: reference
+      ? 'Reference-fact view of hidden scripts. This is not an expert-label save and does not complete professional review.'
       : 'Hidden facts and reference answers are omitted.',
   });
 }));
@@ -151,7 +169,7 @@ router.post('/jobs', requirePermission('research:evaluation'), validateBody(JOB_
     res.status(out.replayed ? 200 : 201).json({ job: jobs.publicJob(out.job), replayed: out.replayed });
   } catch (err) {
     const code = err.code || 'job_rejected';
-    const status = code === 'snapshot_missing' ? 404 : 400;
+    const status = code === 'job_forbidden' ? 403 : (code === 'snapshot_missing' || code === 'snapshot_corrupt' ? 404 : 400);
     return sendError(res, status, code, err.message);
   }
 }));
@@ -168,11 +186,35 @@ router.get('/jobs/:id', requirePermission('research:evaluation'), handle(async (
   res.json({ job: jobs.publicJob(job), summary: job.summary || null });
 }));
 
+router.get('/jobs/:id/progress', requirePermission('research:evaluation'), handle(async (req, res) => {
+  const job = jobs.getJob(req.params.id);
+  if (!job) return sendError(res, 404, 'not_found', 'Job not found');
+  if (!jobs.canSee(job, req.user)) return sendError(res, 403, 'forbidden', 'This job belongs to another researcher');
+  res.json({
+    jobId: job.id,
+    status: job.status,
+    counts: job.counts,
+    cursor: job.cursor,
+    tasks: (job.tasks || []).length,
+    cancelRequested: Boolean(job.cancelRequested),
+    usage: job.usage,
+    estimate: job.estimate,
+    engineVersion: job.engineVersion,
+  });
+}));
+
 router.get('/jobs/:id/results', requirePermission('research:evaluation'), handle(async (req, res) => {
   const job = jobs.getJob(req.params.id);
   if (!job) return sendError(res, 404, 'not_found', 'Job not found');
   if (!jobs.canSee(job, req.user)) return sendError(res, 403, 'forbidden', 'This job belongs to another researcher');
-  res.json({ job: jobs.publicJob(job), results: jobs.listResults(job.id) });
+  const offset = Number(req.query.offset) || 0;
+  const limit = req.query.limit != null ? Math.min(100, Number(req.query.limit) || 20) : null;
+  if (limit == null) {
+    res.json({ jobId: job.id, job: jobs.publicJob(job), results: jobs.listResults(job.id) });
+    return;
+  }
+  const page = jobs.listResults(job.id, { offset, limit });
+  res.json({ jobId: job.id, job: jobs.publicJob(job), ...page });
 }));
 
 router.get('/jobs/:id/cases/:caseId', requirePermission('research:evaluation'), handle(async (req, res) => {
@@ -198,10 +240,14 @@ router.post('/jobs/:id/resume', requirePermission('research:evaluation'), handle
 }));
 
 router.post('/jobs/:id/retry-failed', requirePermission('research:evaluation'), handle(async (req, res) => {
-  const out = jobs.retryFailed(req.params.id, req.user);
-  if (!out) return sendError(res, 404, 'not_found', 'Job not found');
-  if (out.forbidden) return sendError(res, 403, 'forbidden', 'This job belongs to another researcher');
-  res.json({ job: jobs.publicJob(out.job) });
+  try {
+    const out = jobs.retryFailed(req.params.id, req.user);
+    if (!out) return sendError(res, 404, 'not_found', 'Job not found');
+    if (out.forbidden) return sendError(res, 403, 'forbidden', 'This job belongs to another researcher');
+    res.json({ job: jobs.publicJob(out.job) });
+  } catch (err) {
+    return sendError(res, err.code === 'job_running' ? 409 : 400, err.code || 'retry_rejected', err.message);
+  }
 }));
 
 const ADVISE_BODY = {
@@ -236,6 +282,10 @@ router.get('/jobs/:id/export', requirePermission('research:evaluation'), handle(
   res.setHeader('Content-Type', out.type);
   res.setHeader('Content-Disposition', `attachment; filename="${out.filename}"`);
   res.send(out.body);
+}));
+
+router.get('/limits', requirePermission('ai:runtime_configure'), handle(async (req, res) => {
+  res.json({ limits: jobs.limits() });
 }));
 
 router.put('/limits', requirePermission('ai:runtime_configure'), validateBody(LIMITS_BODY), handle(async (req, res) => {

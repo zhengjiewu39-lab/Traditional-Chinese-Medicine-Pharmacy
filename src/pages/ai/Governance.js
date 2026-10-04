@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Box, Paper, Typography, Grid, Alert, Chip, Stack, Button, TextField, Table, TableBody, TableCell, TableRow, CircularProgress,
+  Box, Paper, Typography, Grid, Alert, Chip, Stack, Button, TextField, Table, TableBody, TableCell, TableRow, CircularProgress, FormControlLabel, Switch,
 } from '@mui/material';
-import { aiGovernanceApi, aiCasesApi } from '../../services/aiApi';
+import { aiGovernanceApi, aiCasesApi, researchEvalApi } from '../../services/aiApi';
 import { formatApiError } from '../../config/httpClient';
 import { useAuth } from '../../contexts/AuthContext';
 import { SEMANTIC_STATUS_LABELS, OVERRIDE_REASONS } from '../../config/aiLabels';
@@ -32,15 +32,18 @@ export default function Governance() {
   const [notice, setNotice] = useState('');
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState('');
+  const [limits, setLimits] = useState(null);
 
   const load = useCallback(async () => {
     try {
-      const [metrics, draft] = await Promise.all([
+      const [metrics, draft, lim] = await Promise.all([
         aiGovernanceApi.metrics(),
         user?.role === 'admin' ? aiCasesApi.deskAssist({ lane: 'admin' }).catch(() => ({ data: null })) : Promise.resolve({ data: null }),
+        user?.role === 'admin' ? researchEvalApi.getLimits().catch(() => ({ data: { limits: null } })) : Promise.resolve({ data: { limits: null } }),
       ]);
       setM(metrics.data);
       setAssist(draft.data?.brief || null);
+      setLimits(lim.data.limits || null);
       setError('');
     } catch (e) {
       setError(formatApiError(e));
@@ -132,6 +135,34 @@ export default function Governance() {
       {user?.role === 'admin' && (
         <Paper sx={{ p: 2, mb: 2 }}>
           <ConnectRealAi onSaved={load} />
+        </Paper>
+      )}
+      {user?.role === 'admin' && limits && (
+        <Paper sx={{ p: 2, mb: 2 }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>{t('ai.gov.researchLimits')}</Typography>
+          <Alert severity="info" sx={{ my: 1 }}>{t('ai.gov.researchLimitsHelp')}</Alert>
+          <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} flexWrap="wrap" useFlexGap>
+            <FormControlLabel
+              control={<Switch checked={Boolean(limits.allowLive)} onChange={(e) => setLimits({ ...limits, allowLive: e.target.checked })} />}
+              label={t('ai.gov.allowLive')}
+            />
+            <TextField size="small" type="number" label={t('ai.gov.maxCasesLive')} value={limits.maxCasesLive} onChange={(e) => setLimits({ ...limits, maxCasesLive: Number(e.target.value) })} />
+            <TextField size="small" type="number" label={t('ai.gov.confirmThreshold')} value={limits.confirmCasesThreshold || limits.maxCasesLive} onChange={(e) => setLimits({ ...limits, confirmCasesThreshold: Number(e.target.value) })} />
+            <TextField size="small" type="number" label={t('ai.gov.maxModelCalls')} value={limits.maxModelCallsPerJob || limits.maxRequestsPerJob} onChange={(e) => setLimits({ ...limits, maxModelCallsPerJob: Number(e.target.value) })} />
+            <TextField size="small" type="number" label={t('ai.gov.maxConcurrency')} value={limits.maxConcurrency} onChange={(e) => setLimits({ ...limits, maxConcurrency: Number(e.target.value) })} />
+            <Button variant="contained" onClick={async () => {
+              try {
+                const res = await researchEvalApi.saveLimits(limits);
+                setLimits(res.data.limits);
+                setNotice(t('researchEval.limitsSaved'));
+              } catch (e) {
+                setError(formatApiError(e));
+              }
+            }}
+            >
+              {t('ai.gov.saveLimits')}
+            </Button>
+          </Stack>
         </Paper>
       )}
       <Paper sx={{ p: 2, mb: 2 }}>
