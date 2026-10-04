@@ -15,6 +15,9 @@ const PROTOCOL_BODY = {
   additionalProperties: false,
   properties: {
     note: { type: 'string', maxLength: 400 },
+    version: { type: 'integer' },
+    updatedBy: { type: ['string', 'null'] },
+    updatedAt: { type: ['string', 'null'] },
     fastTrack: {
       type: 'object',
       additionalProperties: false,
@@ -70,6 +73,8 @@ const LIMITS_BODY = {
     maxCasesLive: { type: 'integer', minimum: 1, maximum: 500 },
     maxModelCallsPerJob: { type: 'integer', minimum: 1, maximum: 20000 },
     confirmCasesThreshold: { type: 'integer', minimum: 1, maximum: 500 },
+    updatedBy: { type: ['string', 'null'] },
+    updatedAt: { type: ['string', 'null'] },
   },
 };
 

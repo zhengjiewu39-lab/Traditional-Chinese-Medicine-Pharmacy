@@ -149,6 +149,7 @@ export default function Governance() {
             <TextField size="small" type="number" label={t('ai.gov.maxCasesLive')} value={limits.maxCasesLive} onChange={(e) => setLimits({ ...limits, maxCasesLive: Number(e.target.value) })} />
             <TextField size="small" type="number" label={t('ai.gov.confirmThreshold')} value={limits.confirmCasesThreshold || limits.maxCasesLive} onChange={(e) => setLimits({ ...limits, confirmCasesThreshold: Number(e.target.value) })} />
             <TextField size="small" type="number" label={t('ai.gov.maxModelCalls')} value={limits.maxModelCallsPerJob || limits.maxRequestsPerJob} onChange={(e) => setLimits({ ...limits, maxModelCallsPerJob: Number(e.target.value) })} />
+            <TextField size="small" type="number" label={t('ai.gov.maxRequests')} value={limits.maxRequestsPerJob} onChange={(e) => setLimits({ ...limits, maxRequestsPerJob: Number(e.target.value) })} />
             <TextField size="small" type="number" label={t('ai.gov.maxConcurrency')} value={limits.maxConcurrency} onChange={(e) => setLimits({ ...limits, maxConcurrency: Number(e.target.value) })} />
             <Button variant="contained" onClick={async () => {
               try {

@@ -2,7 +2,7 @@
 
 Research prototype only. Passing tests is not clinical validation. This build can be described as a Traditional-Chinese-Medicine digital-pharmacy AI research prototype. It is not a validated AI active-clarification system.
 
-Checked after the 2026-10-04 `research-engine@2.0.0` repair (local Node may be newer than `engines.node`; CI uses Node 20). Old `50cb7a6` job rows stay historical and are not a new-protocol formal analysis.
+Checked after the 2026-10-04 `research-engine@2.1.0` repair of the `51ea05c` acceptance list (local Node may be newer than `engines.node`; CI uses Node 20). Old `2.0.0` / `51ea05c` job rows stay historical and are not a new-protocol formal analysis.
 
 | Layer | What it is | This pass |
 |---|---|---|
@@ -14,7 +14,7 @@ Checked after the 2026-10-04 `research-engine@2.0.0` repair (local Node may be n
 | Check | Result |
 |---|---|
 | `npm run verify:pharmacy` | included in `test:server` |
-| `npm run test:server` | 168/168 pass (40 groups) |
+| `npm run test:server` | 176/176 pass (40 groups) |
 | `npm run lint` | pass, 0 warnings |
 | `npm run build` | production frontend compiled |
 | Live A/B/C/D | Not re-run this pass. Earlier overlay note stays **AI_MODE=shadow**, not promoted. Clinical labels / effect remain `not_evaluated`. |
@@ -56,11 +56,11 @@ Fact extraction calls a model only when AI is enabled and the mode allows model 
 |---|---|---|
 | Snapshot import | Implemented (dataset 1.1.0) | Selection is by **base case**, then scenes. Unanalyzable herbs/units/dose counts stay exceptions. Encounter time is the frozen `issuedAt`. Same-content snapshots are not overwritten. |
 | Interactive scenes | Implemented from known facts only | complete / omit-allergy or unknown-allergy / paraphrase. Askable fields have source-or-unknown scripts. Missing allergy is not filled as none. |
-| Shared engine | Implemented `research-engine@2.0.0` | Web and CLI share `capabilityPolicy`. rules never calls a model; mock is offline; real pauses when the kill-switch or `allowLive` is off. |
-| Background jobs | Implemented | Per-researcher idempotency; merge-save keeps cancel; actual model-call reserve; corrupt snapshot fails closed; retries keep the original row. |
-| Researcher UI | Implemented | `all` engineering split; selected-case single run; results bound to `jobId`; reference-fact view (not expert labeling). Admin research quotas are on the governance desk. |
+| Shared engine | Implemented `research-engine@2.1.0` | Web and CLI share `capabilityPolicy` and `modelCallGate`. rules never calls a model; mock is offline; real pauses when the kill-switch or `allowLive` is off. Empty selections are `invalid_selection`. |
+| Background jobs | Implemented | Per-researcher idempotency; `_resetCursor` for retry/resume; reserve only on actual `complete()`; protocol fingerprint includes prompt/KB/rules/overlay host; corrupt snapshot fails closed; retries keep the original row and execute attempt 2. |
+| Researcher UI | Implemented | Single-case start sends `selectUnit=scene`; completed-job pages load by `jobId`+page+generation; NL-only seed is sex. Admin saves only allowed limit fields, including task-unit cap. |
 | Isolation | Tested | Two researchers with the same config get separate jobs. Hidden scripts stay out of the default list. |
-| Mock | Tested | Repair suite in `researchEngine.test.js` plus isolated digital-pharmacy job. Offline A/C/D on 500 bases × 1500 scenes × 3 groups = 4500 rows, 0 engineering failures. Encounter freeze: expiry hits 0; all 1500 scenes are `staleAtEvaluationNow`. A: A2=1017 / A3=483. C and D remain identical (A1=372 / A2=645 / A3=483). This is not a live-model result and does not show D > C. |
+| Mock | Tested | Strengthened `researchEngine.test.js` plus isolated digital-pharmacy job. Isolated 500-base A/C/D background job (`research-engine@2.1.0`): 4500/4500 completed, 0 failed, 0 paused, 0 cancelled, 0 retries; mock `modelCalls=6000`, token usage unknown. A: A2=1305 / A3=195. C and D remain identical (A1=18 / A2=1287 / A3=195; asked=9000 each). This used a temporary synthetic 500-patient source, not the store snapshot and not a live model. It does not show D > C. A first run with `maxModelCallsPerJob=4000` correctly finished as `quota_paused` (3500 completed / 1000 paused). |
 | Real model 500 | **Not run** | `maxCasesLive` is a hard cap. `confirmFullLive` is only an extra confirm below that cap. Do not treat as done. |
 | Expert review | **unreviewed / not_evaluated** | No clinical accuracy, miss rate, or patient-benefit numbers. |
 | Autonomous prescribe / auto-approve | Not added | Experiment cannot sign, dispense, set keys, change dose, or promote live. |

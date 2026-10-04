@@ -54,17 +54,22 @@ function parseSummaries(json) {
   }).filter((r) => r.pmid);
 }
 
-async function searchHerb(herb, { fetchImpl = fetch, retmax = 5, email = process.env.NCBI_EMAIL || 'tcm-research-prototype@localhost' } = {}) {
+async function searchHerb(herb, { fetchImpl = fetch, retmax = 5, email = process.env.NCBI_EMAIL || 'tcm-research-prototype@localhost', signal } = {}) {
   const name = String(herb || '').trim();
   if (!name) throw new Error('herb required');
+  if (signal?.aborted) {
+    const err = new Error('cancelled');
+    err.code = 'cancelled';
+    throw err;
+  }
   const common = `tool=tcm-digital-pharmacy&email=${encodeURIComponent(email)}`;
   const searchUrl = `${EUTILS}/esearch.fcgi?db=pubmed&retmode=json&retmax=${Number(retmax) || 5}&term=${encodeURIComponent(queryFor(name))}&${common}`;
-  const searchRes = await fetchImpl(searchUrl);
+  const searchRes = await fetchImpl(searchUrl, signal ? { signal } : undefined);
   if (!searchRes.ok) throw new Error(`PubMed search HTTP ${searchRes.status}`);
   const ids = parseSearch(await searchRes.json());
   if (!ids.length) return { herb: name, query: queryFor(name), records: [] };
   const sumUrl = `${EUTILS}/esummary.fcgi?db=pubmed&retmode=json&id=${ids.join(',')}&${common}`;
-  const sumRes = await fetchImpl(sumUrl);
+  const sumRes = await fetchImpl(sumUrl, signal ? { signal } : undefined);
   if (!sumRes.ok) throw new Error(`PubMed summary HTTP ${sumRes.status}`);
   const records = parseSummaries(await sumRes.json()).map((r) => ({
     ...r,

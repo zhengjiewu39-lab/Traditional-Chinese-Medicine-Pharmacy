@@ -7,7 +7,7 @@ const { createMockProvider } = require('../ai/mockProvider');
 const { createProvider } = require('../ai/providerAdapter');
 const { effectiveEnv } = require('../ai/runtimeConfig');
 
-const ENGINE_VERSION = 'research-engine@2.0.0';
+const ENGINE_VERSION = 'research-engine@2.1.0';
 
 function uniqueSorted(groups) {
   return [...new Set(groups || [])].filter(Boolean).sort();

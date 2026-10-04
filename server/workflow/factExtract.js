@@ -82,7 +82,7 @@ function whitelistOnly(candidates, sourceText) {
   }));
 }
 
-async function modelExtract(text, provider, { timeoutMs = 8000 } = {}) {
+async function modelExtract(text, provider, { timeoutMs = 8000, signal } = {}) {
   if (!provider || typeof provider.complete !== 'function') return { candidates: [], called: false };
   const messages = [
     {
@@ -95,8 +95,13 @@ async function modelExtract(text, provider, { timeoutMs = 8000 } = {}) {
   const controller = typeof AbortController === 'function' ? new AbortController() : null;
   const timer = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
   try {
+    if (signal?.aborted) controller.abort();
+    else if (signal) signal.addEventListener('abort', () => controller.abort(), { once: true });
     raw = await provider.complete({ messages, jsonSchema: { type: 'object' }, signal: controller?.signal });
   } catch (err) {
+    if (['cancelled', 'quota_paused', 'policy_paused'].includes(err.code)) {
+      return { candidates: [], called: false, invalid: false, error: err.code };
+    }
     return { candidates: [], called: true, invalid: true, error: err.name === 'AbortError' ? 'timeout' : 'error' };
   } finally {
     if (timer) clearTimeout(timer);
@@ -126,7 +131,7 @@ async function modelExtract(text, provider, { timeoutMs = 8000 } = {}) {
   return { candidates: rows, called: true };
 }
 
-async function extractCandidateFacts(c, { provider, timeoutMs, aiEnabled } = {}) {
+async function extractCandidateFacts(c, { provider, timeoutMs, aiEnabled, signal } = {}) {
   const text = c.source?.rawText || c.patient?.narrative || '';
   if (!text.trim()) {
     return { candidates: [], provider: 'none', isMock: Boolean(provider?.isMock), modelDidNotVerify: true, extractSource: 'empty', modelCalled: false };
@@ -142,7 +147,19 @@ async function extractCandidateFacts(c, { provider, timeoutMs, aiEnabled } = {})
       fallbackReason: aiEnabled === false ? 'ai_disabled' : 'no_provider',
     };
   }
-  const modeled = await modelExtract(text, provider, { timeoutMs });
+  const modeled = await modelExtract(text, provider, { timeoutMs, signal });
+  if (['cancelled', 'quota_paused', 'policy_paused'].includes(modeled.error)) {
+    return {
+      candidates: [],
+      provider: 'none',
+      isMock: Boolean(provider?.isMock),
+      modelDidNotVerify: true,
+      extractSource: modeled.error,
+      modelCalled: false,
+      skipReason: modeled.error,
+      cancelled: modeled.error === 'cancelled',
+    };
+  }
   if (modeled.called && !modeled.invalid) {
     return {
       candidates: whitelistOnly(modeled.candidates, text),

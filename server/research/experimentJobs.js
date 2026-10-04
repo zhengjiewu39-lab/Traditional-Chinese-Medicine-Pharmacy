@@ -28,8 +28,8 @@ function limits() {
   return repo.getDoc(LIMITS, 'default') || {
     allowLive: false,
     maxConcurrency: 1,
-    maxRequestsPerJob: 4000,
-    maxModelCallsPerJob: 4000,
+    maxRequestsPerJob: 8000,
+    maxModelCallsPerJob: 8000,
     maxCasesLive: 8,
     confirmCasesThreshold: 8,
   };
@@ -39,8 +39,8 @@ function saveLimits(body, actor) {
   const next = {
     allowLive: Boolean(body.allowLive),
     maxConcurrency: Math.max(1, Number(body.maxConcurrency) || 1),
-    maxRequestsPerJob: Math.max(1, Number(body.maxRequestsPerJob) || 4000),
-    maxModelCallsPerJob: Math.max(1, Number(body.maxModelCallsPerJob) || 4000),
+    maxRequestsPerJob: Math.max(1, Number(body.maxRequestsPerJob) || 8000),
+    maxModelCallsPerJob: Math.max(1, Number(body.maxModelCallsPerJob) || 8000),
     maxCasesLive: Math.max(1, Number(body.maxCasesLive) || 8),
     confirmCasesThreshold: Math.max(1, Number(body.confirmCasesThreshold) || 8),
     updatedBy: String(actor?.id || ''),
@@ -68,8 +68,10 @@ function mergeSave(patch) {
   if (!cur) return saveJob(patch);
   const next = { ...cur, ...patch };
   if (cur.cancelRequested && !patch._clearCancel) next.cancelRequested = true;
-  next.cursor = Math.max(Number(cur.cursor || 0), Number(patch.cursor || 0));
+  if (patch._resetCursor != null) next.cursor = Number(patch._resetCursor);
+  else if (patch.cursor != null) next.cursor = Math.max(Number(cur.cursor || 0), Number(patch.cursor || 0));
   delete next._clearCancel;
+  delete next._resetCursor;
   return saveJob(next);
 }
 
@@ -145,33 +147,51 @@ function estimate(cfg, selected) {
   };
 }
 
-function freezeProtocol(snap, cfg) {
+function liveProtocolParts(cfg = {}) {
   let promptRef = null;
   try { promptRef = getPrompt('rx-screening').ref; } catch { /* keep null */ }
   return {
     engineVersion: ENGINE_VERSION,
+    promptVersion: promptRef,
+    knowledgeBaseVersion: knowledgeBaseVersion() || null,
+    ruleSetVersion: typeof ruleSetVersion === 'function' ? ruleSetVersion() : null,
+    requestedMode: cfg.inferenceMode || null,
+    overlay: cfg.inferenceMode === 'real' ? overlayMeta() : { provider: cfg.inferenceMode || 'mock', model: null, baseUrlHost: null },
+    knowledgeTimePolicy: 'sealed-kb-version-frozen; rule time uses encounter issuedAt; KB is not historically rewound',
+  };
+}
+
+function freezeProtocol(snap, cfg) {
+  return {
+    ...liveProtocolParts(cfg),
     datasetId: snap.datasetId,
     datasetVersion: snap.version,
     datasetHash: snap.contentHash,
     evaluationNow: snap.evaluationNow || snap.generatedAt,
     encounterRule: snap.encounterRule || null,
-    promptVersion: promptRef,
-    knowledgeBaseVersion: knowledgeBaseVersion() || null,
-    ruleSetVersion: typeof ruleSetVersion === 'function' ? ruleSetVersion() : null,
-    requestedMode: cfg.inferenceMode,
-    overlay: cfg.inferenceMode === 'real' ? overlayMeta() : { provider: cfg.inferenceMode, model: null, baseUrlHost: null },
+    maxBurden: cfg.maxBurden,
+    maxRounds: cfg.maxRounds,
+    inputMode: cfg.inputMode,
+    groups: uniqueSorted(cfg.groups),
   };
 }
 
 function protocolMismatch(job) {
   if (!job.protocol) return 'Job has no frozen protocol';
-  if (job.protocol.engineVersion !== ENGINE_VERSION) {
-    return `Frozen engine ${job.protocol.engineVersion} does not match ${ENGINE_VERSION}`;
+  const live = liveProtocolParts(job.config || {});
+  const frozen = job.protocol;
+  for (const key of ['engineVersion', 'promptVersion', 'knowledgeBaseVersion', 'ruleSetVersion', 'knowledgeTimePolicy']) {
+    if ((frozen[key] || live[key]) && frozen[key] !== live[key]) {
+      return `Frozen ${key} does not match current ${key}`;
+    }
   }
-  if (job.config.inferenceMode === 'real') {
-    const now = overlayMeta();
-    if (job.protocol.overlay?.model && job.protocol.overlay.model !== now.model) {
-      return 'Approved model changed after this job was frozen';
+  const frozenOverlay = frozen.overlay || {};
+  const liveOverlay = ((job.config?.inferenceMode || frozen.requestedMode) === 'real')
+    ? overlayMeta()
+    : (live.overlay || {});
+  for (const key of ['provider', 'model', 'baseUrlHost']) {
+    if ((frozenOverlay[key] || liveOverlay[key]) && frozenOverlay[key] !== liveOverlay[key]) {
+      return `Frozen overlay.${key} does not match current overlay.${key}`;
     }
   }
   return null;
@@ -231,6 +251,9 @@ function createJob(body, actor) {
   };
   const pack = engine.packFromSnapshot(snap);
   const selected = engine.selectCases(pack, cfg);
+  if (!selected.length) {
+    throw Object.assign(new Error('Selection matched no research cases'), { code: 'invalid_selection' });
+  }
   const baseCount = new Set(selected.map((c) => c.baseId)).size;
   if (inferenceMode === 'real') {
     if (!cap.allowLive) throw Object.assign(new Error('Administrator has not allowed live research calls'), { code: 'live_forbidden' });
@@ -327,15 +350,60 @@ function summarize(job) {
 
 function recount(job) {
   const rows = listResults(job.id).filter((r) => !r.superseded);
-  const counts = { queued: 0, running: 0, completed: 0, failed: 0, cancelled: 0, policy_paused: 0 };
+  const counts = {
+    queued: 0, running: 0, completed: 0, failed: 0, cancelled: 0, policy_paused: 0, quota_paused: 0,
+  };
   counts.queued = Math.max(0, (job.tasks || []).length - (job.cursor || 0));
   for (const r of rows) {
     if (r.executionStatus === 'cancelled' || r.executionStatus === 'cancelled_late') counts.cancelled += 1;
+    else if (r.executionStatus === 'quota_paused') counts.quota_paused += 1;
     else if (r.executionStatus === 'policy_paused') counts.policy_paused += 1;
     else if (r.executionStatus === 'failed' || r.engineeringFailure) counts.failed += 1;
     else if (r.executionStatus === 'completed' || r.ok) counts.completed += 1;
   }
   return counts;
+}
+
+function finishStatus(job) {
+  const c = recount(job);
+  if (c.quota_paused) return 'quota_paused';
+  if (c.policy_paused) return 'policy_paused';
+  if (c.failed) return 'completed_with_errors';
+  if (c.cancelled && !c.completed) return 'cancelled';
+  return 'completed';
+}
+
+function reserveCall(jobId) {
+  const cur = getJob(jobId);
+  if (!cur) return false;
+  const cap = limits();
+  const used = Number(cur.usage?.modelCalls || 0);
+  const max = cap.maxModelCallsPerJob || cap.maxRequestsPerJob;
+  if (used + 1 > max) return false;
+  mergeSave({ id: jobId, usage: { ...cur.usage, modelCalls: used + 1 } });
+  return true;
+}
+
+async function dispatchResearchModel(jobId, provider, args = {}) {
+  const job = getJob(jobId);
+  if (!job) throw Object.assign(new Error('job missing'), { code: 'not_found' });
+  if (job.cancelRequested) throw Object.assign(new Error('cancelled'), { code: 'cancelled' });
+  const real = job.config?.inferenceMode === 'real';
+  if (!runtime.isAiEnabled() || (real && !limits().allowLive)) {
+    throw Object.assign(new Error('policy_paused'), { code: 'policy_paused' });
+  }
+  await acquireSlot();
+  try {
+    const fresh = getJob(jobId);
+    if (fresh.cancelRequested) throw Object.assign(new Error('cancelled'), { code: 'cancelled' });
+    if (!runtime.isAiEnabled() || (real && !limits().allowLive)) {
+      throw Object.assign(new Error('policy_paused'), { code: 'policy_paused' });
+    }
+    if (!reserveCall(jobId)) throw Object.assign(new Error('quota_paused'), { code: 'quota_paused' });
+    return await provider.complete(args);
+  } finally {
+    releaseSlot();
+  }
 }
 
 function currentCaps(job, groupId) {
@@ -358,7 +426,7 @@ async function processNext(jobId) {
       mergeSave({ id: jobId, status: 'cancelled', finishedAt: new Date().toISOString() });
       return;
     }
-    if (['completed', 'cancelled'].includes(job.status) && !job.resume) return;
+    if (['completed', 'cancelled', 'completed_with_errors'].includes(job.status) && !job.resume && !job.retryInFlight) return;
     const mismatch = protocolMismatch(job);
     if (mismatch) {
       mergeSave({
@@ -431,9 +499,29 @@ async function processNext(jobId) {
         continue;
       }
       await acquireSlot();
+      const afterSlot = getJob(jobId);
+      if (afterSlot.cancelRequested) {
+        releaseSlot();
+        mergeSave({ id: jobId, cancelRequested: true, status: 'cancelled', finishedAt: new Date().toISOString() });
+        return;
+      }
+      if (afterSlot.config.inferenceMode === 'real' && (!limits().allowLive || !runtime.isAiEnabled())) {
+        releaseSlot();
+        mergeSave({
+          id: jobId,
+          status: 'policy_paused',
+          pausedReason: !runtime.isAiEnabled()
+            ? 'Global AI switch is off after the queue slot was acquired.'
+            : 'Live research calls are not allowed after the queue slot was acquired.',
+        });
+        return;
+      }
       const controller = new AbortController();
       const watch = setInterval(() => {
-        if (getJob(jobId)?.cancelRequested && !controller.signal.aborted) controller.abort();
+        const live = getJob(jobId);
+        if ((live?.cancelRequested || (live?.config?.inferenceMode === 'real' && (!runtime.isAiEnabled() || !limits().allowLive))) && !controller.signal.aborted) {
+          controller.abort();
+        }
       }, 50);
       try {
         const raw = (snap.cases || []).find((c) => c.id === task.researchCaseId);
@@ -452,17 +540,7 @@ async function processNext(jobId) {
             policyAllows: () => runtime.isAiEnabled() && (job.config.inferenceMode !== 'real' || limits().allowLive),
             isCancelled: () => Boolean(liveJob()?.cancelRequested),
             signal: controller.signal,
-            reserveModelCall: () => {
-              const cur = liveJob();
-              const cap = limits();
-              const used = Number(cur.usage?.modelCalls || 0);
-              if (used + 1 > (cap.maxModelCallsPerJob || cap.maxRequestsPerJob)) return false;
-              mergeSave({
-                id: jobId,
-                usage: { ...cur.usage, modelCalls: used + 1 },
-              });
-              return true;
-            },
+            reserveModelCall: () => reserveCall(jobId),
             onCall: ({ usage }) => {
               const cur = liveJob();
               const nextUsage = { ...(cur.usage || {}) };
@@ -512,9 +590,11 @@ async function processNext(jobId) {
       return;
     }
     if (done.cursor >= done.tasks.length) {
+      const status = finishStatus({ ...done, cursor: done.tasks.length });
       mergeSave({
         id: jobId,
-        status: 'completed',
+        status,
+        retryInFlight: false,
         finishedAt: new Date().toISOString(),
         summary: summarize(done),
         counts: recount({ ...done, cursor: done.tasks.length }),
@@ -554,6 +634,37 @@ function cancelJob(id, user) {
   return { job: saved };
 }
 
+function requeueRows(job, rows, { reason }) {
+  if (!rows.length) return { job };
+  const firstIdx = job.tasks.findIndex((t) => rows.some((r) => r.researchCaseId === t.researchCaseId && r.groupId === t.groupId && r.replicate === t.replicate));
+  const nextTasks = job.tasks.map((t) => {
+    const hit = rows.find((r) => r.researchCaseId === t.researchCaseId && r.groupId === t.groupId && r.replicate === t.replicate);
+    if (!hit) return t;
+    return { ...t, attempt: (t.attempt || 1) + 1 };
+  });
+  for (const r of rows) {
+    saveResult({
+      ...r,
+      superseded: true,
+      attempts: [...(r.attempts || []), { key: r.key, at: new Date().toISOString(), executionStatus: r.executionStatus, reason }],
+    });
+  }
+  const cursor = firstIdx >= 0 ? firstIdx : 0;
+  return mergeSave({
+    id: job.id,
+    tasks: nextTasks,
+    _resetCursor: cursor,
+    cursor,
+    status: 'queued',
+    retryInFlight: true,
+    resume: true,
+    cancelRequested: false,
+    _clearCancel: true,
+    pausedReason: null,
+    counts: recount({ ...job, tasks: nextTasks, cursor }),
+  });
+}
+
 function resumeJob(id, user) {
   const job = getJob(id);
   if (!job) return null;
@@ -569,6 +680,12 @@ function resumeJob(id, user) {
       status: 'policy_paused',
       pausedReason: 'Live research is not allowed at resume time.',
     });
+    return { job: saved };
+  }
+  const paused = listResults(job.id).filter((r) => !r.superseded && ['policy_paused', 'quota_paused'].includes(r.executionStatus));
+  if (paused.length) {
+    const saved = requeueRows(job, paused, { reason: 'resume_paused' });
+    kick(saved.id);
     return { job: saved };
   }
   const saved = mergeSave({
@@ -587,34 +704,15 @@ function retryFailed(id, user) {
   const job = getJob(id);
   if (!job) return null;
   if (!canSee(job, user)) return { forbidden: true };
+  if (['running', 'queued'].includes(job.status) && job.retryInFlight) {
+    throw Object.assign(new Error('A retry is already in progress'), { code: 'retry_in_progress' });
+  }
   if (job.status === 'running') {
     throw Object.assign(new Error('Cannot retry while the job is running'), { code: 'job_running' });
   }
-  const failed = listResults(job.id).filter((r) => !r.superseded && (r.executionStatus === 'failed' || r.engineeringFailure || (!r.ok && r.executionStatus !== 'cancelled' && r.executionStatus !== 'cancelled_late' && r.executionStatus !== 'policy_paused')));
+  const failed = listResults(job.id).filter((r) => !r.superseded && (r.executionStatus === 'failed' || r.engineeringFailure));
   if (!failed.length) return { job };
-  const firstIdx = job.tasks.findIndex((t) => failed.some((r) => r.researchCaseId === t.researchCaseId && r.groupId === t.groupId && r.replicate === t.replicate));
-  const nextTasks = job.tasks.map((t) => {
-    const hit = failed.find((r) => r.researchCaseId === t.researchCaseId && r.groupId === t.groupId && r.replicate === t.replicate);
-    if (!hit) return t;
-    return { ...t, attempt: (t.attempt || 1) + 1 };
-  });
-  for (const r of failed) {
-    saveResult({
-      ...r,
-      superseded: true,
-      attempts: [...(r.attempts || []), { key: r.key, at: new Date().toISOString(), executionStatus: r.executionStatus }],
-    });
-  }
-  const saved = mergeSave({
-    id: job.id,
-    tasks: nextTasks,
-    cursor: firstIdx >= 0 ? firstIdx : job.cursor,
-    status: 'queued',
-    cancelRequested: false,
-    _clearCancel: true,
-    retryGeneration: (job.retryGeneration || 0) + 1,
-    counts: recount({ ...job, tasks: nextTasks, cursor: firstIdx >= 0 ? firstIdx : job.cursor }),
-  });
+  const saved = requeueRows(job, failed, { reason: 'retry_failed' });
   kick(saved.id);
   return { job: saved };
 }
@@ -722,6 +820,10 @@ module.exports = {
   processNext,
   resultKey,
   currentCaps,
+  dispatchResearchModel,
+  reserveCall,
+  protocolMismatch,
+  liveProtocolParts,
   _setProviderFactory(fn) { providerFactory = fn; },
   _resetTestHooks() {
     providerFactory = null;

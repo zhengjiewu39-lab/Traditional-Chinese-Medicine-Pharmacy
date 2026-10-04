@@ -34,12 +34,17 @@ function cachedForHerb(herb) {
   });
 }
 
-async function searchGaps({ unknownHerbs = [], herbNames = [], fetchImpl, searchHerbImpl, maxHerbs = 3, retmax = 3 } = {}) {
+async function searchGaps({ unknownHerbs = [], herbNames = [], fetchImpl, searchHerbImpl, maxHerbs = 3, retmax = 3, signal } = {}) {
   const ordered = [...new Set([...(unknownHerbs || []), ...(herbNames || [])].map((n) => String(n || '').trim()).filter(Boolean))].slice(0, maxHerbs);
   const drafts = [];
   const queried = [];
   const lookup = searchHerbImpl || ((herb, opts) => fetchPubmed(herb, opts));
   for (const herb of ordered) {
+    if (signal?.aborted) {
+      const err = new Error('cancelled');
+      err.code = 'cancelled';
+      throw err;
+    }
     if (!searchHerbImpl) {
       const cached = cachedForHerb(herb);
       if (cached.length) {
@@ -49,11 +54,12 @@ async function searchGaps({ unknownHerbs = [], herbNames = [], fetchImpl, search
       }
     }
     try {
-      const out = await lookup(herb, { fetchImpl, retmax });
+      const out = await lookup(herb, { fetchImpl, retmax, signal });
       const views = (out.records || []).map(toDraftView);
       drafts.push(...views);
       queried.push({ herb, source: searchHerbImpl ? 'stub' : 'pubmed', n: views.length });
     } catch (err) {
+      if (err.code === 'cancelled' || signal?.aborted) throw err;
       queried.push({ herb, source: 'error', error: err.message, n: 0 });
     }
   }

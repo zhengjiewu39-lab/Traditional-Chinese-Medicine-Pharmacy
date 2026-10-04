@@ -101,6 +101,9 @@ function scriptsFromKnown(known) {
   script['patient.facts.pregnancy'] = { status: 'unknown', value: null, source: 'script_absent_in_source' };
   script['patient.facts.currentMedications'] = { status: 'unknown', value: null, source: 'script_absent_in_source' };
   script['patient.facts.liverImpairment'] = { status: 'unknown', value: null, source: 'script_absent_in_source' };
+  script['patient.facts.lactation'] = { status: 'unknown', value: null, source: 'script_absent_in_source' };
+  script['patient.facts.renalImpairment'] = { status: 'unknown', value: null, source: 'script_absent_in_source' };
+  script['patient.facts.weightKg'] = { status: 'unknown', value: null, source: 'script_absent_in_source' };
   return script;
 }
 

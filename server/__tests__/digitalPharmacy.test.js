@@ -1553,4 +1553,28 @@ describe('500-case research console', () => {
     const peek = await call('GET', `/api/research/evaluation/jobs/${jobId}`, { token: otherResearcher });
     assert.strictEqual(peek.status, 403);
   });
+
+  it('saves research limits twice and rejects an empty scene job', async () => {
+    const body = {
+      allowLive: false,
+      maxConcurrency: 1,
+      maxRequestsPerJob: 8000,
+      maxCasesLive: 8,
+      maxModelCallsPerJob: 8000,
+      confirmCasesThreshold: 8,
+    };
+    const first = await call('PUT', '/api/research/evaluation/limits', { as: 'admin', body });
+    assert.strictEqual(first.status, 200, JSON.stringify(first.body));
+    assert.ok(first.body.limits.updatedAt);
+    const second = await call('PUT', '/api/research/evaluation/limits', { as: 'admin', body });
+    assert.strictEqual(second.status, 200, JSON.stringify(second.body));
+    const stale = await call('PUT', '/api/research/evaluation/limits', { as: 'admin', body: first.body.limits });
+    assert.strictEqual(stale.status, 200, JSON.stringify(stale.body));
+    const empty = await call('POST', '/api/research/evaluation/jobs', {
+      as: 'researcher',
+      body: { groups: ['D'], selectUnit: 'scene', ids: ['RC-missing:complete'], inferenceMode: 'mock' },
+    });
+    assert.strictEqual(empty.status, 400, JSON.stringify(empty.body));
+    assert.strictEqual(empty.body.error.code, 'invalid_selection');
+  });
 });

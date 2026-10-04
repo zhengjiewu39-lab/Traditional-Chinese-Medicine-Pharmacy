@@ -13,6 +13,7 @@ const {
   buildVisibleCase, hiddenBundle, assertNoHiddenLeak, answerFromScript,
 } = require('./caseConstructor');
 const { ENGINE_VERSION, resolveCapabilities } = require('./capabilityPolicy');
+const { wrapProvider, isGatedError } = require('./modelCallGate');
 
 const FIXED_QUESTIONNAIRE = [
   'patient.facts.allergies',
@@ -107,21 +108,47 @@ async function analyzeOnce(visible, patient, cfg, provider, opts, caps) {
   assertNoHiddenLeak(input);
   const nowIso = opts.now instanceof Date ? opts.now.toISOString() : (opts.now || null);
   const inputHash = hashObject({ caseId: visible.caseId, patient, rx: visible.prescription, now: nowIso });
-  const reserved = typeof opts.reserveModelCall === 'function' ? opts.reserveModelCall() : true;
-  const useModel = caps.callModel && opts.policyAllows?.() !== false && reserved !== false;
-  const out = await analyzeCase(input, {
-    provider: useModel ? provider : null,
-    aiEnabled: useModel,
+  const wantModel = caps.callModel && opts.policyAllows?.() !== false && !opts.isCancelled?.() && !opts.signal?.aborted;
+  const runRules = async () => analyzeCase(input, {
+    provider: null,
+    aiEnabled: false,
     rulesEnabled: cfg.rulesEnabled,
-    retrievalEnabled: cfg.retrievalEnabled && (caps.searchExternal || caps.executedMode === 'mock'),
+    retrievalEnabled: cfg.retrievalEnabled && caps.executedMode === 'mock',
     clarificationMode: cfg.clarificationMode,
     timeoutMs: opts.timeoutMs || 20000,
-    aiMode: caps.aiMode,
-    searchExternal: caps.searchExternal && opts.policyAllows?.() !== false,
+    aiMode: 'rules',
+    searchExternal: false,
     now: opts.now,
     signal: opts.signal,
   });
-  if (opts.onCall) opts.onCall({ usage: out.providerMeta?.usage || null, usedModel: useModel });
+  let out;
+  let usedModel = false;
+  let skipReason = null;
+  try {
+    if (!wantModel) {
+      out = await runRules();
+    } else {
+      out = await analyzeCase(input, {
+        provider,
+        aiEnabled: true,
+        rulesEnabled: cfg.rulesEnabled,
+        retrievalEnabled: cfg.retrievalEnabled && (caps.searchExternal || caps.executedMode === 'mock'),
+        clarificationMode: cfg.clarificationMode,
+        timeoutMs: opts.timeoutMs || 20000,
+        aiMode: caps.aiMode,
+        searchExternal: caps.searchExternal && opts.policyAllows?.() !== false,
+        now: opts.now,
+        signal: opts.signal,
+      });
+      usedModel = Boolean(provider) && out.semanticTrackResult?.status !== 'disabled';
+    }
+  } catch (err) {
+    if (!isGatedError(err)) throw err;
+    skipReason = err.code;
+    out = await runRules();
+    usedModel = false;
+  }
+  if (opts.onCall) opts.onCall({ usage: out.providerMeta?.usage || null, usedModel });
   return {
     out,
     inputHash,
@@ -131,7 +158,9 @@ async function analyzeOnce(visible, patient, cfg, provider, opts, caps) {
       alerts: (out.alerts || []).map((a) => a.code),
       hardStops: (out.hardStops || []).map((h) => h.code),
     }),
-    usedModel: useModel,
+    usedModel,
+    skipReason,
+    finalModelSkipped: Boolean(wantModel && !usedModel),
   };
 }
 
@@ -173,31 +202,57 @@ async function maybeExtract(visible, hidden, { inputMode, provider, caps, opts }
   if (inputMode !== 'end_to_end_nl') {
     return { used: false, mode: 'structured_only', note: 'Structured facts only. This run does not evaluate natural-language understanding.', confirmations: [] };
   }
+  if (opts.isCancelled?.() || opts.signal?.aborted) {
+    return { used: false, mode: 'end_to_end_nl', cancelled: true, candidates: [], confirmations: [], note: 'Cancelled before extract.' };
+  }
   const text = visible.narrativeText || opts.narrativeText || '';
   if (!text) return { used: false, mode: 'end_to_end_nl', note: 'No narrative on this scene.', candidates: [], confirmations: [] };
-  const extractPatient = attachFacts({
-    sex: visible.patient?.sex || visible.patient?.facts?.sex,
+  const seed = attachFacts({
+    sex: visible.patient?.sex || visible.patient?.facts?.sex?.value || visible.patient?.facts?.sex,
     narrative: text,
   });
-  const out = await extract.extractCandidateFacts({
-    caseId: visible.caseId,
-    patient: extractPatient,
-    source: { rawText: text },
-  }, { provider: caps.callModel ? provider : null, aiEnabled: caps.callModel && opts.policyAllows?.() !== false });
-  if (opts.onCall && caps.callModel) opts.onCall({ usage: null, usedModel: Boolean(caps.callModel), kind: 'extract' });
+  const seedVisible = { ...visible, patient: seed };
+  let out = { candidates: [], modelCalled: false };
+  try {
+    out = await extract.extractCandidateFacts({
+      caseId: visible.caseId,
+      patient: seed,
+      source: { rawText: text },
+    }, {
+      provider: caps.callModel ? provider : null,
+      aiEnabled: caps.callModel && opts.policyAllows?.() !== false,
+      signal: opts.signal,
+    });
+  } catch (err) {
+    if (!isGatedError(err)) throw err;
+    return { used: false, mode: 'end_to_end_nl', cancelled: err.code === 'cancelled', skipReason: err.code, candidates: [], confirmations: [], patient: seed };
+  }
+  if (out.cancelled || ['cancelled', 'quota_paused', 'policy_paused'].includes(out.skipReason)) {
+    return {
+      used: false,
+      mode: 'end_to_end_nl',
+      cancelled: out.cancelled || out.skipReason === 'cancelled',
+      skipReason: out.skipReason,
+      candidates: [],
+      confirmations: [],
+      patient: seed,
+    };
+  }
   const confirmed = confirmExtracted((out.candidates || []).map((c) => ({
     fieldPath: c.fieldPath,
     value: c.candidateValue ?? c.value,
     span: c.sourceText || c.span || null,
-  })), hidden, visible);
+  })), hidden, seedVisible);
   return {
     used: true,
-    mode: 'end_to_end_nl',
+    mode: 'nl_only_min_seed',
     candidates: out.candidates || [],
     extractStatus: out.status || null,
     confirmations: confirmed.confirmations,
+    mismatches: (confirmed.confirmations || []).filter((c) => c.candidate != null && c.scriptStatus && String(c.candidate) !== String(c.scriptStatus === 'unknown' ? '' : c.candidate)),
     patient: confirmed.patient,
-    note: 'Candidates are confirmed or left unknown only by the frozen script. Hidden answers are not sent to extract.',
+    seed: 'sex_only',
+    note: 'NL-only seed is sex when present. Other facts come from sourced candidate confirmation or later scripted clarification. Missing candidates are not filled from hidden or structured answers.',
   };
 }
 
@@ -205,7 +260,23 @@ async function interact(visible, hidden, cfg, provider, opts = {}) {
   const maxRounds = Number(opts.maxRounds || 3);
   const maxBurden = Number(opts.maxBurden || 6);
   const caps = opts.capabilities || resolveCapabilities({ requestedMode: opts.requestedMode || 'mock', groupCfg: cfg });
-  let patient = visible.patient;
+  const cancelled = () => Boolean(opts.isCancelled?.() || opts.signal?.aborted);
+  const policyAllows = () => {
+    if (typeof opts.policyAllows === 'function') return opts.policyAllows();
+    return opts.aiMaster !== false;
+  };
+  const gated = wrapProvider(provider, {
+    reserve: opts.reserveModelCall,
+    policyAllows,
+    isCancelled: cancelled,
+    signal: opts.signal,
+    onDispatched: opts.onCall,
+  }) || (caps.callModel ? provider : null);
+  let working = visible;
+  if (opts.inputMode === 'end_to_end_nl') {
+    working = { ...visible, patient: attachFacts({ sex: visible.patient?.sex || visible.patient?.facts?.sex?.value || visible.patient?.facts?.sex }) };
+  }
+  let patient = working.patient;
   const turns = [];
   const analyses = [];
   let last = null;
@@ -213,19 +284,24 @@ async function interact(visible, hidden, cfg, provider, opts = {}) {
   let round = 0;
   let burdenUsed = 0;
   const asked = new Set();
-  const extractTurn = await maybeExtract({ ...visible, narrativeText: visible.narrativeText || opts.narrativeText }, hidden, {
+  if (cancelled()) {
+    return {
+      patient, turns, last: null, stopReason: 'cancelled', rounds: 0, burdenUsed: 0,
+      extractTurn: { used: false, cancelled: true, confirmations: [] }, analyses, capabilities: caps,
+    };
+  }
+  const extractTurn = await maybeExtract({ ...working, narrativeText: visible.narrativeText || opts.narrativeText }, hidden, {
     inputMode: opts.inputMode,
-    provider,
+    provider: gated,
     caps,
-    opts,
+    opts: { ...opts, isCancelled: cancelled, policyAllows },
   });
+  if (extractTurn.cancelled) {
+    return {
+      patient, turns, last: null, stopReason: 'cancelled', rounds: 0, burdenUsed: 0, extractTurn, analyses, capabilities: caps,
+    };
+  }
   if (extractTurn.patient) patient = extractTurn.patient;
-
-  const cancelled = () => Boolean(opts.isCancelled?.() || opts.signal?.aborted);
-  const policyAllows = () => {
-    if (typeof opts.policyAllows === 'function') return opts.policyAllows();
-    return opts.aiMaster !== false;
-  };
 
   const runAnalyze = async (why) => {
     if (cancelled()) {
@@ -241,14 +317,17 @@ async function interact(visible, hidden, cfg, provider, opts = {}) {
     if (liveCaps.pause && caps.requestedMode === 'real' && cfg.aiEnabled) {
       stopReason = 'policy_paused_ai_disabled';
       const rulesCaps = resolveCapabilities({ requestedMode: 'rules', groupCfg: cfg });
-      const analyzed = await analyzeOnce(visible, patient, cfg, null, { ...opts, policyAllows: () => false }, rulesCaps);
+      const analyzed = await analyzeOnce(working, patient, cfg, null, { ...opts, policyAllows: () => false }, rulesCaps);
       last = analyzed.out;
       analyses.push({ ...analyzed, why, finalModelSkipped: true });
       return analyzed;
     }
-    const analyzed = await analyzeOnce(visible, patient, cfg, provider, { ...opts, policyAllows }, liveCaps);
+    const analyzed = await analyzeOnce(working, patient, cfg, gated, { ...opts, policyAllows, isCancelled: cancelled }, liveCaps);
     last = analyzed.out;
     analyses.push({ ...analyzed, why });
+    if (analyzed.skipReason === 'quota_paused') stopReason = 'quota_paused';
+    else if (analyzed.skipReason === 'policy_paused') stopReason = 'policy_paused_ai_disabled';
+    else if (analyzed.skipReason === 'cancelled') stopReason = 'cancelled';
     return analyzed;
   };
 
@@ -258,7 +337,7 @@ async function interact(visible, hidden, cfg, provider, opts = {}) {
       break;
     }
     await runAnalyze(round === 0 ? 'initial' : `reanalyze_round_${round}`);
-    if (stopReason === 'cancelled' || stopReason === 'policy_paused_ai_disabled') break;
+    if (stopReason === 'cancelled' || stopReason === 'policy_paused_ai_disabled' || stopReason === 'quota_paused') break;
     const remaining = maxBurden - burdenUsed;
     let selected = [];
     if (cfg.clarificationMode === 'none') {
@@ -292,7 +371,7 @@ async function interact(visible, hidden, cfg, provider, opts = {}) {
     round = answeredRound;
     if (afterHash !== before) {
       await runAnalyze('after_script_answers');
-      if (stopReason === 'cancelled' || stopReason === 'policy_paused_ai_disabled') break;
+      if (stopReason === 'cancelled' || stopReason === 'policy_paused_ai_disabled' || stopReason === 'quota_paused') break;
       if (round >= maxRounds || burdenUsed >= maxBurden) {
         stopReason = stopReason || (burdenUsed >= maxBurden ? 'burden_cap' : 'round_cap');
         break;
@@ -335,12 +414,18 @@ function rowFromRun({ groupId, visible, raw, run, started, cfg, pack }) {
   const out = run.last || {};
   const semantic = out.semanticTrackResult || {};
   const counts = countTurns(run.turns || []);
-  const executionStatus = run.stopReason === 'cancelled'
-    ? 'cancelled'
-    : run.stopReason === 'policy_paused_ai_disabled'
-      ? 'policy_paused'
-      : (run.engineeringFailure ? 'failed' : 'completed');
-  const finalModelSkipped = Boolean((run.analyses || []).some((a) => a.finalModelSkipped));
+  const wantedModel = Boolean(cfg.aiEnabled && run.capabilities?.requestedMode && run.capabilities.requestedMode !== 'rules');
+  const anyModel = (run.analyses || []).some((a) => a.usedModel);
+  const finalModelSkipped = Boolean((run.analyses || []).some((a) => a.finalModelSkipped) || (wantedModel && !anyModel && run.stopReason !== 'cancelled'));
+  let executionStatus = 'completed';
+  if (run.stopReason === 'cancelled') executionStatus = 'cancelled';
+  else if (run.stopReason === 'quota_paused') executionStatus = 'quota_paused';
+  else if (run.stopReason === 'policy_paused_ai_disabled') executionStatus = 'policy_paused';
+  else if (run.engineeringFailure) executionStatus = 'failed';
+  else if (wantedModel && run.capabilities?.requestedMode === 'real' && !anyModel) {
+    executionStatus = finalModelSkipped ? (run.stopReason === 'quota_paused' ? 'quota_paused' : 'policy_paused') : 'completed';
+    if (executionStatus === 'completed' && finalModelSkipped) executionStatus = 'quota_paused';
+  }
   return {
     engineVersion: ENGINE_VERSION,
     groupId,
@@ -398,7 +483,10 @@ function rowFromRun({ groupId, visible, raw, run, started, cfg, pack }) {
     whyStopped: run.stopReason,
     finalModelSkipped,
     requestedMode: run.capabilities?.requestedMode || null,
-    executedMode: run.capabilities?.executedMode || null,
+    executedMode: anyModel
+      ? (run.capabilities?.executedMode || run.capabilities?.requestedMode)
+      : (cfg.aiEnabled ? (executionStatus === 'completed' ? 'rules_fallback' : executionStatus) : 'rules'),
+    modelDispatched: anyModel,
     finalFactsHash: hashObject(run.patient),
     inputHash: (run.analyses || []).slice(-1)[0]?.inputHash || null,
     outputHash: (run.analyses || []).slice(-1)[0]?.outputHash || null,
@@ -471,12 +559,21 @@ function selectBases(pack, {
 } = {}) {
   const scenes = pack.cases || [];
   const bases = pack.baseCases || [...new Map(scenes.map((c) => [c.baseId, { baseId: c.baseId, split: c.split }])).values()];
+  if (selectUnit === 'scene') {
+    let rows = scenes;
+    if (ids?.length) {
+      const want = new Set(ids);
+      rows = scenes.filter((c) => want.has(c.id) || want.has(c.researchCaseId));
+    } else if (split && split !== 'all') {
+      rows = rows.filter((c) => (c.split || 'test') === split);
+    }
+    if (offset) rows = rows.slice(offset);
+    if (limit != null) rows = rows.slice(0, limit);
+    return rows;
+  }
   let chosen = bases;
   if (ids?.length) {
     const want = new Set(ids);
-    if (selectUnit === 'scene') {
-      return scenes.filter((c) => want.has(c.id) || want.has(c.researchCaseId) || want.has(c.baseId));
-    }
     chosen = bases.filter((b) => want.has(b.baseId) || want.has(b.id));
   } else if (split && split !== 'all') {
     chosen = bases.filter((b) => (b.split || 'test') === split);

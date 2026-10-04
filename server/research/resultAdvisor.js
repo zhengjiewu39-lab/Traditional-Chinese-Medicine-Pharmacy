@@ -142,9 +142,15 @@ function deterministicJob(job, rows, lang) {
   };
 }
 
+const BLOCKING_ADVICE = /autonomous_|herb_added|dose_changed|citation_not_found/;
+
 function outputLooksUnsafe(text) {
-  const screened = screenOutput({ pharmacistExplanation: text }, { canonicalHerbs: [], allowedEvidenceIds: new Set() });
-  return (screened.violations || []).some((v) => ['diagnosis', 'prescribing', 'dose_change', 'approval_claim'].includes(v.code));
+  const screened = screenOutput({
+    pharmacistExplanation: text,
+    patientExplanation: text,
+    summary: text,
+  }, { canonicalHerbs: [], allowedEvidenceIds: new Set() });
+  return (screened.violations || []).some((v) => BLOCKING_ADVICE.test(v.code) || String(v.code).startsWith('autonomous_'));
 }
 
 async function maybeModelPolish(base, { job, wantModel, lang }) {
@@ -160,9 +166,6 @@ async function maybeModelPolish(base, { job, wantModel, lang }) {
   });
   if (caps.pause || !runtime.isAiEnabled()) {
     return { ...base, source: 'policy_paused', pathHint: copy('全局 AI 已关闭或研究调用未批准，仅保留规则解读，未安排外部模型。', 'The global AI switch is off or live research is not allowed. Only the rule reading is kept; no external model was called.', lang) };
-  }
-  if (requested === 'real' && (job.usage?.modelCalls || 0) >= (cap.maxModelCallsPerJob || 4000)) {
-    return { ...base, source: 'policy_paused', pathHint: copy('本任务模型调用额度已用尽，未再调用解读模型。', 'This job has no remaining model-call quota. The interpretation model was not called.', lang) };
   }
   let provider;
   try {
@@ -181,7 +184,8 @@ async function maybeModelPolish(base, { job, wantModel, lang }) {
     },
   };
   try {
-    const raw = await provider.complete({
+    const { dispatchResearchModel } = require('./experimentJobs');
+    const raw = await dispatchResearchModel(job.id, provider, {
       messages: [
         {
           role: 'system',
@@ -195,7 +199,15 @@ async function maybeModelPolish(base, { job, wantModel, lang }) {
     });
     const parsed = JSON.parse(raw);
     const blob = [parsed.summary, ...(parsed.nextSteps || []), ...(parsed.caveats || [])].join('\n');
-    if (outputLooksUnsafe(blob)) return base;
+    if (outputLooksUnsafe(blob)) {
+      return {
+        ...base,
+        source: 'rules',
+        usedModel: false,
+        rejectedUnsafeAdvice: true,
+        pathHint: copy('模型解读含自主改量、诊断或绕过药师的文字，已回退为规则解读。', 'The model reading contained autonomous dose, diagnosis, or approval language and was discarded.', lang),
+      };
+    }
     return {
       ...base,
       source: provider.isMock ? 'mock' : 'shadow_model',
@@ -205,7 +217,10 @@ async function maybeModelPolish(base, { job, wantModel, lang }) {
       nextSteps: parsed.nextSteps?.length ? parsed.nextSteps : base.nextSteps,
       caveats: [...(parsed.caveats || []), ...base.caveats].slice(0, 8),
     };
-  } catch {
+  } catch (err) {
+    if (err && (err.code === 'quota_paused' || err.code === 'policy_paused' || err.code === 'cancelled')) {
+      return { ...base, source: 'policy_paused', usedModel: false };
+    }
     return base;
   }
 }
@@ -220,4 +235,4 @@ async function adviseJob({ job, rows, lang = 'zh', wantModel = true }) {
   return maybeModelPolish(base, { job, wantModel, lang: base.lang });
 }
 
-module.exports = { safePayload, adviseResult, adviseJob, deterministicResult, deterministicJob };
+module.exports = { safePayload, adviseResult, adviseJob, deterministicResult, deterministicJob, outputLooksUnsafe };

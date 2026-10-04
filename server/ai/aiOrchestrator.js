@@ -65,6 +65,7 @@ async function runSemanticTrack({ provider, caseRecord, ruleTrack, retrieval, ti
   try {
     raw = await callWithTimeout(provider, { messages, context: { ruleSummary, evidence: retrieval.retrieved, minimisedCase }, jsonSchema: SEMANTIC_OUTPUT_SCHEMA, signal }, timeoutMs);
   } catch (err) {
+    if (['cancelled', 'quota_paused', 'policy_paused'].includes(err.code)) throw err;
     const latencyMs = Number(process.hrtime.bigint() - started) / 1e6;
     const status = err.code === 'circuit_open' ? 'circuit_open' : err.name === 'AbortError' ? 'timeout' : 'error';
     return { ...base, latencyMs, status, error: status, providerMeta: provider.lastMeta || null };
@@ -182,11 +183,17 @@ async function analyzeCase(caseRecord, {
     && (retrieval.missingEvidenceFor.length || (ruleTrack.unknownHerbs || []).length)
     && !inputScreen.injectionSuspected && !inputScreen.tooLong;
   if (wantSearch) {
+    if (signal?.aborted) {
+      const err = new Error('cancelled');
+      err.code = 'cancelled';
+      throw err;
+    }
     const found = await searchGaps({
       unknownHerbs: ruleTrack.unknownHerbs,
       herbNames,
       fetchImpl,
       searchHerbImpl,
+      signal,
     });
     retrieval = mergeRetrieval(retrieval, found);
   }

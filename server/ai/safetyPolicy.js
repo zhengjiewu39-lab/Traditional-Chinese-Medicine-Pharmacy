@@ -25,6 +25,10 @@ const CLINICAL_ACTION_PATTERNS = [
   { re: /(改为|调整为|增至|减至|加量至|减量至)\s*\d+(\.\d+)?\s*(g|克)/, code: 'dose_change' },
   { re: /处方如下|为您开具|开具以下/, code: 'prescribing' },
   { re: /(无需|不必)(经过)?药师|已(被)?批准|可以直接(服用|调剂|发药)/, code: 'approval_claim' },
+  { re: /\bdiagnos(e|ed|is)\b.{0,24}(as|of|with)\b/i, code: 'diagnosis' },
+  { re: /\b(add|remove|replace|switch to|prescribe)\b.{0,24}(herb|drug|formula)\b/i, code: 'prescribing' },
+  { re: /\b(change|adjust|increase|decrease)\b.{0,16}(dose|dosage).{0,8}\d+/i, code: 'dose_change' },
+  { re: /\b(no need for (a )?pharmacist|without pharmacist (review|approval)|skip the pharmacist|can (directly )?(dispense|approve)|dispense directly)\b/i, code: 'approval_claim' },
 ];
 
 function collectFreeText(caseRecord) {

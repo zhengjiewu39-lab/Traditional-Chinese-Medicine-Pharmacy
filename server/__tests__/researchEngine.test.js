@@ -378,17 +378,38 @@ describe('research engine 50cb7a6 repair', () => {
       pack, raw: pack.cases[0], groupId: 'C', provider: createMockProvider(),
       opts: {
         requestedMode: 'mock',
-        maxRounds: 1,
-        maxBurden: 2,
+        maxRounds: 2,
+        maxBurden: 6,
         reserveModelCall: () => {
+          if (reserved >= 1) return false;
           reserved += 1;
-          return reserved <= 1;
+          return true;
         },
       },
     });
-    assert.ok(reserved >= 1);
-    assert.ok(row.analyses.some((a) => a.usedModel) || row.finalModelSkipped || reserved >= 1);
-    assert.ok(row.usageCompleteness === 'unknown' || row.usageCompleteness === 'last_analysis_only');
+    assert.strictEqual(reserved, 1);
+    assert.strictEqual(row.analyses.filter((a) => a.usedModel).length, 1);
+    assert.ok(row.modelDispatched);
+  });
+
+  it('does not mark a zero-quota real run as a completed model experiment', async () => {
+    let calls = 0;
+    const provider = {
+      id: 'blocked',
+      isMock: true,
+      complete: async () => { calls += 1; return '{}'; },
+    };
+    const pack = fakePack(1);
+    const row = await engine.runOne({
+      pack, raw: pack.cases[0], groupId: 'C', provider,
+      opts: { requestedMode: 'real', allowLive: true, policyAllows: () => true, reserveModelCall: () => false, maxRounds: 1 },
+    });
+    assert.strictEqual(calls, 0);
+    assert.notStrictEqual(row.executionStatus, 'completed');
+    assert.ok(['quota_paused', 'policy_paused'].includes(row.executionStatus));
+    assert.strictEqual(row.ok, false);
+    assert.strictEqual(row.modelDispatched, false);
+    assert.ok(row.finalModelSkipped);
   });
 
   it('fails closed on a corrupt snapshot and does not overwrite the same hash', () => {
@@ -419,9 +440,17 @@ describe('research engine 50cb7a6 repair', () => {
     jobs.mergeSave({ id: job.id, status: 'failed', cursor: job.tasks.length });
     const retried = jobs.retryFailed(job.id, actor1);
     assert.strictEqual(retried.job.tasks.length, job.tasks.length);
+    assert.throws(() => jobs.retryFailed(job.id, actor1), (err) => ['retry_in_progress', 'job_running'].includes(err.code));
+    await waitFor(() => jobs.listResults(job.id).some((r) => r.attempt === 2 && !r.superseded));
     const old = jobs.listResults(job.id).find((r) => r.key === first.key);
+    const second = jobs.listResults(job.id).find((r) => r.attempt === 2 && !r.superseded);
     assert.strictEqual(old.superseded, true);
-    assert.ok((old.attempts || []).length >= 1);
+    assert.ok(second);
+    assert.notStrictEqual(second.key, first.key);
+    await waitFor(() => ['completed', 'completed_with_errors'].includes(jobs.getJob(job.id)?.status));
+    assert.ok(!jobs.listResults(job.id).some((r) => r.attempt === 3));
+    const summary = jobs.getJob(job.id).summary || {};
+    assert.strictEqual(summary.byGroup?.A?.n, 1);
   });
 
   it('isolates illegal herbs and dose counts instead of rewriting them', () => {
@@ -473,5 +502,157 @@ describe('research engine 50cb7a6 repair', () => {
     assert.strictEqual(row.professionalReview.clinicalCorrectness, 'not_evaluated');
     assert.ok(row.engineVersion.startsWith('research-engine@2'));
     assert.ok(row.versions.engineVersion);
+  });
+
+  it('rejects empty scene selections and expands 500 bases to 1500 scenes', async () => {
+    const pack = fakePack(500);
+    const all = engine.selectCases(pack, { split: 'all', limit: 500, selectUnit: 'base_case' });
+    assert.strictEqual(new Set(all.map((c) => c.baseId)).size, 500);
+    assert.strictEqual(all.length, 1500);
+    const one = engine.selectCases(pack, { selectUnit: 'scene', ids: [pack.cases[3].id] });
+    assert.strictEqual(one.length, 1);
+    assert.strictEqual(one[0].id, pack.cases[3].id);
+    const snap = persistSnap();
+    const scene = snap.cases[0];
+    const created = jobs.createJob({
+      contentHash: snap.contentHash, groups: ['D'], selectUnit: 'scene', ids: [scene.id], inferenceMode: 'mock',
+    }, actor1);
+    assert.strictEqual(created.job.tasks.length, 1);
+    assert.strictEqual(created.job.tasks[0].researchCaseId, scene.id);
+    assert.strictEqual(created.job.tasks[0].groupId, 'D');
+    await waitFor(() => ['completed', 'completed_with_errors'].includes(jobs.getJob(created.job.id)?.status));
+    const rows = jobs.listResults(created.job.id);
+    assert.strictEqual(rows.length, 1);
+    assert.strictEqual(rows[0].researchCaseId, scene.id);
+    assert.strictEqual(rows[0].groupId, 'D');
+    assert.throws(() => jobs.createJob({
+      contentHash: snap.contentHash, groups: ['D'], selectUnit: 'scene', ids: ['RC-missing:complete'], inferenceMode: 'mock',
+    }, actor1), (err) => err.code === 'invalid_selection');
+    assert.throws(() => jobs.createJob({
+      contentHash: snap.contentHash, groups: ['D'], selectUnit: 'scene', ids: [`${scene.baseId}:no-such-version`], inferenceMode: 'mock',
+    }, actor1), (err) => err.code === 'invalid_selection');
+  });
+
+  it('does not call extract after cancel and does not copy structured age when extract finds nothing', async () => {
+    let calls = 0;
+    const provider = { id: 'x', isMock: true, complete: async () => { calls += 1; return '{"candidates":[]}'; } };
+    const pack = { defaults: { source: { channel: 'research' }, prescriber: { name: '合成医师', licenseVerified: true } }, cases: [] };
+    const raw = {
+      id: 'nl-empty',
+      baseId: 'nl-empty',
+      initialObservedFacts: { sex: 'female', ageYears: 44 },
+      hiddenPatientFacts: { ageYears: 44 },
+      patientAnswerScript: { 'patient.facts.ageYears': { status: 'reported', value: 44, source: 'script_from_source' } },
+      prescription: { herbs: [{ name: '甘草', dosage: 6, unit: 'g' }], doseCount: 7, issuedAt: '2025-01-01' },
+      narrativeText: '女性。过敏史未提供。处方：甘草。',
+    };
+    const cancelled = await engine.runOne({
+      pack, raw, groupId: 'C', provider,
+      opts: { requestedMode: 'mock', inputMode: 'end_to_end_nl', isCancelled: () => true },
+    });
+    assert.strictEqual(calls, 0);
+    assert.strictEqual(cancelled.executionStatus, 'cancelled');
+    const empty = await engine.runOne({
+      pack, raw, groupId: 'A', provider: null,
+      opts: { requestedMode: 'rules', inputMode: 'end_to_end_nl', maxRounds: 1, maxBurden: 1 },
+    });
+    const seedAge = empty.extractTurn?.patient?.facts?.ageYears;
+    assert.ok(!seedAge || seedAge.status === 'not_asked' || seedAge.value == null);
+  });
+
+  it('pauses resume when prompt, knowledge, rules, or endpoint change', () => {
+    const snap = persistSnap();
+    const created = jobs.createJob({
+      contentHash: snap.contentHash, groups: ['A'], split: 'all', limit: 1, inferenceMode: 'rules', runTag: 'fp-test',
+    }, actor1);
+    const cases = [
+      { promptVersion: 'tampered-prompt' },
+      { knowledgeBaseVersion: 'tampered-kb' },
+      { ruleSetVersion: 'tampered-rules' },
+      { overlay: { ...(created.job.protocol.overlay || {}), baseUrlHost: 'evil.example' } },
+    ];
+    for (const patch of cases) {
+      jobs.mergeSave({
+        id: created.job.id,
+        protocol: { ...created.job.protocol, ...patch },
+        status: 'queued',
+        cursor: 0,
+      });
+      const out = jobs.resumeJob(created.job.id, actor1);
+      assert.strictEqual(out.job.status, 'policy_paused', JSON.stringify(patch));
+      assert.ok(out.job.pausedReason);
+    }
+  });
+
+  it('rejects unsafe research advice and ignores stale result pages', () => {
+    const advisor = require('../research/resultAdvisor');
+    assert.strictEqual(advisor.outputLooksUnsafe('调整为30g，无需药师审核，可以直接发药'), true);
+    assert.strictEqual(advisor.outputLooksUnsafe('Change the dose to 30g and dispense directly'), true);
+    assert.strictEqual(advisor.outputLooksUnsafe('Open the result row and export JSON.'), false);
+    const bind = require('../../src/pages/research/jobResultBinding');
+    assert.strictEqual(bind.shouldApplyJobResponse({ jobId: 'a', page: 2, gen: 3 }, { jobId: 'a', page: 2, gen: 3 }), true);
+    assert.strictEqual(bind.shouldApplyJobResponse({ jobId: 'a', page: 2, gen: 3 }, { jobId: 'a', page: 1, gen: 3 }), false);
+    assert.strictEqual(bind.shouldApplyJobResponse({ jobId: 'old', page: 1, gen: 1 }, { jobId: 'new', page: 1, gen: 2 }), false);
+    assert.deepStrictEqual(bind.bindAfterJobSwitch('j2').results, []);
+  });
+
+  it('resumes the last paused unit as a new attempt', async () => {
+    const snap = persistSnap();
+    const created = jobs.createJob({
+      contentHash: snap.contentHash, groups: ['A'], split: 'all', limit: 1,
+      selectUnit: 'scene', ids: [snap.cases[0].id], inferenceMode: 'rules', runTag: 'last-pause',
+    }, actor1);
+    await waitFor(() => ['completed', 'completed_with_errors'].includes(jobs.getJob(created.job.id)?.status));
+    const first = jobs.listResults(created.job.id)[0];
+    require('../workflow/workflowRepository').saveDoc('researchJobResults', first.key, {
+      ...first, ok: false, executionStatus: 'quota_paused', superseded: false,
+    });
+    jobs.mergeSave({ id: created.job.id, status: 'quota_paused', cursor: created.job.tasks.length });
+    const resumed = jobs.resumeJob(created.job.id, actor1);
+    assert.ok(resumed.job.cursor < resumed.job.tasks.length);
+    await waitFor(() => jobs.listResults(created.job.id).some((r) => r.attempt === 2 && r.executionStatus === 'completed' && !r.superseded));
+    const old = jobs.listResults(created.job.id).find((r) => r.key === first.key);
+    assert.strictEqual(old.superseded, true);
+    assert.strictEqual(old.executionStatus, 'quota_paused');
+    await waitFor(() => ['completed', 'completed_with_errors'].includes(jobs.getJob(created.job.id)?.status));
+  });
+
+  it('does not dispatch extra advice after the model-call quota is used', async () => {
+    const snap = persistSnap();
+    const created = jobs.createJob({
+      contentHash: snap.contentHash, groups: ['A'], split: 'all', limit: 1,
+      selectUnit: 'scene', ids: [snap.cases[0].id], inferenceMode: 'rules', runTag: 'advise-quota',
+    }, actor1);
+    await waitFor(() => ['completed', 'completed_with_errors'].includes(jobs.getJob(created.job.id)?.status));
+    jobs.saveLimits({
+      allowLive: false, maxConcurrency: 1, maxRequestsPerJob: 8000,
+      maxCasesLive: 8, maxModelCallsPerJob: 1, confirmCasesThreshold: 8,
+    }, { id: 'admin' });
+    jobs.mergeSave({ id: created.job.id, usage: { ...(jobs.getJob(created.job.id).usage || {}), modelCalls: 1 } });
+    let calls = 0;
+    runtime.setProviderOverride({
+      id: 'advise-block',
+      isMock: true,
+      complete: async () => {
+        calls += 1;
+        return '{"summary":"ok","nextSteps":[],"caveats":[]}';
+      },
+    });
+    const first = jobs.listResults(created.job.id)[0];
+    const [a, b] = await Promise.all([
+      jobs.adviseOnResult(created.job.id, {
+        researchCaseId: first.researchCaseId, groupId: first.groupId, replicate: 1, wantModel: true,
+      }, actor1),
+      jobs.adviseOnResult(created.job.id, {
+        researchCaseId: first.researchCaseId, groupId: first.groupId, replicate: 1, wantModel: true,
+      }, actor1),
+    ]);
+    assert.strictEqual(calls, 0);
+    assert.ok(['policy_paused', 'rules'].includes(a.advisor.source));
+    assert.ok(['policy_paused', 'rules'].includes(b.advisor.source));
+    jobs.saveLimits({
+      allowLive: false, maxConcurrency: 1, maxRequestsPerJob: 8000,
+      maxCasesLive: 8, maxModelCallsPerJob: 8000, confirmCasesThreshold: 8,
+    }, { id: 'admin' });
   });
 });

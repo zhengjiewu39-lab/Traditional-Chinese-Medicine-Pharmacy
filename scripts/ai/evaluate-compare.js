@@ -21,11 +21,6 @@ function fail(msg) {
 
 const wantLive = process.env.AI_COMPARE_ALLOW_MOCK !== '1';
 const requestedMode = wantLive ? 'real' : 'mock';
-const cap = jobs.limits();
-if (wantLive) {
-  if (!cap.allowLive) fail('Live compare is blocked: administrator allowLive is false.');
-  if (!runtime.isAiEnabled()) fail('Live compare is blocked: global AI switch is off.');
-}
 
 const archived = process.env.AI_COMPARE_PACK;
 let pack;
@@ -51,8 +46,21 @@ const selected = engine.selectCases(pack, {
   limit,
   selectUnit: 'base_case',
 });
+if (!selected.length) fail('Selection matched no research cases');
 
 async function main() {
+  const startCap = jobs.limits();
+  const baseCount = new Set(selected.map((c) => c.baseId)).size;
+  const plannedTasks = selected.length * 5;
+  if (wantLive) {
+    if (!startCap.allowLive) fail('Live compare is blocked: administrator allowLive is false.');
+    if (!runtime.isAiEnabled()) fail('Live compare is blocked: global AI switch is off.');
+    if (baseCount > startCap.maxCasesLive) fail(`Live compare ${baseCount} bases exceeds hard cap ${startCap.maxCasesLive}.`);
+  }
+  if (plannedTasks > startCap.maxRequestsPerJob) {
+    fail(`Planned ${plannedTasks} tasks exceed maxRequestsPerJob ${startCap.maxRequestsPerJob}.`);
+  }
+  let modelCalls = 0;
   const outDir = path.resolve(ROOT, wantLive ? 'benchmarks/ai-review/results-live' : 'benchmarks/ai-review/results-mock');
   fs.mkdirSync(outDir, { recursive: true });
   const protocol = {
@@ -85,11 +93,18 @@ async function main() {
     note: 'Clinical outcomes are not_evaluated. Stopping questions is not approval. 500 synthetic bases are not real patients. Mock is not a live model.',
   };
   const groups = {};
+  const reserveModelCall = () => {
+    const capNow = jobs.limits();
+    if (modelCalls + 1 > (capNow.maxModelCallsPerJob || capNow.maxRequestsPerJob)) return false;
+    modelCalls += 1;
+    return true;
+  };
   for (const g of ['A', 'B', 'C', 'D', 'RAG_off']) {
+    const liveCap = jobs.limits();
     const caps = resolveCapabilities({
       requestedMode,
       groupCfg: engine.GROUPS[g],
-      allowLive: cap.allowLive,
+      allowLive: liveCap.allowLive,
       runtimeEnabled: runtime.isAiEnabled(),
     });
     let provider = null;
@@ -110,9 +125,15 @@ async function main() {
           maxRounds: protocol.interactionBudget.maxRounds,
           inputMode: 'structured',
           requestedMode,
-          allowLive: cap.allowLive,
-          capabilities: caps,
-          policyAllows: () => runtime.isAiEnabled() && (requestedMode !== 'real' || cap.allowLive),
+          allowLive: jobs.limits().allowLive,
+          capabilities: resolveCapabilities({
+            requestedMode,
+            groupCfg: engine.GROUPS[g],
+            allowLive: jobs.limits().allowLive,
+            runtimeEnabled: runtime.isAiEnabled(),
+          }),
+          policyAllows: () => runtime.isAiEnabled() && (requestedMode !== 'real' || jobs.limits().allowLive),
+          reserveModelCall,
         },
       }));
     }

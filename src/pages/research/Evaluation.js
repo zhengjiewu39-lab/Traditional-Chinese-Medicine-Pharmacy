@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import {
   Alert, Box, Button, Checkbox, Chip, FormControl, FormControlLabel, InputLabel, MenuItem,
@@ -6,6 +6,7 @@ import {
   TextField, Typography, Pagination,
 } from '@mui/material';
 import { researchEvalApi } from '../../services/aiApi';
+import { nextRequestGeneration, shouldApplyJobResponse, bindAfterJobSwitch } from './jobResultBinding';
 import { formatApiError } from '../../config/httpClient';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../i18n/LanguageContext';
@@ -77,6 +78,8 @@ export default function Evaluation() {
   const [q, setQ] = useState('');
   const [busyAdvise, setBusyAdvise] = useState(false);
   const [busyStart, setBusyStart] = useState(false);
+  const requestGen = useRef(0);
+  const selectedRef = useRef({ jobId: null, page: 1, gen: 0 });
   const [cfg, setCfg] = useState({
     groups: ['A', 'C', 'D'],
     split: 'test',
@@ -112,26 +115,39 @@ export default function Evaluation() {
   }, [load]);
 
   useEffect(() => {
+    selectedRef.current = { jobId: selectedJob?.id || null, page: resultPage, gen: requestGen.current };
+  }, [selectedJob?.id, resultPage]);
+
+  useEffect(() => {
+    if (!selectedJob?.id) return undefined;
+    requestGen.current = nextRequestGeneration(requestGen.current);
+    const request = { jobId: selectedJob.id, page: resultPage, gen: requestGen.current };
+    selectedRef.current = request;
+    researchEvalApi.jobResults(request.jobId, { offset: (request.page - 1) * 20, limit: 20 }).then((r) => {
+      if (!shouldApplyJobResponse(request, selectedRef.current)) return;
+      setResults(r.data.results || []);
+      setResultsTotal(r.data.total ?? (r.data.results || []).length);
+      setResultsJobId(request.jobId);
+    }).catch((err) => {
+      if (shouldApplyJobResponse(request, selectedRef.current)) setError(formatApiError(err));
+    });
+    return undefined;
+  }, [selectedJob?.id, resultPage]);
+
+  useEffect(() => {
     const running = jobs.some((j) => ['queued', 'running'].includes(j.status));
     if (!running) return undefined;
     const tmr = setInterval(() => {
       load().catch(() => {});
-      if (selectedJob?.id) {
-        const jobId = selectedJob.id;
-        researchEvalApi.getJob(jobId).then((r) => {
-          if (r.data.job?.id === jobId) setSelectedJob(r.data.job);
-        }).catch(() => {});
-        researchEvalApi.jobResults(jobId, { offset: (resultPage - 1) * 20, limit: 20 }).then((r) => {
-          if (r.data.jobId === jobId) {
-            setResults(r.data.results || []);
-            setResultsTotal(r.data.total ?? (r.data.results || []).length);
-            setResultsJobId(jobId);
-          }
-        }).catch(() => {});
-      }
+      const jobId = selectedRef.current.jobId;
+      if (!jobId) return;
+      researchEvalApi.jobProgress(jobId).then((r) => {
+        if (selectedRef.current.jobId !== jobId) return;
+        setSelectedJob((cur) => (cur?.id === jobId ? { ...cur, ...r.data, id: jobId } : cur));
+      }).catch(() => {});
     }, 2000);
     return () => clearInterval(tmr);
-  }, [jobs, selectedJob?.id, load, resultPage]);
+  }, [jobs, selectedJob?.id, load]);
 
   const start = async (preset) => {
     setError('');
@@ -149,7 +165,7 @@ export default function Evaluation() {
       const body = {
         groups: preset === 'single' ? ['D'] : cfg.groups,
         split: cfg.split,
-        selectUnit: 'base_case',
+        selectUnit: preset === 'single' ? 'scene' : 'base_case',
         limit: preset === 'single' ? 1 : preset === 'pilot' ? Math.min(8, Number(cfg.limit) || 8) : cfg.limit,
         replicates: cfg.replicates,
         inferenceMode: cfg.inferenceMode,
@@ -163,13 +179,16 @@ export default function Evaluation() {
         ...(cfg.newRun ? { runTag: `rerun-${Date.now()}` } : {}),
       };
       const res = await researchEvalApi.createJob(body);
+      requestGen.current = nextRequestGeneration(requestGen.current);
+      const bound = bindAfterJobSwitch(res.data.job.id);
+      selectedRef.current = { jobId: bound.jobId, page: bound.page, gen: requestGen.current };
       setNotice(res.data.replayed ? t('researchEval.replayed') : t('researchEval.created', { id: res.data.job.id }));
       setSelectedJob(res.data.job);
-      setResults([]);
-      setResultsJobId(res.data.job.id);
+      setResults(bound.results);
+      setResultsJobId(bound.jobId);
       setResultsTotal(0);
-      setResultPage(1);
-      setTrace(null);
+      setResultPage(bound.page);
+      setTrace(bound.trace);
       await load();
     } catch (err) {
       setError(formatApiError(err));
@@ -181,6 +200,8 @@ export default function Evaluation() {
   const act = async (fn, id) => {
     try {
       const res = await fn(id);
+      requestGen.current = nextRequestGeneration(requestGen.current);
+      setTrace(null);
       setSelectedJob(res.data.job);
       await load();
     } catch (err) {
@@ -189,19 +210,22 @@ export default function Evaluation() {
   };
 
   const openResults = async (job) => {
+    requestGen.current = nextRequestGeneration(requestGen.current);
+    const bound = bindAfterJobSwitch(job.id);
+    const request = { jobId: job.id, page: bound.page, gen: requestGen.current };
+    selectedRef.current = request;
     setSelectedJob(job);
-    setResults([]);
-    setTrace(null);
-    setResultsJobId(job.id);
-    setResultPage(1);
+    setResults(bound.results);
+    setTrace(bound.trace);
+    setResultsJobId(bound.jobId);
+    setResultPage(bound.page);
     try {
       const res = await researchEvalApi.jobResults(job.id, { offset: 0, limit: 20 });
-      if (res.data.jobId === job.id) {
-        setResults(res.data.results || []);
-        setResultsTotal(res.data.total ?? (res.data.results || []).length);
-      }
+      if (!shouldApplyJobResponse(request, selectedRef.current)) return;
+      setResults(res.data.results || []);
+      setResultsTotal(res.data.total ?? (res.data.results || []).length);
     } catch (err) {
-      setError(formatApiError(err));
+      if (shouldApplyJobResponse(request, selectedRef.current)) setError(formatApiError(err));
     }
   };
 
@@ -322,7 +346,11 @@ export default function Evaluation() {
             <Select
               label={t('researchEval.snapshot')}
               value={cfg.contentHash || snap?.contentHash || ''}
-              onChange={(e) => setCfg({ ...cfg, contentHash: e.target.value })}
+              onChange={(e) => {
+                setCfg({ ...cfg, contentHash: e.target.value });
+                setSelectedSceneId('');
+                setTrace(null);
+              }}
             >
               {(snap.versions || [snap]).map((v) => (
                 <MenuItem key={v.contentHash} value={v.contentHash}>
@@ -392,6 +420,15 @@ export default function Evaluation() {
           label={t('researchEval.newRun')}
         />
         {selectedSceneId && <Typography variant="caption" display="block">{t('researchEval.selectedCase')}: {selectedSceneId}</Typography>}
+        <Typography variant="caption" display="block">
+          {t('researchEval.estimate', {
+            bases: cfg.limit,
+            scenes: Number(cfg.limit || 0) * 3,
+            groups: cfg.groups.length,
+            tasks: Number(cfg.limit || 0) * 3 * cfg.groups.length * (cfg.replicates || 1),
+          })}
+          {home?.limits?.maxRequestsPerJob ? ` · cap ${home.limits.maxRequestsPerJob}` : ''}
+        </Typography>
         {selectedJob?.estimate && (
           <Typography variant="caption" display="block">
             {t('researchEval.estimate', {

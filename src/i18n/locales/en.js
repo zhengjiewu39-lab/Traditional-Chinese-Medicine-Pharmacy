@@ -471,7 +471,7 @@ const en = {
     real: 'Live model (admin-approved overlay only)',
     input: 'Input',
     structured: 'Structured (does not evaluate NLU)',
-    e2e: 'Natural language (extract, then confirm from the frozen script, then review)',
+    e2e: 'Natural-language only (minimal seed; confirm candidates, then review)',
     split: 'Split',
     splitTest: 'test — formal evaluation (do not mix with dev)',
     splitDev: 'dev — development / tuning',
