@@ -56,13 +56,14 @@ npm run dev          # API :3002 + 前端 :3000
 
 ```bash
 npm run ai:evaluate          # 合成病例 + mock，工程回归
-npm run ai:evaluate:compare  # 交互病例包主实验 A/B/C/D + RAG_off；缺密钥退出码 2，不写占位成绩
+npm run ai:evaluate:compare  # 默认：冻结的 500 条合成基础病例主实验 A/B/C/D + RAG_off；缺密钥退出码 2
 AI_COMPARE_ALLOW_MOCK=1 npm run ai:evaluate:compare   # mock 交互循环，写入 results-mock
-AI_COMPARE_PACK=benchmarks/ai-review/cases-v1.json AI_COMPARE_ALLOW_MOCK=1 npm run ai:evaluate:compare  # 工程规则包
+AI_COMPARE_PACK=benchmarks/ai-review/cases-interactive-v1.json AI_COMPARE_ALLOW_MOCK=1 npm run ai:evaluate:compare  # 归档的 IT01–IT06
+AI_COMPARE_SMOKE=1 AI_COMPARE_ALLOW_MOCK=1 npm run ai:evaluate:compare  # 最多 4 条试运行
 ./scripts/backup-data.sh     # 迁移前备份 JSON/SQLite
 ```
 
-主实验组：A 固定问卷+规则；B 固定问卷+规则+真实 LLM+检索；C 同 B + 通用澄清；D 同 B + 风险相关主动追问与停止。主要比较 D 与 C。关闭检索是独立消融组 `RAG_off`，不再把 B 写成无检索。
+主实验组：A 固定问卷+规则；B 固定问卷+规则+真实 LLM+检索；C 同 B + 通用澄清；D 同 B + 风险相关主动追问与停止。主要比较 D 与 C。关闭检索是独立消融组 `RAG_off`。网页控制台在 `/research/evaluation`，与命令行共用同一引擎。IT01–IT06 只作历史回归。未审核指标保持 not_evaluated。不要未经确认跑 500 例付费调用。
 
 ## 验收命令
 

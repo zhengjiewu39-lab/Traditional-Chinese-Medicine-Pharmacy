@@ -47,4 +47,19 @@ Independent professional labels were not filled. The worksheet is blank on purpo
 
 Fact extraction calls a model only when AI is enabled and the mode allows model calls. Heuristic output is labelled `heuristic_fallback`. History alone is not treated as current-negative liver impairment. Denying a candidate does not infer disease denial. Stopping questions is not approval. Marking a clarification `reviewed` is not a resolved fact.
 
-`cases-v1.json` remains the engineering rule pack. The main clarification experiment uses `benchmarks/ai-review/cases-interactive-v1.json`. Rule-derived `expected` is not a medical gold standard.
+`cases-v1.json` remains the engineering rule pack. The main clarification experiment is the frozen 500-case research snapshot built from existing synthetic patients. `cases-interactive-v1.json` (IT01–IT06) is archived for regression. Rule-derived `expected` is not a medical gold standard. Snapshot clinical labels stay `not_evaluated` / `unreviewed`.
+
+## 500-case research console (this pass)
+
+| Layer | Status | Note |
+|---|---|---|
+| Snapshot import | Implemented | One existing prescription per existing synthetic patient (`one-rx-per-patient-date-asc-id-asc@1`). Unlabeled init rows stay synthetic. Exceptions are listed, not dropped silently. |
+| Interactive scenes | Implemented from known facts only | complete / omit-allergy or unknown-allergy / paraphrase. Missing allergy is not filled as none. Pregnancy, meds, and liver are not invented. |
+| Shared engine | Implemented | Web jobs and `npm run ai:evaluate:compare` call `experimentEngine`. Groups A/B/C/D/RAG_off. Primary comparison D vs C. |
+| Background jobs | Implemented | Persistent `researchJobs` / `researchJobResults`. Duplicate start returns the same job. Refresh does not drop results. Live 500 is not auto-started. |
+| Researcher UI | Implemented | `/research/evaluation` dataset / config / run / single-case / results / export. Hidden facts only in authorized annotate view. |
+| Isolation | Tested (mock) | Job does not change inventory or operational cases. Researcher list omits hidden scripts. |
+| Mock | Tested | Isolated 1-scene A/C job in `digitalPharmacy.test.js`. |
+| Real model 500 | **Not run** | Requires admin `allowLive`, `confirmLive`, and (if over cap) `confirmFullLive`. Do not treat as done. |
+| Expert review | **unreviewed / not_evaluated** | No clinical accuracy, miss rate, or patient-benefit numbers. |
+| Autonomous prescribe / auto-approve | Not added | Experiment cannot sign, dispense, set keys, or promote live. |

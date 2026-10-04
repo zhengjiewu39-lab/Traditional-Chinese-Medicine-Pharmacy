@@ -2,7 +2,7 @@
   "benchmarkId": "tcm-ai-review-interactive",
   "version": "1.0.0",
   "frozenAt": "2026-10-03",
-  "label": "Interactive evaluation pack. Synthetic. Not a clinical gold standard.",
+  "label": "ARCHIVED historical/regression pack (IT01–IT06). Not the default main experiment. Main experiment is the frozen 500-case research snapshot. Synthetic. Not a clinical gold standard.",
   "expertReviewStatus": "unreviewed",
   "split": { "devBaseIds": ["IX01", "IX02", "IX03", "IX04"], "testBaseIds": ["IT01", "IT02", "IT03", "IT04", "IT05", "IT06"] },
   "defaults": {

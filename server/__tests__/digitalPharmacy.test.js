@@ -672,6 +672,11 @@ describe('role lanes and research protocol', () => {
       body: { note: 'should fail' },
     });
     assert.strictEqual(denied.status, 403);
+    const adminDenied = await call('PUT', '/api/research/evaluation/protocol', {
+      as: 'admin',
+      body: { note: 'admin should not own protocol' },
+    });
+    assert.strictEqual(adminDenied.status, 403);
     const saved = await call('PUT', '/api/research/evaluation/protocol', {
       as: 'researcher',
       body: { note: '轻症快审，不确定双审', fastTrack: { enabled: true, maxTier: 'A1' }, dualReview: { enabled: true, minTier: 'A2', onAbstain: true } },
@@ -1435,5 +1440,108 @@ describe('d14c1a9 review gates', () => {
     assert.ok((asOwner.body.cases || []).every((c) => c.caseId));
     const asOther = await call('GET', `/api/ai/cases?riskTier=A3&limit=20`, { as: 'prescriberB' });
     assert.ok(!(asOther.body.cases || []).some((c) => c.caseId === a3Id));
+  });
+});
+
+describe('500-case research console', () => {
+  it('freezes existing patients into a de-identified snapshot and does not treat unlabeled seed rows as real', () => {
+    const { buildSnapshot } = require('../research/snapshotBuilder');
+    const { generateDemoPatients } = require('../data/patientGenerator');
+    const { generateDemoPrescriptions } = require('../data/prescriptionGenerator');
+    const unlabeled = { id: 1, patientRef: 'P1', gender: '女', age: 34, allergies: [], name: '演示甲', phone: '13800000000' };
+    const gen = generateDemoPatients(6, { preserveExisting: [unlabeled], startCustomerId: 9 });
+    const { prescriptions } = generateDemoPrescriptions(gen.patients, { perPatient: 1 });
+    const snap = buildSnapshot({ patients: gen.patients, prescriptions, sourceVersion: 'test' });
+    const refs = new Set(snap.baseCases.map((b) => b.source.storePatientRef));
+    assert.strictEqual(refs.size, snap.counts.baseCases);
+    assert.ok(snap.counts.baseCases >= 5);
+    assert.ok(snap.counts.scenes >= snap.counts.baseCases);
+    const unlabeledBase = snap.baseCases.find((b) => b.source.storePatientRef === 'P1');
+    assert.ok(unlabeledBase);
+    assert.strictEqual(unlabeledBase.provenance.kind, 'synthetic');
+    assert.ok(unlabeledBase.provenance.evidence.includes('unlabeled_initialization_record'));
+    assert.ok(!JSON.stringify(snap.cases).includes('13800000000'));
+    assert.ok(snap.cases.every((c) => c.expertReviewStatus === 'unreviewed'));
+    assert.ok(snap.cases.every((c) => c.clinicalCorrectness === 'not_evaluated'));
+    assert.ok(!snap.cases.some((c) => c.hiddenPatientFacts?.pregnancy === 'no'));
+    const ctor = require('../research/caseConstructor');
+    const pack = { defaults: snap.defaults, cases: snap.cases };
+    const visible = ctor.buildVisibleCase(pack, snap.cases[0]);
+    ctor.assertNoHiddenLeak(visible);
+    assert.ok(!JSON.stringify(visible).includes('hiddenPatientFacts'));
+  });
+
+  it('home no longer treats IT01–IT06 as the default main experiment', async () => {
+    const home = await call('GET', '/api/research/evaluation', { as: 'researcher' });
+    assert.strictEqual(home.status, 200, JSON.stringify(home.body));
+    assert.strictEqual(home.body.archivedInteractivePack.defaultMainExperiment, false);
+    assert.ok(home.body.snapshot?.datasetId);
+    assert.ok((home.body.snapshot.counts?.baseCases || 0) >= 1);
+    assert.ok(!JSON.stringify(home.body.groups).includes('IT01'));
+    const listed = await call('GET', '/api/research/evaluation/snapshot/cases?limit=5', { as: 'researcher' });
+    assert.strictEqual(listed.status, 200);
+    assert.ok(!(JSON.stringify(listed.body.records || [])).includes('hiddenPatientFacts'));
+    assert.ok(!(JSON.stringify(listed.body.records || [])).includes('patientAnswerScript'));
+    const denied = await call('GET', '/api/research/evaluation', { as: 'prescriber' });
+    assert.strictEqual(denied.status, 403);
+    const asAdmin = await call('GET', '/api/research/evaluation', { as: 'admin' });
+    assert.strictEqual(asAdmin.status, 403);
+  });
+
+  it('runs an isolated mock job without changing inventory or operational cases', async () => {
+    const beforeInv = JSON.stringify(getStore().inventory);
+    const beforeCases = (repo.listCases({ limit: 5 }) || []).map((c) => c.caseId);
+    const created = await call('POST', '/api/research/evaluation/jobs', {
+      as: 'researcher',
+      body: { groups: ['A', 'C'], split: 'test', limit: 1, inferenceMode: 'mock', inputMode: 'structured' },
+    });
+    assert.ok([200, 201].includes(created.status), JSON.stringify(created.body));
+    const jobId = created.body.job.id;
+    const again = await call('POST', '/api/research/evaluation/jobs', {
+      as: 'researcher',
+      body: { groups: ['A', 'C'], split: 'test', limit: 1, inferenceMode: 'mock', inputMode: 'structured' },
+    });
+    assert.strictEqual(again.body.job.id, jobId);
+    let job;
+    for (let i = 0; i < 40; i += 1) {
+      const got = await call('GET', `/api/research/evaluation/jobs/${jobId}`, { as: 'researcher' });
+      job = got.body.job;
+      if (['completed', 'failed', 'cancelled'].includes(job.status)) break;
+      await new Promise((r) => setTimeout(r, 50));
+    }
+    assert.strictEqual(job.status, 'completed', JSON.stringify(job));
+    const rows = await call('GET', `/api/research/evaluation/jobs/${jobId}/results`, { as: 'researcher' });
+    assert.ok((rows.body.results || []).length >= 1);
+    assert.ok(rows.body.results.every((r) => r.clinicalAccuracy === 'not_evaluated'));
+    const first = rows.body.results[0];
+    const adviceZh = await call('POST', `/api/research/evaluation/jobs/${jobId}/advise`, {
+      as: 'researcher',
+      body: {
+        scope: 'result', researchCaseId: first.researchCaseId, groupId: first.groupId,
+        replicate: first.replicate || 1, lang: 'zh', wantModel: false,
+      },
+    });
+    assert.strictEqual(adviceZh.status, 200, JSON.stringify(adviceZh.body));
+    assert.strictEqual(adviceZh.body.advisor.clinicalCorrectness, 'not_evaluated');
+    assert.ok(adviceZh.body.advisor.summary);
+    assert.ok(!JSON.stringify(adviceZh.body.advisor).includes('hiddenPatientFacts'));
+    const adviceEn = await call('POST', `/api/research/evaluation/jobs/${jobId}/advise`, {
+      as: 'researcher',
+      body: {
+        scope: 'job', lang: 'en', wantModel: false,
+      },
+    });
+    assert.strictEqual(adviceEn.status, 200);
+    assert.match(String(adviceEn.body.advisor.summary), /case-level|synthetic|engineering|patients/i);
+    const exp = await call('GET', `/api/research/evaluation/jobs/${jobId}/export`, { as: 'researcher' });
+    assert.strictEqual(exp.status, 200);
+    const text = typeof exp.body === 'string' ? exp.body : JSON.stringify(exp.body);
+    assert.ok(!/api[_-]?key/i.test(text));
+    assert.ok(!text.includes('patient123'));
+    const other = await call('GET', `/api/research/evaluation/jobs/${jobId}`, { as: 'admin' });
+    assert.strictEqual(other.status, 403);
+    assert.strictEqual(JSON.stringify(getStore().inventory), beforeInv);
+    const afterCases = (repo.listCases({ limit: 5 }) || []).map((c) => c.caseId);
+    assert.deepStrictEqual(afterCases, beforeCases);
   });
 });

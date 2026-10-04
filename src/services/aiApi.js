@@ -72,6 +72,21 @@ export const researchEvalApi = {
   home: () => api.get('/research/evaluation'),
   protocol: () => api.get('/research/evaluation/protocol'),
   saveProtocol: (body) => api.put('/research/evaluation/protocol', body),
+  snapshot: () => api.get('/research/evaluation/snapshot'),
+  snapshotCases: (params) => api.get('/research/evaluation/snapshot/cases', { params }),
+  snapshotExceptions: () => api.get('/research/evaluation/snapshot/exceptions'),
+  snapshotCase: (id, params) => api.get(`/research/evaluation/snapshot/cases/${id}`, { params }),
+  createJob: (body) => api.post('/research/evaluation/jobs', body),
+  listJobs: () => api.get('/research/evaluation/jobs'),
+  getJob: (id) => api.get(`/research/evaluation/jobs/${id}`),
+  jobResults: (id) => api.get(`/research/evaluation/jobs/${id}/results`),
+  jobTrace: (id, caseId) => api.get(`/research/evaluation/jobs/${id}/cases/${caseId}`),
+  cancelJob: (id) => api.post(`/research/evaluation/jobs/${id}/cancel`, {}),
+  resumeJob: (id) => api.post(`/research/evaluation/jobs/${id}/resume`, {}),
+  retryJob: (id) => api.post(`/research/evaluation/jobs/${id}/retry-failed`, {}),
+  exportJob: (id, format) => api.get(`/research/evaluation/jobs/${id}/export`, { params: { format }, responseType: 'blob' }),
+  adviseJob: (id, body) => api.post(`/research/evaluation/jobs/${id}/advise`, body),
+  saveLimits: (body) => api.put('/research/evaluation/limits', body),
 };
 
 /** Token links are public; no session header is attached. */

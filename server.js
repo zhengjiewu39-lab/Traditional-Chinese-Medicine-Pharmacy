@@ -235,6 +235,7 @@ if (migrated && migrated.ok === false) {
 }
 getStore();
 require('./server/workflow/catalogAlign').bootstrap();
+require('./server/research/experimentJobs').resumeUnfinished();
 
 const server = app.listen(port, () => {
   console.log(`中药数字药学服务 API http://localhost:${port}`, migrated?.skipped ? '(sqlite already imported)' : '');

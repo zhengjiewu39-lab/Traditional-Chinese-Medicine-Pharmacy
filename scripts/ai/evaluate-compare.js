@@ -1,24 +1,16 @@
 #!/usr/bin/env node
 /**
- * Main experiment: does risk-related active questioning help?
- * A  fixed questionnaire + rules
- * B  fixed questionnaire + rules + live LLM + retrieval
- * C  same as B + generic clarification
- * D  same as B + risk-related active questions and stop
- * RAG_off is a separate ablation, not group B.
- *
- * Without a live provider this process exits 2 and writes no live scores.
+ * CLI wrapper around the shared research experiment engine.
+ * Default pack is the frozen 500-case snapshot. IT01–IT06 remain available
+ * via AI_COMPARE_PACK=benchmarks/ai-review/cases-interactive-v1.json
  */
 const fs = require('fs');
 const path = require('path');
-const { analyzeCase } = require('../../server/ai/aiOrchestrator');
 const { createProvider } = require('../../server/ai/providerAdapter');
 const { effectiveEnv } = require('../../server/ai/runtimeConfig');
-const { applyFactChange } = require('../../server/workflow/clinicalFacts');
-const clarification = require('../../server/workflow/clarificationService');
-const {
-  buildVisibleCase, hiddenBundle, assertNoHiddenLeak, answerFromScript,
-} = require('../../server/research/caseConstructor');
+const { createMockProvider } = require('../../server/ai/mockProvider');
+const snapshotService = require('../../server/research/snapshotService');
+const engine = require('../../server/research/experimentEngine');
 
 const ROOT = path.resolve(__dirname, '../..');
 
@@ -30,203 +22,71 @@ function fail(msg) {
 const env = effectiveEnv();
 const wantLive = process.env.AI_COMPARE_ALLOW_MOCK !== '1';
 if (wantLive && ((env.AI_PROVIDER || '') !== 'openai-compatible' || !env.AI_BASE_URL || !env.AI_MODEL || !env.AI_API_KEY)) {
-  fail('Live compare requires an openai-compatible provider with AI_BASE_URL, AI_MODEL and AI_API_KEY in the environment or the saved runtime overlay. No placeholder scores were written.');
+  fail('Live compare requires an openai-compatible provider with AI_BASE_URL, AI_MODEL and AI_API_KEY. No placeholder scores were written.');
 }
 
-const packRel = process.env.AI_COMPARE_PACK || 'benchmarks/ai-review/cases-interactive-v1.json';
-const casesPath = path.resolve(ROOT, packRel);
-if (!fs.existsSync(casesPath)) fail(`${packRel} missing`);
-const pack = JSON.parse(fs.readFileSync(casesPath, 'utf8'));
+const archived = process.env.AI_COMPARE_PACK;
+let pack;
+let packRel;
+if (archived) {
+  packRel = archived;
+  const casesPath = path.resolve(ROOT, packRel);
+  if (!fs.existsSync(casesPath)) fail(`${packRel} missing`);
+  pack = JSON.parse(fs.readFileSync(casesPath, 'utf8'));
+} else {
+  const snap = snapshotService.ensureCurrent();
+  pack = engine.packFromSnapshot(snap);
+  packRel = `research-snapshot:${snap.datasetId}:${snap.contentHash.slice(0, 12)}`;
+}
+
 const smoke = process.env.AI_COMPARE_SMOKE === '1';
-const all = pack.cases || pack;
-const cases = smoke ? all.slice(0, Math.min(4, all.length)) : all.filter((c) => (c.split || 'test') === 'test');
-
-const FIXED_QUESTIONNAIRE = [
-  'patient.facts.allergies',
-  'patient.facts.pregnancy',
-  'patient.facts.currentMedications',
-  'patient.facts.liverImpairment',
-  'patient.facts.ageYears',
-];
-
-const GROUPS = {
-  A: { rulesEnabled: true, retrievalEnabled: false, aiEnabled: false, clarificationMode: 'none' },
-  B: { rulesEnabled: true, retrievalEnabled: true, aiEnabled: true, clarificationMode: 'none' },
-  C: { rulesEnabled: true, retrievalEnabled: true, aiEnabled: true, clarificationMode: 'generic' },
-  D: { rulesEnabled: true, retrievalEnabled: true, aiEnabled: true, clarificationMode: 'risk_adaptive' },
-  RAG_off: { rulesEnabled: true, retrievalEnabled: false, aiEnabled: true, clarificationMode: 'none', ablation: true },
-};
-
-const MAX_BURDEN = Number(process.env.AI_COMPARE_MAX_BURDEN || 6);
-const MAX_ROUNDS = Number(process.env.AI_COMPARE_MAX_ROUNDS || 3);
-
-function applyScriptedAnswers(visible, hidden, selected) {
-  let patient = visible.patient;
-  const turns = [];
-  for (const q of selected || []) {
-    const fieldPath = q.fieldPaths[0];
-    const scripted = answerFromScript(hidden, fieldPath);
-    if (!scripted) {
-      turns.push({ fieldPath, asked: true, answered: false, leakedLabel: false, kind: 'no_script' });
-      continue;
-    }
-    if (scripted.status === 'unknown' || scripted.status === 'denied') {
-      const applied = applyFactChange(patient, {
-        changeId: `cmp-${fieldPath}`, kind: 'correct', fieldPath, newValue: scripted.value ?? null, newStatus: scripted.status,
-      }, { id: 'script', role: 'patient' });
-      patient = applied.patient;
-      turns.push({ fieldPath, asked: true, answered: true, kind: scripted.status, leakedLabel: false });
-      continue;
-    }
-    const applied = applyFactChange(patient, {
-      changeId: `cmp-${fieldPath}`, kind: 'correct', fieldPath, newValue: scripted.value, newStatus: scripted.status || 'reported',
-    }, { id: 'script', role: 'patient' });
-    patient = applied.patient;
-    turns.push({ fieldPath, asked: true, answered: true, kind: 'reported', leakedLabel: false });
-  }
-  return { patient, turns };
-}
-
-function fixedQuestions(patient) {
-  return FIXED_QUESTIONNAIRE
-    .filter((fieldPath) => {
-      const key = fieldPath.replace('patient.facts.', '');
-      const st = patient?.facts?.[key]?.status || (patient?.[key] == null ? 'not_asked' : 'reported');
-      return ['not_asked', 'unknown'].includes(st);
-    })
-    .map((fieldPath) => ({ fieldPaths: [fieldPath], questionId: `fixed-${fieldPath}` }));
-}
-
-async function interact(visible, hidden, cfg, provider) {
-  let patient = visible.patient;
-  const turns = [];
-  let last = null;
-  let stopReason = null;
-  let round = 0;
-  let burdenUsed = 0;
-  const asked = new Set();
-  while (round < MAX_ROUNDS && burdenUsed < MAX_BURDEN) {
-    const input = { ...visible, patient };
-    assertNoHiddenLeak(input);
-    last = await analyzeCase(input, {
-      provider: cfg.aiEnabled ? provider : null,
-      aiEnabled: cfg.aiEnabled,
-      rulesEnabled: cfg.rulesEnabled,
-      retrievalEnabled: cfg.retrievalEnabled,
-      clarificationMode: cfg.clarificationMode,
-      timeoutMs: 20000,
-      aiMode: cfg.aiEnabled ? 'live' : 'rules',
-    });
-    const remaining = MAX_BURDEN - burdenUsed;
-    let selected = [];
-    if (cfg.clarificationMode === 'none') {
-      selected = fixedQuestions(patient).filter((q) => !asked.has(q.fieldPaths[0])).slice(0, remaining);
-    } else {
-      const plan = clarification.generateRiskQuestions({
-        ...visible, patient, analyses: [{ output: last }], clarificationRound: round, clarificationBurden: burdenUsed,
-      }, { mode: cfg.clarificationMode, maxBurden: remaining, maxRounds: MAX_ROUNDS });
-      selected = (plan.selected || []).filter((q) => !asked.has(q.fieldPaths[0]));
-      stopReason = plan.stopReason;
-    }
-    if (!selected.length) {
-      stopReason = stopReason || 'no_remaining_questions';
-      break;
-    }
-    const applied = applyScriptedAnswers({ ...visible, patient }, hidden, selected);
-    const answeredRound = round + 1;
-    patient = applied.patient;
-    turns.push(...applied.turns.map((t) => ({ ...t, round: answeredRound })));
-    selected.forEach((q) => asked.add(q.fieldPaths[0]));
-    burdenUsed += selected.length;
-    round = answeredRound;
-  }
-  return { patient, turns, last, stopReason, rounds: round, burdenUsed };
-}
-
-async function runGroup(groupId, provider) {
-  const cfg = GROUPS[groupId];
-  const rows = [];
-  for (const raw of cases) {
-    const visible = buildVisibleCase(pack, raw);
-    const hidden = hiddenBundle(raw);
-    assertNoHiddenLeak(visible);
-    const started = Date.now();
-    try {
-      const run = await interact(visible, hidden, cfg, provider);
-      const out = run.last;
-      rows.push({
-        groupId,
-        caseId: visible.caseId,
-        ok: true,
-        latencyMs: Date.now() - started,
-        rawRisk: out.semanticTrackResult?.suggestedRiskTier || null,
-        filteredRisk: out.riskTier,
-        pharmacistApprovedRisk: 'not_evaluated',
-        ruleRisk: out.ruleTrackResult?.tier || null,
-        semanticStatus: out.semanticTrackResult?.status || 'disabled',
-        retrievalUsed: Boolean(out.experimentControl?.retrievalUsed),
-        retrievalEnabled: Boolean(out.experimentControl?.retrievalEnabled),
-        rulesEnabled: Boolean(out.experimentControl?.rulesEnabled),
-        clarificationMode: cfg.clarificationMode,
-        clarificationTurns: run.turns,
-        answered: run.turns.filter((t) => t.answered).length,
-        asked: run.turns.length,
-        rounds: run.rounds,
-        burdenUsed: run.burdenUsed,
-        stopReason: run.stopReason,
-        finalPatientHash: require('../../server/common/hash').hashObject(run.patient),
-        inputHash: require('../../server/common/hash').hashObject({
-          caseId: visible.caseId, patient: run.patient, rx: visible.prescription,
-          promptVersion: out.promptVersion, modelVersion: out.modelVersion, knowledgeBaseVersion: out.knowledgeBaseVersion,
-        }),
-        outputHash: require('../../server/common/hash').hashObject({
-          risk: out.riskTier,
-          recommendation: out.recommendation,
-          alerts: (out.alerts || []).map((a) => a.code),
-          hardStops: (out.hardStops || []).map((h) => h.code),
-          pharmacistExplanation: out.pharmacistExplanation || null,
-          retrieved: (out.retrievalTrackResult?.retrieved || []).map((e) => e.sourceId),
-          semanticStatus: out.semanticTrackResult?.status,
-        }),
-        retrieved: out.retrievalTrackResult?.retrieved || [],
-        providerMeta: out.providerMeta || null,
-        modelFailure: ['timeout', 'error', 'schema_invalid', 'policy_violation'].includes(out.semanticTrackResult?.status),
-        engineeringFailure: false,
-        clinicalUnsafe: 'not_evaluated',
-      });
-    } catch (err) {
-      rows.push({
-        groupId, caseId: raw.id || raw.caseId, ok: false, error: err.message, latencyMs: Date.now() - started,
-        engineeringFailure: true,
-      });
-    }
-  }
-  return rows;
-}
+const selected = engine.selectCases(pack, {
+  split: smoke ? 'all' : 'test',
+  limit: smoke ? Math.min(4, (pack.cases || []).length) : null,
+});
 
 async function main() {
-  const provider = wantLive ? createProvider() : require('../../server/ai/mockProvider').createMockProvider();
+  const provider = wantLive ? createProvider() : createMockProvider();
   const outDir = path.resolve(ROOT, wantLive ? 'benchmarks/ai-review/results-live' : 'benchmarks/ai-review/results-mock');
   fs.mkdirSync(outDir, { recursive: true });
   const protocol = {
     generatedAt: new Date().toISOString(),
-    frozenCasePack: { path: packRel, version: pack.version, frozenAt: pack.frozenAt, expertReviewStatus: pack.expertReviewStatus || 'unreviewed' },
-    groups: {
-      A: 'fixed questionnaire + rules',
-      B: 'fixed questionnaire + rules + live LLM + retrieval',
-      C: 'same as B + generic clarification',
-      D: 'same as B + risk-related active questions and stop',
-      RAG_off: 'ablation: B with retrieval disabled in model context',
+    frozenCasePack: {
+      path: packRel,
+      version: pack.version,
+      contentHash: pack.contentHash || null,
+      expertReviewStatus: pack.expertReviewStatus || 'unreviewed',
+      defaultMainExperiment: !archived,
     },
+    archivedInteractivePack: 'benchmarks/ai-review/cases-interactive-v1.json',
+    groups: engine.GROUP_LABELS,
     primaryComparison: 'D vs C',
-    interactionBudget: { maxBurden: MAX_BURDEN, maxRounds: MAX_ROUNDS, note: 'Experimental parameter, not a clinical standard.' },
-    smoke: smoke,
-    note: 'Unsafe-suggestion rate needs independent professional labels. Clinical outcomes are not_evaluated. Stopping questions is not approval.',
+    interactionBudget: {
+      maxBurden: Number(process.env.AI_COMPARE_MAX_BURDEN || 6),
+      maxRounds: Number(process.env.AI_COMPARE_MAX_ROUNDS || 3),
+      note: 'Experimental parameter, not a clinical standard.',
+    },
+    smoke,
+    note: 'Clinical outcomes are not_evaluated. Stopping questions is not approval. 500 synthetic bases are not real patients.',
   };
   const groups = {};
-  const order = ['A', 'B', 'C', 'D', 'RAG_off'];
-  for (const g of order) {
-    groups[g] = await runGroup(g, provider);
+  for (const g of ['A', 'B', 'C', 'D', 'RAG_off']) {
+    const rows = [];
+    for (const raw of selected) {
+      rows.push(await engine.runOne({
+        pack,
+        raw,
+        groupId: g,
+        provider,
+        opts: {
+          maxBurden: protocol.interactionBudget.maxBurden,
+          maxRounds: protocol.interactionBudget.maxRounds,
+          inputMode: 'structured',
+          aiMode: wantLive ? 'shadow' : 'rules',
+        },
+      }));
+    }
+    groups[g] = rows;
   }
   const report = {
     generatedAt: new Date().toISOString(),
@@ -237,7 +97,7 @@ async function main() {
     protocol,
     groups,
     engineering: {
-      cases: cases.length,
+      cases: selected.length,
       failures: Object.values(groups).flat().filter((r) => !r.ok).length,
       modelFailures: Object.values(groups).flat().filter((r) => r.modelFailure).length,
     },
@@ -246,7 +106,7 @@ async function main() {
   fs.writeFileSync(path.join(outDir, file), `${JSON.stringify(report, null, 2)}\n`);
   fs.writeFileSync(path.join(outDir, 'compare-protocol.json'), `${JSON.stringify(protocol, null, 2)}\n`);
   console.log(JSON.stringify({
-    ok: true, inferenceMode: report.inferenceMode, cases: cases.length, smoke, failures: report.engineering.failures, outDir,
+    ok: true, inferenceMode: report.inferenceMode, cases: selected.length, smoke, failures: report.engineering.failures, outDir, pack: packRel,
   }, null, 2));
 }
 

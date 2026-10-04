@@ -39,6 +39,7 @@ experiments/results/*.joblib
 
 # AI workflow runtime data (cases, tokens, audit chain)
 data/ai/
+data/research/
 
 # Local live-model evaluation outputs (never treat as published AI performance)
 benchmarks/ai-review/results-live/*.json

@@ -7,8 +7,10 @@
 const fs = require('fs');
 const path = require('path');
 
-const packPath = path.resolve(__dirname, '../../benchmarks/ai-review/cases-interactive-v1.json');
+const archived = process.env.AI_RATER_PACK || 'benchmarks/ai-review/cases-interactive-v1.json';
+const packPath = path.resolve(__dirname, '../../', archived);
 const pack = JSON.parse(fs.readFileSync(packPath, 'utf8'));
+console.log('Default rater cards are the archived IT pack unless you pass a snapshot JSON path.');
 const includeHidden = process.argv.includes('--include-hidden');
 
 console.log(`Pack ${pack.benchmarkId} ${pack.version}`);

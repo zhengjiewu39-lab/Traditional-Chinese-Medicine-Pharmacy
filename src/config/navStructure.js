@@ -65,8 +65,8 @@ export const NAV_STRUCTURE = [
   {
     sectionKey: 'nav.sectionResearch',
     items: [
-      { labelKey: 'nav.researchDesk', path: '/research/desk', icon: 'documentation', roles: [...RESEARCHER, ...ADMIN] },
-      { labelKey: 'nav.researchEval', path: '/research/evaluation', icon: 'documentation', roles: [...RESEARCHER, ...ADMIN] },
+      { labelKey: 'nav.researchDesk', path: '/research/desk', icon: 'documentation', roles: RESEARCHER },
+      { labelKey: 'nav.researchEval', path: '/research/evaluation', icon: 'documentation', roles: RESEARCHER },
     ],
   },
   {

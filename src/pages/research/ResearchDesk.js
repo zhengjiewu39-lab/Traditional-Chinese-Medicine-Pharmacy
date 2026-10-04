@@ -125,11 +125,17 @@ export default function ResearchDesk() {
         <Paper sx={{ p: 2 }}>
           <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>{t('researchDesk.eval')}</Typography>
           <Typography sx={{ mb: 1 }}>{data.paperQuestion}</Typography>
-          <Alert severity="warning" sx={{ mb: 2 }}>{data.warning}</Alert>
-          <Chip label={data.liveModelReport?.present === false ? 'No live-model file' : 'Live report present'} sx={{ mr: 1 }} />
-          <Chip label="Mock is engineering only" />
-          <Typography variant="body2" sx={{ mt: 2 }}>Groups: {(data.groups || []).join(' · ')}</Typography>
-          <Button component={RouterLink} to="/research/evaluation" sx={{ mt: 2 }}>{t('nav.researchEval')}</Button>
+          <Alert severity="warning" sx={{ mb: 2 }}>{t('researchEval.intro')}</Alert>
+          <Chip label={`${t('researchDesk.snapshot')} ${data.snapshot?.datasetId || '—'}`} sx={{ mr: 1 }} />
+          <Chip label={`${t('researchDesk.baseCases')} ${data.snapshot?.counts?.baseCases ?? '—'}`} sx={{ mr: 1 }} />
+          <Chip label={t('researchDesk.mockOnly')} />
+          <Typography variant="body2" sx={{ mt: 2 }}>
+            {t('researchDesk.primary')}{Object.entries(data.groups || {}).map(([k, v]) => `${k} ${v}`).join(' · ') || 'A · B · C · D · RAG_off'}
+          </Typography>
+          {data.archivedInteractivePack?.defaultMainExperiment === false && (
+            <Typography variant="caption" display="block" sx={{ mt: 1 }}>{t('researchDesk.archived')}</Typography>
+          )}
+          <Button component={RouterLink} to="/research/evaluation" sx={{ mt: 2 }}>{t('researchDesk.openEval')}</Button>
         </Paper>
       )}
     </Box>

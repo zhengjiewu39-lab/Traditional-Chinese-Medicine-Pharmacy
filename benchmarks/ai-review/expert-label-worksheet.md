@@ -1,7 +1,8 @@
 # Independent professional labels
 
-Pack: `cases-interactive-v1.json` (v1.0.0, frozen 2026-10-03).  
-`expertReviewStatus` on the pack remains **unreviewed**.
+Main pack: frozen 500-case research snapshot (`research-500-v1`).  
+Archived pack: `cases-interactive-v1.json` (IT01–IT06, historical/regression only).  
+`expertReviewStatus` remains **unreviewed**. Clinical correctness stays **not_evaluated**.
 
 This worksheet is empty on purpose. An independent licensed pharmacist or TCM physician fills it.  
 The model, this repository’s authors, and automated agents must not invent gold labels.

@@ -7,7 +7,7 @@ These are not software defects that Cursor can honestly close, plus engineering 
 1. **Clinical gold labels** for miss rate / citation-support rate — worksheet `benchmarks/ai-review/expert-label-worksheet.md` is blank; pack remains `unreviewed` (`not_evaluated`).
 2. **Authoritative knowledge** — 中国药典仍无开放全文 API，系统已登记该限制并接入 NCBI PubMed 题录检索。抓回的文献是草稿，不是药典正文，药师审核前不能当临床规则证据。捆绑库仍是 `synthetic-demo-kb.json`。不得把 PubMed 条数写成临床验证。
 3. **Emergency thresholds and on-call contacts** — not invented. Severe-symptom escalation stays in-app (`仅站内待办，未发送`). New symptoms are not auto-diagnosed as ADR.
-4. **Live LLM comparison (A/B/C/D)** — a DeepSeek overlay is saved in shadow mode. A 4-case smoke ran (`results-live/compare-smoke.json`, gitignored): 0 engineering failures, 2 schema-invalid model rows. Full IT01–IT06 test split was not run. Clinical outcome remains `not_evaluated`. Promotion to `AI_MODE=live` still needs a shadow report, pharmacist approval, and governance sign-off.
+4. **Live LLM comparison (A/B/C/D)** — the default main experiment is now the frozen 500-case snapshot, not IT01–IT06. A paid full-500 live run was **not** started. Clinical outcome remains `not_evaluated`. Promotion to `AI_MODE=live` still needs a shadow report, pharmacist approval, and governance sign-off. The web console can start single-case or small mock jobs; live 500 requires admin allow-list and explicit confirm.
 5. **MedWear** — no real interface; Observation is a reserved disabled stub. Not FHIR-certified.
 6. **Identity proofing** — checkbox `identityConfirmed` is not professional verification.
 7. **Independent pharmacist review of education text and second-review workflow in a live clinic** — not_evaluated.
