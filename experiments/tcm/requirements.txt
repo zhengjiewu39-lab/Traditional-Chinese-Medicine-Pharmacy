@@ -12,4 +12,4 @@ optuna>=3.4
 torch>=2.0
 pytorch-lightning>=2.0
 jupyter>=1.0
-ipykernel>=6.0
+ipykernel>=7.4.0
